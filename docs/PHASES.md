@@ -96,11 +96,20 @@ apart from the substitutions sql.js's *synchronous* API forces — awaited reads
 and the helper/arrow functions that must become async as a result. Nothing a
 script checks, and no message it prints, is rewritten.
 
-**The transform handles one of two shapes.** Scripts build their service stub
-in two different places, and the second shape (`svc` as a top-level literal,
-with a `call()` helper) also has preamble helpers that close over the sql.js
-handle and are reached from the body. Those need per-script attention rather
-than another layer of cleverness in the transform.
+**The transform handles one of two shapes, and shape B is unresolved.**
+
+Shape A (`svc` built inside `initSqlJs().then()`) ports cleanly. Shape B
+(`svc` as a top-level literal with a `call()` helper) keeps helpers in its
+preamble that close over the sql.js handle and are called from the body, so
+the transformed region has to include them — and once it does, the async
+cascade stops converging. The inline-arrow pass reports **0 matches at
+transform time** while the same pattern matches the emitted file, which is
+unexplained and was not worth more blind iteration.
+
+**Recommendation: hand-port the four shape-B money scripts** (vouchers,
+internal_settlements, cash_and_bank_totals, no_negative_bank). A hand port is
+a known quantity; another transform layer is not, and a subtly wrong test is
+worse than no test.
 
 Realistic estimate: shape-A scripts port in minutes each; shape-B ones need
 hand work. Expect each batch to surface engine differences — three have turned

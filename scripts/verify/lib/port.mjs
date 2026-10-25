@@ -27,6 +27,23 @@
  *              substitutions.
  *
  * The output is a committed file, reviewable in a diff against the original.
+ *
+ * STATUS — WORKS FOR SHAPE A ONLY
+ * -------------------------------
+ * Shape A (`svc` built inside initSqlJs().then(), methods bound afterwards)
+ * ports cleanly: verify_loans came through with all 133 checks green.
+ *
+ * Shape B (`svc` as a top-level literal with a `call()` helper) does NOT yet
+ * port. Its preamble defines helpers that close over the sql.js handle and are
+ * reached from the body, so the transformed region had to grow to include
+ * them — and once it did, the async cascade stopped converging. The
+ * `inline arrows made async` pass reports 0 matches at transform time even
+ * though the same pattern matches the emitted file, which is unexplained.
+ *
+ * Do not extend this speculatively. Either debug that discrepancy first, or
+ * hand-port the shape-B scripts — there are four money-critical ones
+ * (vouchers, internal_settlements, cash_and_bank_totals, no_negative_bank)
+ * and a hand port is a known quantity where another transform layer is not.
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -108,8 +125,34 @@ if (bindMatch) {
 const tailAt = src.search(/^\}\)\.catch\(/m);
 if (tailAt < 0) throw new Error('Could not find the trailing .catch()');
 
-const preamble = src.slice(preambleStart, bootAt).trimEnd();
-let body = src.slice(bodyStart, tailAt);
+let preamble;
+let body;
+
+if (shape === 'A') {
+  preamble = src.slice(preambleStart, bootAt).trimEnd();
+  body = src.slice(bodyStart, tailAt);
+} else {
+  // Shape B's preamble does not stop at `svc`. It goes on to define helpers
+  // that close over the sql.js handle — `bankInvariant` calls `one()` calls
+  // `rows()` calls `db.prepare` — and the body calls THOSE. Leaving them
+  // untransformed was the "Cannot read properties of null" failure.
+  //
+  // So the split moves: everything up to the end of the `svc` literal is
+  // verbatim preamble (it decides which source is lifted, and must not be
+  // touched); everything after it is transformed along with the body.
+  const svcAt = src.indexOf('const svc = {');
+  if (svcAt < 0) throw new Error('Shape B without a `const svc = {` literal');
+  let depth = 0;
+  let i = src.indexOf('{', svcAt);
+  for (; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}') { depth--; if (depth === 0) { i++; break; } }
+  }
+  preamble = src.slice(preambleStart, i).trimEnd();
+
+  // Two pieces, skipping the sql.js bootstrap that sits between them.
+  body = src.slice(i, bootAt) + '\n' + src.slice(bodyStart, tailAt);
+}
 
 // ── the three mechanical substitutions ─────────────────────
 // sql.js is synchronous; PostgreSQL is not. These are the only edits made to
