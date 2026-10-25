@@ -1,0 +1,542 @@
+.ledger-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.ledger-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+  
+  h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+  }
+  
+  .subtitle {
+    font-size: 13px;
+    color: #888;
+    margin: 0;
+  }
+  
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: #f9a825;
+  font-size: 14px;
+  cursor: pointer;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.btn-primary {
+  background: #f9a825;
+  color: #1a1a1a;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  
+  &:hover {
+    background: #f57f17;
+  }
+}
+
+.btn-secondary {
+  background: #f0f4f8;
+  color: #333;
+  border: 1px solid #d0d0d0;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  
+  &:hover {
+    background: #e0e8f0;
+  }
+}
+
+// Shown instead of the bin on a ledger row that mirrors a payment recorded on
+// another screen — it is reversed by deleting that payment, not this row.
+.linked-note {
+  color: #90a4ae;
+  font-size: 13px;
+  cursor: help;
+}
+
+.error-message {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+// ── SEARCH BAR ─────────────────────────────────────────────
+
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  flex: 1;
+  min-width: 260px;
+  max-width: 420px;
+  transition: border-color 0.15s;
+
+  &:focus-within {
+    border-color: #f9a825;
+    box-shadow: 0 0 0 3px rgba(249, 168, 37, 0.12);
+  }
+}
+
+.search-icon {
+  font-size: 14px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.search-input {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 13px;
+  color: #333;
+  background: transparent;
+
+  &::placeholder {
+    color: #aaa;
+  }
+}
+
+.search-clear {
+  background: #f5f5f5;
+  border: none;
+  color: #888;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #e0e0e0;
+    color: #333;
+  }
+}
+
+.search-results {
+  font-size: 12px;
+  color: #f57f17;
+  font-weight: 500;
+}
+
+.deposit {
+  color: #1a5c38;
+  font-weight: 500;
+}
+
+.withdrawal {
+  color: #c62828;
+  font-weight: 500;
+}
+
+.detail-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+// Form Overlay
+.form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.form-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  
+  h4 {
+    margin: 0 0 16px;
+    font-size: 18px;
+    color: #1a1a1a;
+  }
+
+  // What this entry does to Cash in Hand, said before the amount is typed.
+  .form-hint {
+    margin: -8px 0 16px;
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #1a3d66;
+    background: #f4f7fb;
+    border-left: 3px solid #1565c0;
+    border-radius: 4px;
+  }
+  
+  .form-group {
+    margin-bottom: 12px;
+    
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+      
+      &:focus {
+        outline: none;
+        border-color: #f9a825;
+      }
+      
+      &:disabled {
+        background: #f5f5f5;
+        color: #888;
+      }
+    }
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+}
+
+.btn-save {
+  flex: 1;
+  background: #f9a825;
+  color: #1a1a1a;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  
+  &:hover {
+    background: #f57f17;
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-cancel {
+  flex: 1;
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #d0d0d0;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  
+  &:hover {
+    background: #eeeeee;
+  }
+}
+
+// ── NEGATIVE BALANCE STYLES ──────────────────────────────
+
+.negative {
+  color: #e53935 !important;
+  font-weight: 600;
+}
+
+.bank-balance {
+  color: #1a5c38;
+  font-weight: 600;
+
+  &.negative {
+    color: #e53935 !important;
+  }
+}
+
+// An overdrawn account's warning. Beside the figure, in the same cell, so the
+// table's column count is untouched — see the cell-count landmine in CLAUDE.md.
+.overdrawn-icon {
+  margin-right: 4px;
+  color: #e53935;
+}
+
+// ── BALANCE IN LEDGER TABLE ──────────────────────────────
+
+.balance {
+  font-weight: 600;
+  color: #1a5c38;
+
+  &.negative {
+    color: #e53935 !important;
+  }
+}
+
+// ── LOADING STATE IMPROVEMENTS ────────────────────────────
+
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #aaa;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #f9a825;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  p {
+    margin: 0;
+    font-size: 14px;
+  }
+}
+
+// ── SUMMARY BAR ────────────────────────────────────────────
+
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.summary-item {
+  background: white;
+  padding: 16px 20px;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+  text-align: center;
+
+  .summary-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .summary-value {
+    display: block;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-top: 4px;
+
+    &.bank-balance {
+      color: #f9a825;
+    }
+  }
+}
+
+// ── TABLE CARD ─────────────────────────────────────────────
+
+.table-card {
+  background: white;
+  border-radius: 12px;
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 650px;
+
+    th {
+      background: #f8f9fa;
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #e0e0e0;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #333;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: #fafafa;
+    }
+  }
+}
+
+.customer-name {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.bank-name {
+  font-weight: 500;
+}
+
+// ── BUTTONS ─────────────────────────────────────────────────
+
+.btn-view-ledger {
+  background: #fff8e1;
+  color: #f57f17;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-right: 4px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #ffecb3;
+  }
+}
+
+.btn-edit {
+  background: #e8f5e9;
+  color: #1a5c38;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-right: 4px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #c8e6c9;
+  }
+}
+
+.btn-delete {
+  background: #fce4ec;
+  color: #c62828;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #f8bbd0;
+    opacity: 0.7;
+  }
+}
+
+// ── EMPTY STATE ────────────────────────────────────────────
+
+.empty-row {
+  text-align: center;
+  color: #aaa;
+  padding: 30px !important;
+  font-size: 14px;
+}
+
+// ── RESPONSIVE ─────────────────────────────────────────────
+
+@media (max-width: 768px) {
+  .summary-bar {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .summary-item .summary-value {
+    font-size: 18px;
+  }
+
+  .table-card {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 550px;
+  }
+}
+
+@media (max-width: 480px) {
+  .summary-bar {
+    grid-template-columns: 1fr;
+  }
+}

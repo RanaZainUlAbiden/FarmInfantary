@@ -1,0 +1,455 @@
+.batch-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+// ── HEADER ──────────────────────────────────────────────────
+
+.batch-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  .header-left {
+    h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 8px 0 4px 0;
+    }
+    
+    .subtitle {
+      font-size: 13px;
+      color: #888;
+      margin: 0;
+    }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+
+    .total-stock {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a5c38;
+      background: #e8f5e9;
+      padding: 6px 14px;
+      border-radius: 20px;
+    }
+  }
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: #1a5c38;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.btn-primary {
+  background: #1a5c38;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+  
+  &:hover {
+    background: #0d4a2a;
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// ── ERROR & LOADING ────────────────────────────────────────
+
+.error-message {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 40px;
+  color: #aaa;
+}
+
+// ── BATCH FORM ──────────────────────────────────────────────
+
+.batch-form-container {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  border: 1px solid #e0e0e0;
+
+  .batch-form {
+    h4 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      color: #333;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: #666;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #d0d0d0;
+        border-radius: 6px;
+        font-size: 13px;
+        box-sizing: border-box;
+        
+        &:focus {
+          outline: none;
+          border-color: #1a5c38;
+        }
+      }
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 8px;
+    }
+  }
+}
+
+.btn-save {
+  background: #1a5c38;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  
+  &:hover {
+    background: #0d4a2a;
+  }
+}
+
+.btn-cancel {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #e0e0e0;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  
+  &:hover {
+    background: #eeeeee;
+  }
+}
+
+// ── TABLE ──────────────────────────────────────────────────
+
+.table-card {
+  background: white;
+  border-radius: 12px;
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+
+    th {
+      background: #f8f9fa;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      border-bottom: 1px solid #e0e0e0;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #333;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+  }
+}
+
+// ── BATCH STATUS ROW STYLES ──────────────────────────────
+
+tr.status-active td {
+  background: #ffffff;
+}
+
+tr.status-expiring td {
+  background: #fff3e0 !important;
+}
+
+tr.status-expired td {
+  background: #fce4ec !important;
+  opacity: 0.7;
+}
+
+tr.status-depleted td {
+  background: #f5f5f5 !important;
+  opacity: 0.6;
+}
+
+// ── STATUS BADGES ──────────────────────────────────────────
+
+.status-active {
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.status-expiring {
+  color: #e53935;
+  font-weight: 600;
+}
+
+.status-expired {
+  color: #999;
+  font-weight: 400;
+}
+
+.status-depleted {
+  color: #999;
+  font-weight: 400;
+}
+
+.batch-code {
+  font-weight: 600;
+  font-family: monospace;
+  color: #1a5c38;
+}
+
+.quantity {
+  font-weight: 600;
+}
+
+// ── BUTTONS ──────────────────────────────────────────────────
+
+.actions {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.btn-edit {
+  background: #e8f5e9;
+  color: #1a5c38;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+  
+  &:hover {
+    background: #c8e6c9;
+  }
+}
+
+.btn-delete {
+  background: #fce4ec;
+  color: #c62828;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+  
+  &:hover {
+    background: #f8bbd0;
+  }
+}
+
+.btn-transactions {
+  background: #e3f2fd;
+  color: #0d47a1;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+  
+  &:hover {
+    background: #bbdefb;
+  }
+}
+
+// ── EMPTY STATE ────────────────────────────────────────────
+
+.empty-state {
+  text-align: center;
+  padding: 60px;
+  color: #aaa;
+  background: white;
+  border-radius: 12px;
+  border: 1px dashed #e0e0e0;
+  
+  .btn-primary {
+    margin-top: 16px;
+  }
+}
+
+// ── MODAL ──────────────────────────────────────────────────
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  
+  h4 {
+    margin: 0;
+    font-size: 16px;
+  }
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #666;
+  padding: 0 4px;
+  
+  &:hover {
+    color: #333;
+  }
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.transaction-list {
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+
+    th {
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid #e0e0e0;
+      font-weight: 600;
+      color: #666;
+    }
+
+    td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+  }
+}
+
+.transaction-type {
+  text-transform: capitalize;
+  font-weight: 500;
+  background: #f0f0f0;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.positive {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.negative {
+  color: #c62828;
+  font-weight: 600;
+}
+
+.empty-transactions {
+  text-align: center;
+  padding: 30px;
+  color: #aaa;
+}

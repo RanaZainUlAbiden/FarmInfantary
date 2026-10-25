@@ -1,0 +1,252 @@
+<div class="module-container">
+
+  <div class="module-header">
+    <div>
+      <h3>Flock Health</h3>
+      <p class="subtitle" *ngIf="currentFlock">
+        {{ currentFlock.flock_name }}
+      </p>
+    </div>
+    <div class="header-actions">
+      <ng-container *ngIf="hasPendingRows">
+        <button class="btn-secondary" (click)="cancelAllRows()">
+          Cancel
+        </button>
+        <button class="btn-primary" (click)="saveAllRows()"
+          [disabled]="isSavingAll">
+          {{ isSavingAll ? 'Saving...' : 'Save All' }}
+        </button>
+      </ng-container>
+      <button class="btn-add" (click)="addPendingRow()"
+        *ngIf="currentFlock" title="Add row (Ctrl+A)">
+        +
+      </button>
+    </div>
+  </div>
+
+  <div class="summary-grid" *ngIf="currentFlock && healthRecords.length > 0">
+    <div class="summary-card">
+      <div class="card-icon">🐔</div>
+      <div class="card-label">Current Birds</div>
+      <div class="card-value">{{ currentBirdCount | number }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-icon">⚠️</div>
+      <div class="card-label">Total Mortality</div>
+      <div class="card-value">{{ totalMortality | number }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-icon">🌾</div>
+      <div class="card-label">Total Feed Used</div>
+      <div class="card-value">{{ totalFeedUsed | number }} bags</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-icon">📊</div>
+      <div class="card-label">Latest FCR</div>
+      <div class="card-value">{{ latestFcr !== null ? (latestFcr | number:'1.2-3') : '—' }}</div>
+    </div>
+  </div>
+
+  <div class="shortcuts-hint" *ngIf="hasPendingRows">
+    <span>Ctrl+A — new row</span>
+    <span>Ctrl+S — save all</span>
+  </div>
+
+  <!-- No flock selected -->
+  <div class="empty-state" *ngIf="!currentFlock">
+    <p>Please select a flock first.</p>
+  </div>
+
+  <!-- No records and no pending rows -->
+  <div class="empty-state"
+    *ngIf="currentFlock && healthRecords.length === 0 && pendingRows.length === 0">
+    <p>No health records yet. Click + or press Ctrl+A to get started.</p>
+  </div>
+
+  <div class="table-card"
+    *ngIf="currentFlock && (healthRecords.length > 0 || pendingRows.length > 0)">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:32px"></th>
+          <th>Day</th>
+          <th>Total Birds</th>
+          <th>Mortality</th>
+          <th>Remaining</th>
+          <th>Feed Used (in Bags)</th>
+          <th>Avg Weight (g)</th>
+          <th>FCR</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- PENDING NEW ROWS -->
+        <tr *ngFor="let row of pendingRows; let i = index" class="pending-row">
+          <td class="row-plus-cell">
+            <button class="row-plus-btn"
+              (click)="addRowAfter(i)"
+              title="Add row below">+</button>
+          </td>
+          <td>
+            <input class="inline-input" type="number"
+              [(ngModel)]="row.week_number"
+              (ngModelChange)="onRowFeedOrWeightChange()"
+              placeholder="Day #" />
+          </td>
+          <td>
+            <input class="inline-input" type="number"
+              [(ngModel)]="row.total_birds"
+              (ngModelChange)="onRowFeedOrWeightChange()"
+              placeholder="Total birds" />
+          </td>
+          <td>
+            <input class="inline-input" type="number"
+              [(ngModel)]="row.mortality"
+              (ngModelChange)="onRowFeedOrWeightChange()"
+              placeholder="Mortality" />
+          </td>
+          <td class="computed">
+            {{ getRowRemaining(row) | number }}
+          </td>
+          <td>
+            <input class="inline-input" type="number"
+              [(ngModel)]="row.feed_used"
+              (ngModelChange)="onRowFeedOrWeightChange()"
+              placeholder="Feed kg" />
+          </td>
+          <td>
+            <input class="inline-input" type="number"
+              step="0.001"
+              [(ngModel)]="row.avg_weight"
+              (ngModelChange)="onRowFeedOrWeightChange()"
+              placeholder="Avg wt (g)" />
+          </td>
+          <td>
+            <input class="inline-input fcr-input" type="number"
+              step="0.001"
+              [(ngModel)]="row.fcr"
+              (ngModelChange)="onRowFcrChange(row)"
+              [placeholder]="getRowAutoFcr(row) || 'auto'" />
+          </td>
+          <td class="actions">
+            <button class="btn-remove-row"
+              (click)="removePendingRow(i)"
+              title="Remove row">✕</button>
+          </td>
+        </tr>
+
+        <!-- Existing records -->
+        <tr *ngFor="let record of healthRecords"
+          [class.editing]="editingId === record.health_id">
+
+          <!-- VIEW MODE -->
+          <ng-container *ngIf="editingId !== record.health_id">
+            <td></td>
+            <td>Day {{ record.week_number }}</td>
+            <td>{{ record.total_birds | number }}</td>
+            <td class="mortality">{{ record.mortality | number }}</td>
+            <td>{{ record.total_birds - record.mortality | number }}</td>
+            <td>{{ record.feed_used | number }}</td>
+            <td>{{ record.avg_weight }}</td>
+            <td class="fcr">{{ getDisplayFcr(record) }}</td>
+            <td class="actions">
+              <button
+                class="btn-edit"
+                [disabled]="isSaving"
+                (click)="startEdit(record)">
+                Edit
+              </button>
+              <button
+                class="btn-delete"
+                [disabled]="isSaving"
+                (click)="confirmDelete(record.health_id)">
+                Delete
+              </button>
+            </td>
+          </ng-container>
+
+          <!-- EDIT MODE -->
+          <ng-container *ngIf="editingId === record.health_id">
+            <td></td>
+            <td>
+              <input class="inline-input" type="number"
+                [(ngModel)]="editForm.week_number"
+                (ngModelChange)="onEditFeedOrWeightChange()" />
+            </td>
+            <td>
+              <input class="inline-input" type="number"
+                [(ngModel)]="editForm.total_birds"
+                (ngModelChange)="onEditFeedOrWeightChange()" />
+            </td>
+            <td>
+              <input class="inline-input" type="number"
+                [(ngModel)]="editForm.mortality"
+                (ngModelChange)="onEditFeedOrWeightChange()" />
+            </td>
+            <td class="computed">
+              {{ editRemaining | number }}
+            </td>
+            <td>
+              <input class="inline-input" type="number"
+                [(ngModel)]="editForm.feed_used"
+                (ngModelChange)="onEditFeedOrWeightChange()" />
+            </td>
+            <td>
+              <input class="inline-input" type="number"
+                step="0.001"
+                [(ngModel)]="editForm.avg_weight"
+                (ngModelChange)="onEditFeedOrWeightChange()" />
+            </td>
+            <td>
+              <input class="inline-input fcr-input" type="number"
+                step="0.001"
+                [(ngModel)]="editForm.fcr"
+                (ngModelChange)="onEditFcrChange()"
+                [placeholder]="editAutoFcr || 'auto'" />
+            </td>
+            <td class="actions">
+              <button
+                class="btn-save"
+                [disabled]="isSaving"
+                (click)="saveEdit(record.health_id)">
+                {{ isSaving ? 'Saving…' : 'Save' }}
+              </button>
+              <button
+                class="btn-cancel-edit"
+                [disabled]="isSaving"
+                (click)="cancelEdit()">
+                Cancel
+              </button>
+            </td>
+          </ng-container>
+
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Record"
+  message="Are you sure you want to delete this health record?"
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"
+/>
+
+<app-confirm-dialog
+  *ngIf="showValidationDialog"
+  title="Validation Notice"
+  [message]="validationMessage"
+  confirmText="OK"
+  type="warning"
+  [hideCancel]="true"
+  (confirmed)="showValidationDialog = false"
+  (cancelled)="showValidationDialog = false">
+</app-confirm-dialog>

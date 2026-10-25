@@ -1,0 +1,203 @@
+<div class="module-container">
+  <div class="module-header">
+    <div>
+      <h3>Purchase Returns</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }}</p>
+    </div>
+    <button class="btn-secondary" *ngIf="selectedPurchase" (click)="clearSelection()">
+      ← Back to Purchases
+    </button>
+  </div>
+
+  <div class="alert alert-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="alert alert-success" *ngIf="successMessage && !selectedPurchase">{{ successMessage }}</div>
+
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading data...</p>
+  </div>
+
+  <!-- ═══ PURCHASE LIST VIEW ════════════════════════════════════ -->
+  <ng-container *ngIf="!isLoading && !selectedPurchase">
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <span class="summary-label">Eligible Purchases</span>
+        <strong>{{ filteredPurchases.length }}</strong>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Total Returns</span>
+        <strong>{{ returns.length }}</strong>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Total Returned</span>
+        <strong>Rs. {{ totalReturnsAmount | number:'1.0-0' }}</strong>
+      </div>
+    </div>
+
+    <div class="section-title">Purchases Available for Return</div>
+
+    <div class="search-container" style="margin-bottom: 12px;">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Search by product, supplier, or notes..."
+          [(ngModel)]="purchaseSearchTerm"
+          (ngModelChange)="filterPurchases()"
+        />
+        <button class="search-clear" *ngIf="purchaseSearchTerm" (click)="clearPurchaseSearch()">✕</button>
+      </div>
+      <span class="search-results" *ngIf="purchaseSearchTerm">Found {{ filteredPurchases.length }} result(s)</span>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Product</th>
+            <th>Supplier</th>
+            <th class="text-right">Purchased Qty</th>
+            <th class="text-right">Returned Qty</th>
+            <th class="text-right">Cost/Unit</th>
+            <th>Payment</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of paginatedPurchases">
+            <td>{{ p.date | dateOnly }}</td>
+            <td class="strong">{{ p.product_name || '—' }}</td>
+            <td>{{ p.supplier_name || '—' }}</td>
+            <td class="text-right">{{ p.quantity | number }}</td>
+            <td class="text-right returned-amt">
+              {{ p.returned_quantity > 0 ? (p.returned_quantity | number) : '—' }}
+            </td>
+            <td class="text-right">Rs. {{ p.cost_price | number:'1.2-2' }}</td>
+            <td>
+              <span class="payment-badge" [class.cash]="p.payment_type==='cash'">
+                {{ p.payment_type === 'cash' ? 'Paid' : 'Unpaid' }}
+              </span>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="'badge-' + (p.status || 'completed')">
+                {{ p.status || 'completed' }}
+              </span>
+            </td>
+            <td>
+              <button class="btn-return"
+                [disabled]="p.status === 'returned'"
+                (click)="selectPurchase(p)">
+                ↩ Return
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredPurchases.length === 0 && purchases.length > 0">
+            <td colspan="9" class="empty-row">No purchases found matching "{{ purchaseSearchTerm }}"</td>
+          </tr>
+          <tr *ngIf="purchases.length === 0">
+            <td colspan="9" class="empty-row">No purchases available for return.</td>
+          </tr>
+        </tbody>
+      </table>
+      <app-pagination [currentPage]="purchasesPage" [totalItems]="filteredPurchases.length" [pageSize]="purchasesPageSize" (pageChange)="purchasesPage = $event"></app-pagination>
+    </div>
+
+    <div class="section-title" *ngIf="returns.length > 0">Return History</div>
+    <div class="table-card history" *ngIf="returns.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>Return #</th>
+            <th>Date</th>
+            <th>Product</th>
+            <th>Supplier</th>
+            <th class="text-right">Qty</th>
+            <th class="text-right">Amount</th>
+            <th>Method</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of paginatedReturns">
+            <td class="strong bill-num">{{ r.return_number }}</td>
+            <td>{{ r.return_date | dateOnly }}</td>
+            <td>{{ r.product_name || '—' }}</td>
+            <td>{{ r.supplier_name || '—' }}</td>
+            <td class="text-right">{{ r.quantity | number }}</td>
+            <td class="text-right amount">Rs. {{ r.return_amount | number:'1.0-0' }}</td>
+            <td>
+              <span class="badge" [ngClass]="r.refund_method === 'bank' ? 'badge-bank' : 'badge-cash'">
+                {{ r.refund_method }}
+              </span>
+            </td>
+            <td class="reason-cell">{{ r.reason || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <app-pagination [currentPage]="returnsPage" [totalItems]="returns.length" [pageSize]="returnsPageSize" (pageChange)="returnsPage = $event"></app-pagination>
+    </div>
+
+  </ng-container>
+
+  <!-- ═══ RETURN FORM VIEW ══════════════════════════════════════ -->
+  <ng-container *ngIf="!isLoading && selectedPurchase">
+
+    <div class="bill-info-bar">
+      <div class="bill-info-main">
+        <span class="bill-info-num">{{ selectedPurchase.product_name }}</span>
+        <span class="bill-info-customer">{{ selectedPurchase.supplier_name || 'No supplier' }}</span>
+        <span class="badge" [ngClass]="'badge-' + (selectedPurchase.status || 'completed')">
+          {{ selectedPurchase.status || 'completed' }}
+        </span>
+      </div>
+      <div class="bill-info-amounts">
+        <span>Purchased: <strong>{{ selectedPurchase.quantity | number }}</strong></span>
+        <span>Already Returned: <strong>{{ selectedPurchase.returned_quantity | number }}</strong></span>
+        <span>Cost/Unit: <strong>Rs. {{ selectedPurchase.cost_price | number:'1.2-2' }}</strong></span>
+      </div>
+    </div>
+
+    <div class="controls-bar">
+      <div class="control-group">
+        <label>Return Date</label>
+        <input type="date" class="ctrl-input" [(ngModel)]="returnDate" />
+      </div>
+      <div class="control-group">
+        <label>Return Quantity (max {{ maxReturnable }})</label>
+        <input type="number" class="ctrl-input" min="0" [max]="maxReturnable" [(ngModel)]="returnQuantity" placeholder="0" />
+      </div>
+      <div class="control-group">
+        <label>Refund Method</label>
+        <select class="ctrl-input" [(ngModel)]="refundMethod">
+          <option value="cash">Cash</option>
+          <option value="bank">Bank Transfer</option>
+        </select>
+      </div>
+      <div class="control-group reason-group">
+        <label>Reason (optional)</label>
+        <input type="text" class="ctrl-input" [(ngModel)]="reason" placeholder="e.g. Expired, Damaged, Wrong item..." />
+      </div>
+    </div>
+
+    <div class="return-summary-bar">
+      <div class="summary-numbers">
+        <div class="sumrow">
+          <span>Return Amount</span>
+          <strong class="amount">Rs. {{ returnAmount | number:'1.0-0' }}</strong>
+        </div>
+      </div>
+      <button
+        class="btn-save"
+        [disabled]="isSaving || returnAmount <= 0"
+        (click)="saveReturn()">
+        <span *ngIf="!isSaving">✔ Save Return</span>
+        <span *ngIf="isSaving">Saving...</span>
+      </button>
+    </div>
+
+  </ng-container>
+</div>

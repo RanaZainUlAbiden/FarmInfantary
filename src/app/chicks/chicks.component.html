@@ -1,0 +1,312 @@
+<div class="module-container">
+
+  <!-- ══════════════════════════════════════════════════════════
+       TRADERS LIST VIEW
+  ══════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="!selectedTrader">
+    <div class="module-header">
+      <div>
+        <h3>Chicks</h3>
+        <p class="subtitle" *ngIf="currentFlock">
+          {{ currentFlock.flock_name || currentFlock.batch_name }}
+        </p>
+      </div>
+      <button
+        class="btn-primary"
+        [disabled]="isSaving"
+        (click)="openTraderForm()"
+        *ngIf="currentFlock">
+        + Add Trader
+      </button>
+    </div>
+
+    <!-- Trader Form -->
+    <div class="form-card" *ngIf="showTraderForm">
+      <h4>Add Chick Supplier</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Trader Name *</label>
+          <input
+            type="text"
+            [(ngModel)]="traderForm.trader_name"
+            placeholder="e.g. TM Traders"
+            (keyup.enter)="saveTrader()" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button
+          class="btn-secondary"
+          [disabled]="isSaving"
+          (click)="showTraderForm = false">
+          Cancel
+        </button>
+        <button
+          class="btn-primary"
+          [disabled]="isSaving"
+          (click)="saveTrader()">
+          {{ isSaving ? 'Saving…' : 'Add Trader' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty states -->
+    <div class="empty-state" *ngIf="!currentFlock">
+      <p>Please select a flock or batch first.</p>
+    </div>
+    <div class="empty-state"
+      *ngIf="currentFlock && traders.length === 0 && !showTraderForm">
+      <p>No suppliers yet. Add your first hatchery or chick supplier.</p>
+    </div>
+
+    <!-- Trader Cards -->
+    <div class="trader-grid" *ngIf="traders.length > 0">
+      <div class="trader-card"
+        *ngFor="let trader of traders"
+        (click)="selectTrader(trader)">
+        <div class="trader-card-header">
+          <div class="trader-icon">💊</div>
+          <button
+            class="btn-delete-trader"
+            [disabled]="isSaving"
+            [style.visibility]="trader.trader_name === 'Internal Distribution' ? 'hidden' : 'visible'"
+            (click)="$event.stopPropagation(); confirmDeleteTrader(trader.trader_id)">
+            ✕
+          </button>
+        </div>
+        <div class="trader-name">{{ trader.trader_name }}</div>
+        <div class="trader-total">Rs. {{ trader.total | number:'1.0-0' }}</div>
+        <div class="trader-footer">Click to view entries →</div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════════════
+       ENTRIES VIEW
+  ══════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="selectedTrader">
+    <div class="module-header">
+      <div class="header-with-back">
+        <button
+          class="btn-back"
+          [disabled]="isSaving"
+          (click)="backToTraders()">
+          ← Back
+        </button>
+        <div>
+          <h3>{{ selectedTrader.trader_name }}</h3>
+          <p class="subtitle">{{ currentFlock.flock_name }}</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <ng-container *ngIf="hasPendingRows">
+          <button class="btn-secondary" (click)="cancelAllRows()">
+            Cancel
+          </button>
+          <button class="btn-primary" (click)="saveAllRows()"
+            [disabled]="isSavingAll">
+            {{ isSavingAll ? 'Saving...' : 'Save All' }}
+          </button>
+        </ng-container>
+        <button class="btn-add" (click)="addPendingRow()"
+          *ngIf="!hasPendingRows" title="Add row (Ctrl+A)">
+          +
+        </button>
+      </div>
+    </div>
+
+    <div class="shortcuts-hint" *ngIf="hasPendingRows">
+      <span>Ctrl+A — new row</span>
+      <span>Ctrl+S — save all</span>
+    </div>
+
+    <div class="filter-bar" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <label style="font-size:13px;font-weight:500;">Filter by Date:</label>
+      <input type="date" class="inline-input" style="width:160px;" [(ngModel)]="selectedDateFilter"/>
+      <button class="btn-apply" (click)="applyDateFilter()" style="padding:4px 12px;">Apply</button>
+      <button class="btn-clear" *ngIf="filteredByDate" (click)="clearDateFilter()" style="padding:4px 12px;">Clear</button>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state"
+      *ngIf="entries.length === 0 && pendingRows.length === 0">
+      <p>No entries yet. Click + or press Ctrl+A to record a chick purchase.</p>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card" *ngIf="entries.length > 0 || pendingRows.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Date</th>
+            <th>Chick Type</th>
+            <th>Quantity</th>
+            <th>Price/Unit (Rs.)</th>
+            <th>Total (Rs.)</th>
+            <th>Bill #</th>
+            <!-- <th>Actions</th> -->
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- PENDING NEW ROWS -->
+          <tr *ngFor="let row of pendingRows; let i = index" class="pending-row">
+            <td class="row-plus-cell">
+              <button class="row-plus-btn"
+                (click)="addRowAfter(i)"
+                title="Add row below">+</button>
+            </td>
+            <td>
+              <input class="inline-input" type="date"
+                [(ngModel)]="row.date" />
+            </td>
+            <td>
+              <input class="inline-input" type="text"
+                [(ngModel)]="row.chick_name"
+                placeholder="e.g. Ross 308" />
+            </td>
+            <td>
+              <input class="inline-input" type="number"
+                [(ngModel)]="row.quantity"
+                placeholder="Qty" />
+            </td>
+            <td>
+              <input class="inline-input" type="number"
+                [(ngModel)]="row.price_per_unit"
+                placeholder="Price/unit" />
+            </td>
+            <td class="amount">
+              Rs. {{ getRowTotal(row) | number:'1.0-0' }}
+            </td>
+            <!-- Bill # is assigned on save; the cell must still exist or the
+                 pending row is one cell short of the header. -->
+            <td></td>
+            <!--
+            <td class="actions">
+              <button class="btn-remove-row"
+                (click)="removePendingRow(i)"
+                title="Remove row">✕</button>
+            </td>
+            -->
+          </tr>
+
+          <!-- EXISTING ENTRIES -->
+          <tr *ngFor="let entry of paginatedEntries"
+            [class.editing]="editingEntryId === entry.entry_id">
+
+            <!-- VIEW MODE -->
+            <ng-container *ngIf="editingEntryId !== entry.entry_id">
+              <td></td>
+              <td>{{ entry.date | dateOnly }}</td>
+              <td>{{ entry.chick_name }}</td>
+              <td>{{ entry.quantity }}</td>
+              <td>Rs. {{ entry.price_per_unit | number:'1.0-0' }}</td>
+              <td class="amount">Rs. {{ entry.total_amount | number:'1.0-0' }}</td>
+              <td>{{ entry.bill_number || '—' }}</td>
+              <!--
+              <td class="actions">
+                <button
+                  class="btn-edit"
+                  [disabled]="isSaving"
+                  (click)="startEditEntry(entry)">
+                  Edit
+                </button>
+                <button
+                  class="btn-delete"
+                  [disabled]="isSaving"
+                  (click)="confirmDeleteEntry(entry.entry_id)">
+                  Delete
+                </button>
+              </td>
+              -->
+            </ng-container>
+
+            <!-- EDIT MODE (disabled — Actions column commented out above)
+            <ng-container *ngIf="editingEntryId === entry.entry_id">
+              <td></td>
+              <td>
+                <input class="inline-input" type="date"
+                  [(ngModel)]="editEntryForm.date" />
+              </td>
+              <td>
+                <input class="inline-input" type="text"
+                  [(ngModel)]="editEntryForm.chick_name" />
+              </td>
+              <td>
+                <input class="inline-input" type="number"
+                  [(ngModel)]="editEntryForm.quantity" />
+              </td>
+              <td>
+                <input class="inline-input" type="number"
+                  [(ngModel)]="editEntryForm.price_per_unit" />
+              </td>
+              <td class="amount">
+                Rs. {{ getEditTotal() | number:'1.0-0' }}
+              </td>
+              <td class="actions">
+                <button
+                  class="btn-save"
+                  [disabled]="isSaving"
+                  (click)="saveEditEntry(entry.entry_id)">
+                  {{ isSaving ? 'Saving…' : 'Save' }}
+                </button>
+                <button
+                  class="btn-cancel-edit"
+                  [disabled]="isSaving"
+                  (click)="cancelEditEntry()">
+                  Cancel
+                </button>
+              </td>
+            </ng-container>
+            -->
+
+          </tr>
+
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="5" class="total-label">Total</td>
+            <td class="total-amount">Rs. {{ traderTotal | number:'1.0-0' }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+      <app-pagination [currentPage]="currentPage" [totalItems]="filteredEntries.length" [pageSize]="pageSize" (pageChange)="currentPage = $event"></app-pagination>
+    </div>
+  </ng-container>
+
+</div>
+
+<!-- ── Confirm Dialogs ─────────────────────────────────────────── -->
+<app-confirm-dialog
+  *ngIf="showDeleteTraderDialog"
+  title="Delete Trader"
+  message="This will delete the supplier and all chick entries. Cannot be undone."
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteTraderConfirmed()"
+  (cancelled)="onDeleteTraderCancelled()"
+/>
+
+<app-confirm-dialog
+  *ngIf="showDeleteEntryDialog"
+  title="Delete Entry"
+  message="Are you sure you want to delete this chick entry?"
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteEntryConfirmed()"
+  (cancelled)="onDeleteEntryCancelled()"
+/>
+
+<app-confirm-dialog
+  *ngIf="showValidationDialog"
+  title="Validation Notice"
+  [message]="validationMessage"
+  confirmText="OK"
+  type="warning"
+  [hideCancel]="true"
+  (confirmed)="showValidationDialog = false"
+  (cancelled)="showValidationDialog = false">
+</app-confirm-dialog>

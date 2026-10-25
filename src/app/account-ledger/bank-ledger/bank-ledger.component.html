@@ -1,0 +1,268 @@
+<div class="ledger-container">
+  <div class="ledger-header">
+    <app-back-link *ngIf="!selectedBank && !isHouse"></app-back-link>
+    <button class="btn-back" (click)="goBack()" *ngIf="selectedBank">← Back</button>
+    <h2>{{ selectedBank ? selectedBank.bank_name + ' - Ledger' : screenTitle }}</h2>
+    <p class="subtitle" *ngIf="!selectedBank">
+      {{ currentFarm?.farm_name }}<ng-container *ngIf="isHouse"> · Your own accounts, not tied to any customer</ng-container>
+    </p>
+    <div class="header-actions" *ngIf="!selectedBank">
+      <button class="btn-primary" (click)="openBankForm()">+ Add Bank Account</button>
+    </div>
+    <div class="header-actions" *ngIf="selectedBank">
+      <button class="btn-primary" (click)="openTransactionForm('deposit')">💰 Deposit</button>
+      <button class="btn-secondary" (click)="openTransactionForm('withdrawal')">💳 Withdraw</button>
+      <button class="btn-secondary" (click)="printReport()">🖨️ Print</button>
+    </div>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading bank accounts...</p>
+  </div>
+
+  <!-- Bank List View -->
+  <div class="bank-list" *ngIf="!isLoading && !selectedBank">
+    <div class="summary-bar">
+      <div class="summary-item">
+        <span class="summary-label">Total Accounts</span>
+        <span class="summary-value">{{ bankAccounts.length }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Total Balance</span>
+        <span class="summary-value bank-balance">Rs. {{ getTotalBalance() | number:'1.0-0' }}</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th *ngIf="!isHouse">Customer</th>
+            <th>Bank Name</th>
+            <th>Account Number</th>
+            <th>Account Holder</th>
+            <th>Current Balance</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let b of bankAccounts">
+            <td class="customer-name" *ngIf="!isHouse">{{ getCustomerName(b.customer_id) }}</td>
+            <td class="bank-name">{{ b.bank_name }}</td>
+            <td>{{ b.account_number || '—' }}</td>
+            <td>{{ b.account_holder || '—' }}</td>
+            <!-- An account that is already overdrawn. Balances could go below
+                 zero before the save-time guard existed and those are kept,
+                 not cleared: shown in red with a warning, and a deposit
+                 clears it. No new save can take an account below zero — see
+                 checkBankBalances() in database.service.ts. The icon goes
+                 INSIDE this cell, so the row's column count is unchanged. -->
+            <td [class.bank-balance]="b.current_balance > 0" [class.negative]="b.current_balance < 0">
+              <span class="overdrawn-icon" *ngIf="b.current_balance < 0"
+                    title="This account is overdrawn. A deposit will clear it.">&#9888;</span>
+              Rs. {{ b.current_balance | number:'1.0-0' }}
+            </td>
+            <td>
+              <button class="btn-view-ledger" (click)="selectBank(b)">View Ledger</button>
+              <button class="btn-edit" (click)="openBankForm(b)">✏️</button>
+              <!-- Delete is offered on the owner's own accounts only. A customer's
+                   account is deleted with the customer, not from here. -->
+              <button class="btn-delete" *ngIf="isHouse" (click)="confirmDelete(b.bank_id, 'bank')">🗑️</button>
+            </td>
+          </tr>
+          <tr *ngIf="bankAccounts.length === 0">
+            <td [attr.colspan]="isHouse ? 5 : 6" class="empty-row">
+              {{ isHouse ? 'No accounts yet. Click "Add Bank Account" to add one of yours.' : 'No bank accounts found' }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Bank Detail View -->
+  <div class="bank-detail" *ngIf="!isLoading && selectedBank">
+    <!-- 🔥 SEARCH BAR for transaction number -->
+    <div class="search-container" style="margin-bottom:16px;">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          class="search-input" 
+          [(ngModel)]="transactionNumberSearch" 
+          (input)="filterLedger()" 
+          placeholder="Search by transaction number (e.g. DEP-0001, WD-0002)..."
+        />
+        <button class="search-clear" *ngIf="transactionNumberSearch" (click)="clearTransactionSearch()">✕</button>
+      </div>
+      <span class="search-results" *ngIf="transactionNumberSearch">
+        Found {{ filteredLedgerEntries.length }} result(s)
+      </span>
+    </div>
+
+    <div class="detail-summary">
+      <div class="summary-item">
+        <span class="summary-label">Total Deposits</span>
+        <span class="summary-value">Rs. {{ getTotalDeposits() | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Total Withdrawals</span>
+        <span class="summary-value">Rs. {{ getTotalWithdrawals() | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Current Balance</span>
+        <span class="summary-value" [class.bank-balance]="getBankBalance() > 0" [class.negative]="getBankBalance() < 0">
+          Rs. {{ getBankBalance() | number:'1.0-0' }}
+        </span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Transaction #</th>   <!-- 🔥 NEW COLUMN -->
+            <th>Description</th>
+            <th>Deposit</th>
+            <th>Withdrawal</th>
+            <th>Balance</th>
+            <th *ngIf="isHouse">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let entry of filteredLedgerEntries">
+            <td>{{ entry.transaction_date | date:'yyyy-MM-dd' }}</td>
+            <td class="transaction-number">{{ entry.transaction_number || '—' }}</td>
+            <td>{{ entry.description || '—' }}</td>
+            <td class="deposit" *ngIf="entry.debit > 0">Rs. {{ entry.debit | number:'1.0-0' }}</td>
+            <td class="deposit" *ngIf="entry.debit === 0">—</td>
+            <td class="withdrawal" *ngIf="entry.credit > 0">Rs. {{ entry.credit | number:'1.0-0' }}</td>
+            <td class="withdrawal" *ngIf="entry.credit === 0">—</td>
+            <td class="balance" [class.negative]="entry.balance < 0">Rs. {{ entry.balance | number:'1.0-0' }}</td>
+            <td *ngIf="isHouse">
+              <button class="btn-delete" *ngIf="canDeleteEntry(entry)"
+                      (click)="confirmDelete(entry.ledger_id, 'entry')">🗑️</button>
+              <span class="linked-note" *ngIf="!canDeleteEntry(entry)"
+                    title="This entry mirrors a payment recorded elsewhere. Delete that payment to reverse it.">🔗</span>
+            </td>
+          </tr>
+          <tr *ngIf="filteredLedgerEntries.length === 0">
+            <td [attr.colspan]="isHouse ? 7 : 6" class="empty-row">
+              {{ transactionNumberSearch ? 'No transactions found matching "' + transactionNumberSearch + '"' : 'No transactions found' }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Bank Form -->
+  <div class="form-overlay" *ngIf="showBankForm">
+    <div class="form-modal">
+      <h4>{{ isEditingBank ? 'Edit Bank Account' : 'Add Bank Account' }}</h4>
+      
+      <!-- Own accounts belong to nobody: no customer picker, and saveBank()
+           forces customer_id to null so one cannot be set by any other route. -->
+      <div class="form-group" *ngIf="!isHouse">
+        <label>Customer *</label>
+        <select class="form-control" [(ngModel)]="bankForm.customer_id">
+          <option [ngValue]="null">Select Customer</option>
+          <option *ngFor="let c of customers" [ngValue]="c.customer_id">
+            {{ c.customer_name }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Bank Name *</label>
+        <input class="form-control" type="text" [(ngModel)]="bankForm.bank_name" placeholder="e.g. HBL, UBL"/>
+      </div>
+      <div class="form-group">
+        <label>Account Number</label>
+        <input class="form-control" type="text" [(ngModel)]="bankForm.account_number" placeholder="Account number"/>
+      </div>
+      <div class="form-group">
+        <label>Account Holder</label>
+        <input class="form-control" type="text" [(ngModel)]="bankForm.account_holder" placeholder="Account holder name"/>
+      </div>
+      <div class="form-group" *ngIf="!isEditingBank">
+        <label>Opening Balance</label>
+        <input class="form-control" type="number" [(ngModel)]="bankForm.opening_balance" min="0" step="1"/>
+      </div>
+      <div class="form-actions">
+        <button class="btn-save" (click)="saveBank()" [disabled]="isSubmitting">
+          {{ isSubmitting ? 'Saving...' : (isEditingBank ? 'Update' : 'Save') }}
+        </button>
+        <button class="btn-cancel" (click)="closeBankForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transaction Form -->
+  <div class="form-overlay" *ngIf="showTransactionForm">
+    <div class="form-modal">
+      <h4>{{ transactionType === 'deposit' ? '💰 Deposit' : '💳 Withdrawal' }}</h4>
+      <!-- Says the cash effect outright, because it is the whole point of the
+           entry and the client had no way to know it: on one of HIS OWN
+           accounts this form is the only way in the app to move money between
+           the drawer and a bank, so Cash in Hand follows it. A customer's
+           deposit account is that customer's money and moves no cash of his. -->
+      <p class="form-hint" *ngIf="isHouse">
+        {{ transactionType === 'deposit'
+            ? 'Cash in Hand will go DOWN by this amount — the notes leave the drawer and land in this account.'
+            : 'Cash in Hand will go UP by this amount — the money comes out of this account and into the drawer.' }}
+      </p>
+      <p class="form-hint" *ngIf="!isHouse">
+        This is the customer's own deposit account, so Cash in Hand is not affected.
+      </p>
+      <div class="form-group">
+        <label>Bank</label>
+        <input class="form-control" [value]="selectedBank.bank_name" disabled/>
+      </div>
+      <div class="form-group" *ngIf="!isHouse">
+        <label>Customer</label>
+        <input class="form-control" [value]="getCustomerName(selectedBank.customer_id)" disabled/>
+      </div>
+      <div class="form-group">
+        <label>Current Balance</label>
+        <input class="form-control" [value]="'Rs. ' + (getBankBalance() | number:'1.0-0')" disabled/>
+      </div>
+      <div class="form-group">
+        <label>Amount *</label>
+        <input class="form-control" type="number" [(ngModel)]="transactionAmount" min="0" step="1"/>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input class="form-control" type="date" [(ngModel)]="transactionDate"/>
+      </div>
+      <div class="form-group">
+        <label>Note (Optional)</label>
+        <input class="form-control" type="text" [(ngModel)]="transactionNote" placeholder="Transaction note"/>
+      </div>
+      <div class="form-actions">
+        <button class="btn-save" (click)="submitTransaction()" [disabled]="isSubmitting">
+          {{ isSubmitting ? 'Processing...' : 'Confirm ' + (transactionType === 'deposit' ? 'Deposit' : 'Withdrawal') }}
+        </button>
+        <button class="btn-cancel" (click)="closeTransactionForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-delete-code-dialog
+  *ngIf="showDeleteCodeDialog"
+  (verified)="onDeleteCodeVerified()"
+  (cancelled)="onDeleteCodeCancelled()"/>
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  [title]="deleteType === 'bank' ? 'Delete Bank Account' : 'Delete Entry'"
+  [message]="deleteType === 'bank' ? 'Are you sure you want to delete this bank account? All transactions will be deleted.' : 'Are you sure you want to delete this transaction?'"
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"/>

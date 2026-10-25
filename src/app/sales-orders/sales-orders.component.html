@@ -1,0 +1,329 @@
+<div class="pos-root">
+  <!-- ========== BILL LIST MODE ========== -->
+  <ng-container *ngIf="viewMode === 'list'">
+    <div class="module-container">
+      <div class="module-header">
+        <div>
+          <h3>Sales Orders</h3>
+          <p class="subtitle">{{ currentFarm?.farm_name }}</p>
+        </div>
+        <button class="btn-primary" (click)="onCreateNewBill()" [disabled]="isLoading">+ New Bill</button>
+      </div>
+
+      <div class="loading-state" *ngIf="isLoading">
+        <div class="spinner"></div>
+        <p>Loading sales orders...</p>
+      </div>
+
+      <div class="qbar" *ngIf="!isLoading">
+        <div class="qbar-field">
+          <span>🔍</span>
+          <input
+            class="qbar-input"
+            type="text"
+            placeholder="Search bill number or customer..."
+            [(ngModel)]="billSearchTerm"
+            (input)="onBillSearch()"
+            (keydown.enter)="onBillSearch()"
+          />
+          <button class="search-clear-btn" *ngIf="billSearchTerm" (click)="clearSearch()">✕</button>
+        </div>
+        <span class="search-results" *ngIf="billSearchTerm && filteredBills.length > 0">
+          Found {{ filteredBills.length }} result(s)
+        </span>
+      </div>
+
+      <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+      <div class="empty-state" *ngIf="!isLoading && filteredBills.length === 0 && !billSearchTerm">
+        <p>No bills yet. Click "New Bill" to create one.</p>
+      </div>
+
+      <div class="empty-state" *ngIf="!isLoading && filteredBills.length === 0 && billSearchTerm">
+        <p>No bills found matching "{{ billSearchTerm }}"</p>
+        <button class="btn-secondary" (click)="clearSearch()">Clear Search</button>
+      </div>
+
+      <div class="bill-list" *ngIf="!isLoading && filteredBills.length > 0">
+        <div class="bill-item" *ngFor="let bill of paginatedBills" (click)="selectBill(bill)">
+          <div class="bill-left">
+            <span class="bill-num">{{ bill.bill_number }}</span>
+            <span class="bill-cust">{{ bill.customer_name || 'Walk-in' }}</span>
+          </div>
+          <div class="bill-right">
+            <span class="bill-date">{{ bill.bill_date | dateOnly }}</span>
+            <span class="bill-amt">Rs. {{ bill.total_amount | number:'1.0-0' }}</span>
+            <span class="payment-badge"
+              [class.bank]="bill.payment_type === 'bank'"
+              [class.cash]="bill.payment_type === 'cash' || !bill.payment_type"
+              [class.internal]="bill.payment_type === 'internal'">
+              {{ billPaymentLabel(bill) }}
+            </span>
+            <span class="bill-status"
+              [class.paid]="bill.amount_paid >= bill.total_amount"
+              [class.unpaid]="bill.amount_paid < bill.total_amount">
+              {{ bill.amount_paid >= bill.total_amount ? 'Paid' : 'Unpaid' }}
+            </span>
+            <button class="bill-delete" (click)="confirmDeleteBill($event, bill.bill_id)" type="button">Delete</button>
+          </div>
+        </div>
+      </div>
+
+      <app-pagination
+        *ngIf="!isLoading && filteredBills.length > 0"
+        [currentPage]="currentPage"
+        [totalItems]="filteredBills.length"
+        [pageSize]="pageSize"
+        (pageChange)="currentPage = $event">
+      </app-pagination>
+    </div>
+  </ng-container>
+
+  <!-- ========== CREATE / EDIT MODE ========== -->
+  <ng-container *ngIf="viewMode !== 'list'">
+    <div class="pos-layout">
+
+      <!-- LEFT: Cart -->
+      <div class="pos-left">
+        <div class="pos-left-header">
+          <button class="back-btn" (click)="backToList()">← Back</button>
+          <h3>{{ isEditMode ? 'Edit Bill' : 'New Bill' }}</h3>
+        </div>
+
+        <div class="error-message" *ngIf="products.length === 0" style="margin-bottom:8px;">
+          No products in inventory yet. Add products in the Inventory page before creating a bill.
+        </div>
+
+        <div class="psearch-wrap">
+          <div class="psf">
+            <span>🔍</span>
+            <input
+              #productSearchInput
+              class="psf-input"
+              type="text"
+              placeholder="Search & add product..."
+              [(ngModel)]="productSearchTerm"
+              (input)="onProductSearch()"
+              (keydown)="onProductSearchKeydown($event)"
+              autocomplete="off"
+            />
+          </div>
+          <div class="pdrop" *ngIf="showProductDropdown">
+            <div class="pd-row"
+                 *ngFor="let p of productOptions; let i = index"
+                 [style.background]="i === highlightedIndex ? '#eef6ff' : ''"
+                 [style.opacity]="(p.calculated_stock || 0) <= 0 ? 0.5 : 1"
+                 (mouseenter)="highlightedIndex = i"
+                 (click)="selectProductOption(p)">
+              <span class="pd-name">{{ p.product_name }}</span>
+              <span class="pd-price">Rs. {{ p.selling_price | number:'1.0-0' }}</span>
+              <span class="pd-stock">{{ (p.calculated_stock || 0) <= 0 ? 'Out of stock' : (p.calculated_stock + ' left') }}</span>
+            </div>
+            <div class="pdrop-empty" *ngIf="productOptions.length === 0">No products found</div>
+          </div>
+        </div>
+
+        <div class="cart-scroll">
+          <table class="cart-tbl" *ngIf="gridItems.length > 0">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of gridItems">
+                <td>
+                  <div style="font-weight: 500;">{{ item.productName }}</div>
+                  <select *ngIf="item.batches && item.batches.length > 0"
+                          class="inline-input"
+                          style="font-size: 11px; padding: 2px 4px; margin-top: 4px; width: 100%;"
+                          [(ngModel)]="item.selectedBatchId">
+                    <option [ngValue]="null">Auto (FIFO)</option>
+                    <option *ngFor="let b of item.batches" [ngValue]="b.batch_id">
+                      {{ b.batch_code || b.batch_id }} ({{ b.quantity }} left)
+                    </option>
+                  </select>
+                  <div *ngIf="!item.batches || item.batches.length === 0"
+                       style="font-size: 10px; color: #888; margin-top: 4px;">No active batches</div>
+                </td>
+                <td>
+  <div class="stepper">
+    <button class="st-btn" (click)="item.quantity = item.quantity > 1 ? item.quantity - 1 : 1; recalcItem(item)">−</button>
+    <input class="st-input" type="number" [(ngModel)]="item.quantity"
+               (input)="recalcItem(item)" (focus)="selectInputText($event)" placeholder="1" min="1"/>
+    <button class="st-btn" (click)="item.quantity = item.quantity + 1; recalcItem(item)">+</button>
+  </div>
+</td>
+                <td>
+                  <input class="price-input" type="number" [(ngModel)]="item.unitPrice" (input)="recalcItem(item)" (focus)="selectInputText($event)"/>
+                </td>
+                <td class="mono">Rs. {{ item.totalPrice | number:'1.0-0' }}</td>
+                <td><button class="rm-btn" (click)="removeItem(item)">✕</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="empty-cart" *ngIf="gridItems.length === 0">
+            <p>Cart is empty</p>
+            <span>Search a product above to add</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Checkout -->
+      <div class="pos-right">
+
+        <!-- ── Customer block ─────────────────────────────── -->
+        <div class="rblock">
+          <p class="rblock-title">Customer</p>
+          <div class="ctype-row">
+            <button class="ct-opt" [class.ct-on]="customerType==='walkin'" (click)="onCustomerTypeChange('walkin')">Walk-in</button>
+            <button class="ct-opt" [class.ct-on]="customerType==='regular'" (click)="onCustomerTypeChange('regular')">Regular</button>
+            <button class="ct-opt" [class.ct-on]="customerType==='internal'" (click)="onCustomerTypeChange('internal')">🏠 Own Farm</button>
+          </div>
+
+          <!-- Regular customer dropdown -->
+          <div *ngIf="customerType==='regular'" style="margin-top:8px">
+            <select class="inline-input" [(ngModel)]="selectedCustomerId" (change)="onCustomerSelect()">
+              <option [ngValue]="null">Select Customer</option>
+              <option *ngFor="let c of customers" [ngValue]="c.customer_id">{{ c.customer_name }}</option>
+            </select>
+          </div>
+
+          <!-- Walk-in label -->
+          <div *ngIf="customerType==='walkin'" class="walkin-badge">Walk-in customer</div>
+
+          <!-- Internal Transfer targets -->
+          <div *ngIf="customerType==='internal'" style="margin-top:8px">
+            <label style="font-size:12px;color:#888;display:block;margin-bottom:4px">Target Module</label>
+            <select class="inline-input" [(ngModel)]="internalTargetModule"
+                    (change)="loadInternalTargets(); onFormChange()" style="margin-bottom:8px">
+              <option value="broiler">🐔 Broiler</option>
+              <option value="layer">🥚 Layer</option>
+            </select>
+            <label style="font-size:12px;color:#888;display:block;margin-bottom:4px">Target Flock/Batch</label>
+            <select class="inline-input" [(ngModel)]="internalTargetFlockId" (change)="errorMessage=''; onFormChange()">
+              <option [ngValue]="null">Select Flock/Batch</option>
+              <option *ngFor="let f of internalFlocks" [ngValue]="f.flock_id || f.batch_id">
+                {{ f.flock_name || f.batch_name }}
+              </option>
+            </select>
+            <div class="walkin-badge" style="margin-top:8px;background:#e8f5e9;color:#1a5c38;">
+              🏠 Own-farm sale — cost booked to the farm, and the farm owes the amount
+              left unpaid below
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Received Into (all customer types except own-farm) ────────── -->
+        <!--
+          One dropdown for both kinds of account. "Your accounts" are the
+          owner's own (customer_id IS NULL) and take a real deposit keyed to
+          this bill; "Customer deposit accounts" is the money this customer
+          already holds with the farm, and picking it draws that down — the axis
+          this screen has always had.
+
+          Own-farm bills have no selector at all: they are settled on the
+          Internal Settlement screen, which names its own FROM and TO accounts,
+          and a receipt here as well would record the same money twice.
+        -->
+        <div class="rblock" *ngIf="customerType !== 'internal'">
+          <p class="rblock-title">Received Into</p>
+          <select class="inline-input" [(ngModel)]="receivedInto" (change)="errorMessage=''; onFormChange()">
+            <option value="cash">💰 Cash</option>
+            <optgroup label="Your accounts" *ngIf="houseBanks.length > 0">
+              <option *ngFor="let b of houseBanks" [value]="'house:' + b.bank_id">
+                {{ bankOptionLabel(b) }}
+              </option>
+            </optgroup>
+            <optgroup label="Customer deposit accounts"
+                      *ngIf="customerType === 'regular' && selectedCustomerId && customerHasBank">
+              <option [value]="'customer:' + customerBankId">
+                {{ selectedCustomerName }} (Rs. {{ customerBankBalance | number:'1.0-0' }})
+              </option>
+            </optgroup>
+          </select>
+          <div class="payment-methods" style="margin-top:8px"
+               *ngIf="customerType === 'regular' && selectedCustomerId && !customerHasBank">
+            <button class="pm-opt create-bank"
+                    (click)="createBankAccount()">➕ Create Deposit Account</button>
+          </div>
+        </div>
+
+        <!-- ── Order Summary (all customer types) ───────────── -->
+        <div class="rblock">
+          <p class="rblock-title">Order Summary</p>
+          <div class="sum-rows">
+            <div class="sum-row"><span>Items</span><span>{{ gridItems.length }}</span></div>
+            <div class="sum-row"><span>Subtotal</span><span class="mono">Rs. {{ cartSubtotal | number:'1.0-0' }}</span></div>
+            <div class="sum-row sum-total"><span>Total</span><span class="mono">Rs. {{ cartSubtotal | number:'1.0-0' }}</span></div>
+            <div class="sum-row" *ngIf="customerType === 'internal'" style="color:#1a5c38;font-size:12px;margin-top:4px">
+              <span>✅ Cost booked in the {{ internalTargetModule === 'broiler' ? 'Broiler' : 'Layer' }} module</span>
+            </div>
+            <div class="sum-row" *ngIf="customerType === 'internal' && cartSubtotal - paidAmount > 0"
+                 style="color:#b26a00;font-size:12px;margin-top:2px">
+              <span>🏠 Farm will owe Rs. {{ cartSubtotal - paidAmount | number:'1.0-0' }} until settled</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Payment Amount (all customer types) ──────────── -->
+        <div class="rblock">
+          <p class="rblock-title">Payment</p>
+          <label class="paid-lbl">Amount Received</label>
+          <div class="paid-field">
+            <span>Rs.</span>
+            <input class="paid-input" type="number" [(ngModel)]="paidAmount"
+                   (input)="onPaidAmountChange()" placeholder="0"/>
+          </div>
+          <div class="payment-shortcuts">
+            <button type="button" class="pay-shortcut paid" (click)="markPaid()">Paid</button>
+            <button *ngIf="customerType !== 'walkin'" type="button" class="pay-shortcut unpaid" (click)="markUnpaid()">Unpaid</button>
+          </div>
+          <div class="change-row" *ngIf="paidAmount > cartSubtotal">
+            Change: <strong>Rs. {{ paidAmount - cartSubtotal | number:'1.0-0' }}</strong>
+          </div>
+          <div class="change-row remaining" *ngIf="paidAmount < cartSubtotal">
+            Remaining: <strong>Rs. {{ cartSubtotal - paidAmount | number:'1.0-0' }}</strong>
+          </div>
+          <div class="change-row exact-ok" *ngIf="paidAmount === cartSubtotal && cartSubtotal > 0">
+            Exact amount!
+          </div>
+        </div>
+
+        <div class="error-message" *ngIf="errorMessage" style="margin-bottom:8px;">{{ errorMessage }}</div>
+
+        <!-- ── Actions ────────────────────────────────────── -->
+        <div class="rblock r-actions">
+          <button class="btn-create" (click)="saveBill()" [disabled]="isSubmitting || gridItems.length === 0">
+            {{ isSubmitting ? 'Saving...' : (isEditMode ? 'Update Bill' : (customerType === 'internal' ? 'Transfer to Farm' : 'Save Bill')) }}
+          </button>
+          <button class="btn-print" (click)="saveAndPrint()"
+                  [disabled]="isSubmitting || gridItems.length === 0"
+                  style="margin-top:8px">🖨️ Save & Print</button>
+          <button class="btn-cancel-edit" (click)="backToList()" style="margin-top:8px;width:100%">Cancel</button>
+        </div>
+
+      </div>
+    </div>
+  </ng-container>
+</div>
+
+<app-delete-code-dialog
+  *ngIf="showDeleteCodeDialog"
+  (verified)="onDeleteCodeVerified()"
+  (cancelled)="onDeleteCodeCancelled()"
+/>
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Bill"
+  message="This will delete the bill and restore its product stock."
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"
+/>

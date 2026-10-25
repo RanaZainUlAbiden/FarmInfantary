@@ -1,0 +1,192 @@
+<div class="ledger-container">
+  <div class="ledger-header">
+    <h2>📊 Account Ledger</h2>
+    <p class="subtitle">{{ currentFarm?.farm_name }}</p>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading dashboard...</p>
+  </div>
+
+  <div class="dashboard-grid" *ngIf="!isLoading">
+    <!-- Customer Ledger Box -->
+    <div class="ledger-card customer" (click)="navigateTo('customer-ledger')">
+      <div class="card-header">
+        <span class="card-icon">👤</span>
+        <h3>Customer Ledger</h3>
+      </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-label">Total Customers</span>
+          <span class="stat-value">{{ customerStats.total }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Total Outstanding</span>
+          <span class="stat-value outstanding">Rs. {{ customerStats.outstanding | number:'1.0-0' }}</span>
+        </div>
+      </div>
+      <div class="card-recent" *ngIf="recentCustomers.length > 0">
+        <p class="recent-label">Recent Customers</p>
+        <div class="recent-list">
+          <div class="recent-item" *ngFor="let c of recentCustomers" (click)="viewCustomerLedger(c.customer_id); $event.stopPropagation()">
+            <span class="recent-name">{{ c.customer_name }}</span>
+            <span class="recent-balance" [class.positive]="c.outstanding_balance > 0" [class.zero]="c.outstanding_balance === 0">
+              Rs. {{ c.outstanding_balance | number:'1.0-0' }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="card-action">
+        <button class="btn-view">View All →</button>
+      </div>
+    </div>
+
+    <!-- Supplier Ledger Box -->
+    <div class="ledger-card supplier" (click)="navigateTo('supplier-ledger')">
+      <div class="card-header">
+        <span class="card-icon">🏢</span>
+        <h3>Supplier Ledger</h3>
+      </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-label">Total Suppliers</span>
+          <span class="stat-value">{{ supplierStats.total }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Total Payable</span>
+          <span class="stat-value payable">Rs. {{ supplierStats.outstanding | number:'1.0-0' }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Total Purchased</span>
+          <span class="stat-value">Rs. {{ supplierStats.purchased | number:'1.0-0' }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Total Paid</span>
+          <span class="stat-value paid">Rs. {{ supplierStats.paid | number:'1.0-0' }}</span>
+        </div>
+      </div>
+
+      <!-- Which bank each supplier payment came out of. Cash is a row of its
+           own; a payment with no account recorded is honestly cash. -->
+      <div class="card-recent" *ngIf="supplierPaymentAccounts.length > 0">
+        <p class="recent-label">Paid From</p>
+        <div class="recent-list">
+          <div class="recent-item" *ngFor="let a of supplierPaymentAccounts">
+            <span class="recent-name">{{ accountLabel(a) }}</span>
+            <span class="recent-balance positive">Rs. {{ a.total_paid | number:'1.0-0' }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-recent" *ngIf="recentSuppliers.length > 0">
+        <p class="recent-label">Recent Suppliers</p>
+        <div class="recent-list">
+          <div class="recent-item" *ngFor="let s of recentSuppliers" (click)="viewSupplierLedger(s.supplier_id); $event.stopPropagation()">
+            <span class="recent-name">{{ s.supplier_name }}</span>
+            <span class="recent-balance" [class.positive]="s.outstanding_balance > 0" [class.zero]="s.outstanding_balance === 0">
+              Rs. {{ s.outstanding_balance | number:'1.0-0' }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="card-action">
+        <button class="btn-view">View All →</button>
+      </div>
+    </div>
+
+    <!-- Supplier Accounts Box -->
+    <!-- The entity view of the same rows the card above summarises: one card
+         per supplier, click to drill in. A SIBLING of Supplier Ledger, not a
+         replacement — a bank account screen next to a bank statement. -->
+    <div class="ledger-card supplier" (click)="navigateTo('supplier-accounts')">
+      <div class="card-header">
+        <span class="card-icon">🏭</span>
+        <h3>Supplier Accounts</h3>
+      </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-label">Total Suppliers</span>
+          <span class="stat-value">{{ supplierStats.total }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Outstanding Payable</span>
+          <span class="stat-value payable">Rs. {{ supplierStats.outstanding | number:'1.0-0' }}</span>
+        </div>
+      </div>
+      <div class="card-recent" *ngIf="recentSuppliers.length > 0">
+        <p class="recent-label">Open a supplier</p>
+        <div class="recent-list">
+          <div class="recent-item" *ngFor="let s of recentSuppliers" (click)="viewSupplierAccount(s.supplier_id); $event.stopPropagation()">
+            <span class="recent-name">{{ s.supplier_name }}</span>
+            <span class="recent-balance" [class.positive]="s.outstanding_balance > 0" [class.zero]="s.outstanding_balance === 0">
+              Rs. {{ s.outstanding_balance | number:'1.0-0' }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="card-action">
+        <button class="btn-view">View Accounts →</button>
+      </div>
+    </div>
+
+    <!-- Bank Ledger Box -->
+    <div class="ledger-card bank" (click)="navigateTo('bank-ledger')">
+      <div class="card-header">
+        <span class="card-icon">🏦</span>
+        <h3>Bank Ledger</h3>
+      </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-label">Total Accounts</span>
+          <span class="stat-value">{{ bankStats.total }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Total Balance</span>
+          <span class="stat-value bank-balance">Rs. {{ bankStats.balance | number:'1.0-0' }}</span>
+        </div>
+      </div>
+      <div class="card-action">
+        <button class="btn-view">View All →</button>
+      </div>
+    </div>
+
+    <!-- MANAGE THE PARTIES THEMSELVES — the roster behind every card above.
+         Here because the two screens now return HERE with their back button,
+         and a back button needs a parent that actually offers the way in; a
+         sidebar-only screen had neither. They are rosters, not ledgers, so
+         they carry a count and no money figure. -->
+    <div class="ledger-card customer" (click)="navigateTo('customer-management')">
+      <div class="card-header">
+        <span class="card-icon">👥</span>
+        <h3>Customers</h3>
+      </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-label">On the roster</span>
+          <span class="stat-value">{{ customerStats.total }}</span>
+        </div>
+      </div>
+      <div class="card-action">
+        <button class="btn-view">Manage Customers →</button>
+      </div>
+    </div>
+
+    <div class="ledger-card supplier" (click)="navigateTo('supplier-management')">
+      <div class="card-header">
+        <span class="card-icon">🏭</span>
+        <h3>Suppliers</h3>
+      </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-label">On the roster</span>
+          <span class="stat-value">{{ supplierStats.total }}</span>
+        </div>
+      </div>
+      <div class="card-action">
+        <button class="btn-view">Manage Suppliers →</button>
+      </div>
+    </div>
+  </div>
+</div>

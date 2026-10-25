@@ -1,0 +1,18 @@
+// Shared with receive-voucher / payment-voucher: this screen is the same shape
+// as those two — a dated list of money events with a modal form — and must not
+// drift away from them visually.
+@use '../shared/styles/voucher-screen';
+
+// The one thing the vouchers have no use for: a badge saying this settlement
+// moved nothing between accounts. Matches the `.row-note` on the two ledger
+// screens, which marks a row whose delete lives somewhere else, so the same
+// kind of aside reads the same way wherever it appears.
+.row-note {
+  font-size: 11px;
+  color: #888;
+  background: #f3f4f6;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-left: 6px;
+  white-space: nowrap;
+}

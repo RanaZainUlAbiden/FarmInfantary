@@ -1,0 +1,245 @@
+<!-- ── CATEGORY CARD GRID ────────────────────────────────────── -->
+<div class="module-container" *ngIf="!selectedCategory">
+  <div class="module-header">
+    <div>
+      <h3>Personal Expenses</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }} · Account-wide, across all farms</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="openAddCategoryForm()" [disabled]="isLoading">+ Add Category</button>
+      <button class="btn-primary" (click)="openAddForm()" [disabled]="isLoading || categories.length === 0">
+        + Add Entry
+      </button>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <label>
+      From
+      <input type="date" [(ngModel)]="fromDate" (change)="applyFilter()"/>
+    </label>
+    <label>
+      To
+      <input type="date" [(ngModel)]="toDate" (change)="applyFilter()"/>
+    </label>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="loading-state" *ngIf="isLoading"><p>Loading...</p></div>
+
+  <ng-container *ngIf="!isLoading">
+    <div class="summary-row" *ngIf="categories.length > 0">
+      <div class="summary-card">
+        <span class="summary-label">Categories</span>
+        <span class="summary-value">{{ categories.length }}</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Entries (Selected Range)</span>
+        <span class="summary-value">{{ totalEntries }}</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Total (Selected Range)</span>
+        <span class="summary-value">Rs. {{ grandTotal | number:'1.0-0' }}</span>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="categories.length === 0">
+      <p>No categories yet. Click "Add Category" to create your first one.</p>
+    </div>
+
+    <div class="card-grid" *ngIf="categories.length > 0">
+      <div class="category-card" *ngFor="let c of categories" (click)="openCategory(c)">
+        <div class="card-top">
+          <h4 class="category-name">{{ c.category_name }}</h4>
+          <div class="card-actions">
+            <button class="btn-edit" (click)="openRenameCategoryForm(c, $event)">Rename</button>
+            <button class="btn-delete" (click)="confirmDeleteCategory(c.category_id, $event)">Delete</button>
+          </div>
+        </div>
+
+        <div class="card-figures">
+          <div class="figure">
+            <span class="figure-label">Total Spent</span>
+            <span class="figure-value">Rs. {{ c.total_spent | number:'1.0-0' }}</span>
+          </div>
+          <div class="figure">
+            <span class="figure-label">Entries</span>
+            <span class="figure-value">{{ c.entry_count }}</span>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <span class="open-hint">View →</span>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>
+
+<!-- ── CATEGORY DETAIL VIEW ──────────────────────────────────── -->
+<div class="module-container" *ngIf="selectedCategory">
+  <div class="module-header">
+    <div>
+      <button class="btn-back" (click)="closeCategory()">← Personal Expenses</button>
+      <h3>{{ selectedCategory.category_name }}</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }} · {{ fromDate }} to {{ toDate }}</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary" (click)="openAddForm()">+ Add Entry</button>
+      <button class="btn-secondary" (click)="printCategoryReport()" [disabled]="entries.length === 0">🖨️ Print</button>
+      <button class="btn-edit" (click)="openRenameCategoryForm(selectedCategory)">Rename</button>
+      <button class="btn-delete" (click)="confirmDeleteCategory(selectedCategory.category_id)">Delete</button>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <label>
+      From
+      <input type="date" [(ngModel)]="fromDate" (change)="applyFilter()"/>
+    </label>
+    <label>
+      To
+      <input type="date" [(ngModel)]="toDate" (change)="applyFilter()"/>
+    </label>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="error-message" *ngIf="detailError">{{ detailError }}</div>
+
+  <div class="summary-row">
+    <div class="summary-card">
+      <span class="summary-label">Total (Selected Range)</span>
+      <span class="summary-value">Rs. {{ categoryTotal | number:'1.0-0' }}</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-label">Entries</span>
+      <span class="summary-value">{{ entries.length }}</span>
+    </div>
+  </div>
+
+  <div class="loading-state" *ngIf="isLoadingEntries"><p>Loading entries...</p></div>
+
+  <ng-container *ngIf="!isLoadingEntries">
+    <div class="empty-state" *ngIf="entries.length === 0">
+      <p>No entries in this category for the selected range. Click "Add Entry" to record one.</p>
+    </div>
+
+    <div class="table-card" *ngIf="entries.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Amount</th>
+            <th>Paid From</th>
+            <th>Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let e of entries">
+            <td>{{ e.date | dateOnly }}</td>
+            <td>{{ e.description || '—' }}</td>
+            <td class="amount">Rs. {{ e.amount | number:'1.0-0' }}</td>
+            <td>{{ paymentSourceLabel(e) }}</td>
+            <td>{{ e.notes || '—' }}</td>
+            <td class="actions">
+              <button class="btn-edit" (click)="openEditForm(e)">Edit</button>
+              <button class="btn-delete" (click)="confirmDelete(e.pexpense_id)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td></td>
+            <td class="amount">Rs. {{ categoryTotal | number:'1.0-0' }}</td>
+            <td colspan="3"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </ng-container>
+</div>
+
+<!-- ── MODALS ────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showCategoryForm">
+  <div class="modal-card">
+    <h4>{{ editingCategoryId ? 'Rename Category' : 'Add Category' }}</h4>
+    <div class="error-message" *ngIf="categoryError">{{ categoryError }}</div>
+
+    <input class="inline-input" type="text" [(ngModel)]="categoryForm.category_name" placeholder="Category name"/>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="cancelCategoryForm()">Cancel</button>
+      <button class="btn-primary" (click)="saveCategoryForm()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showForm">
+  <div class="modal-card">
+    <h4>{{ editingId ? 'Edit Entry' : 'Add Entry' }}</h4>
+    <div class="error-message" *ngIf="formError">{{ formError }}</div>
+
+    <input class="inline-input" type="date" [(ngModel)]="form.date"/>
+
+    <select class="inline-input" [(ngModel)]="form.category_id">
+      <option [ngValue]="null">Select category</option>
+      <option *ngFor="let c of categories" [ngValue]="c.category_id">{{ c.category_name }}</option>
+    </select>
+
+    <input class="inline-input" type="text" [(ngModel)]="form.description" placeholder="Description"/>
+    <input class="inline-input" type="number" [(ngModel)]="form.amount" placeholder="Amount"/>
+
+    <!-- Choosing Bank posts a real withdrawal against that account. On an edit,
+         changing any of amount, date or account moves the withdrawal with it. -->
+    <label class="field-label">Paid from</label>
+    <select class="inline-input" [(ngModel)]="form.payment_source"
+            (ngModelChange)="form.bank_id = null; formError = ''">
+      <option value="cash">Cash</option>
+      <option value="bank" [disabled]="!hasHouseBanks">Bank</option>
+    </select>
+    <select class="inline-input" *ngIf="form.payment_source === 'bank'" [(ngModel)]="form.bank_id">
+      <option [ngValue]="null">Select bank account</option>
+      <option *ngFor="let b of houseBanks" [ngValue]="b.bank_id">
+        {{ bankOptionLabel(b) }}
+        (Rs. {{ b.current_balance | number:'1.0-0' }})
+      </option>
+    </select>
+    <p class="field-hint" *ngIf="form.payment_source === 'bank' && form.amount > 0">
+      This records a withdrawal of Rs. {{ form.amount | number:'1.0-0' }} against that account.
+    </p>
+    <p class="field-hint" *ngIf="!hasHouseBanks">
+      To pay from a bank, add one of your own accounts under Overview &gt; Bank first.
+    </p>
+
+    <textarea class="inline-input" [(ngModel)]="form.notes" placeholder="Notes (optional)" rows="2"></textarea>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="cancelForm()">Cancel</button>
+      <button class="btn-primary" (click)="saveForm()">Save</button>
+    </div>
+  </div>
+</div>
+
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Expense"
+  message="Are you sure? This cannot be undone."
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"/>
+
+<app-confirm-dialog
+  *ngIf="showDeleteCategoryDialog"
+  title="Delete Category"
+  message="A category can only be deleted once it has no entries left. Delete it?"
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteCategoryConfirmed()"
+  (cancelled)="onDeleteCategoryCancelled()"/>

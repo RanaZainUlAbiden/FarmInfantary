@@ -1,0 +1,171 @@
+<div class="app-layout" [class.has-license-banner]="licenseExpired">
+
+  <!-- Licence expiry banner. Deliberately non-destructive: it never navigates
+       on its own, so in-progress forms survive and can still be saved. -->
+  <div class="license-expired-banner" *ngIf="licenseExpired">
+    <span class="banner-icon">⚠️</span>
+    <span class="banner-text">{{ licenseExpiredMessage }}</span>
+    <button class="btn-banner-activate" (click)="navigateToActivation()">Activate Now</button>
+  </div>
+
+  <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
+
+    <div class="sidebar-header" (click)="toggleSidebar()">
+      <div class="farm-logo">
+        <span><img src="logo.png" alt=""></span>
+      </div>
+      <div class="farm-info" *ngIf="!sidebarCollapsed">
+        <h3>{{ currentFarm?.farm_name }}</h3>
+        <p>Farm ID: {{ currentFarm?.farm_id }}</p>
+      </div>
+      <div class="collapse-icon" *ngIf="!sidebarCollapsed">‹</div>
+      <div class="collapse-icon expanded" *ngIf="sidebarCollapsed">›</div>
+    </div>
+
+    <!-- License Status Warning -->
+    <div class="license-status-bar" *ngIf="!sidebarCollapsed">
+      <div class="license-status" [class.expired]="showLicenseWarning" [class.active]="!showLicenseWarning && isLicenseActivated">
+        <span class="status-icon">{{ isLicenseActivated ? '✅' : (showLicenseWarning ? '⚠️' : '🚀') }}</span>
+        <span class="status-text">{{ licenseStatus }}</span>
+      </div>
+      <div class="license-activate" *ngIf="showLicenseWarning">
+        <button class="btn-activate-small" (click)="navigateToActivation()">Activate Now</button>
+      </div>
+    </div>
+
+    <div class="unit-selector" *ngIf="!sidebarCollapsed && !isDistributionMode && !isOverviewMode">
+      <div class="unit-label">Active Farm</div>
+      <div class="unit-dropdown-trigger"
+        (click)="toggleUnitDropdown($event)">
+        <span>{{ currentUnit() ? currentUnit().unit_name : (units().length === 0 ? 'No farms yet' : 'No Farm') }}</span>
+        <span class="arrow" [class.open]="showUnitDropdown">▼</span>
+      </div>
+      <div class="unit-dropdown" *ngIf="showUnitDropdown"
+        (click)="$event.stopPropagation()">
+        <div
+          class="unit-option"
+          *ngFor="let unit of units()"
+          (click)="selectUnit(unit)"
+          [class.active]="currentUnit()?.unit_id === unit.unit_id">
+          <span>{{ unit.unit_name }}</span>
+          <span class="unit-status" [class.closed]="unit.status === 'closed'">
+            {{ unit.status }}
+          </span>
+        </div>
+        <div class="unit-option no-units" *ngIf="units().length === 0">
+          <span>No farms yet — add one from the Farms page</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flock-selector" *ngIf="!sidebarCollapsed && !isDistributionMode && !isOverviewMode">
+      <div class="flock-label">{{ isLayerMode ? 'Active Batch' : 'Active Flock' }}</div>
+      <div class="flock-dropdown-trigger"
+        (click)="toggleFlockDropdown($event)">
+        <span>{{ currentFlock() ? currentFlock().flock_name : (isLayerMode ? 'No Batch' : 'No Flock') }}</span>
+        <span class="arrow" [class.open]="showFlockDropdown">▼</span>
+      </div>
+      <div class="flock-dropdown" *ngIf="showFlockDropdown"
+        (click)="$event.stopPropagation()">
+        <div
+          class="flock-option"
+          *ngFor="let item of dropdownItems"
+          (click)="isLayerMode ? selectBatch(item) : selectFlock(item)"
+          [class.active]="isLayerMode ? currentFlock()?.batch_id === item.batch_id : (!currentFlock()?.batch_id && currentFlock()?.flock_id === item.flock_id)">
+          <span>{{ item.flock_name || item.batch_name }}</span>
+          <span class="flock-status" [class.closed]="item.status === 'closed'">
+            {{ item.status }}
+          </span>
+        </div>
+        <div class="flock-option add-new" (click)="goToFlockManagement()">
+          <span>+ {{ isLayerMode ? 'Manage Batches' : 'Manage Flocks' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <!-- An "Add ..." shortcut shares its route with the management item
+           beside it, so only the plain item takes the active state. -->
+      <div
+        class="nav-item"
+        *ngFor="let item of menuItems"
+        [class.active]="activeRoute === item.route && !item.queryParams"
+        (click)="navigate(item.route, item.queryParams)"
+        [title]="sidebarCollapsed ? item.label : ''">
+        <span class="nav-icon">{{ item.icon }}</span>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">{{ item.label }}</span>
+      </div>
+
+      <ng-container *ngIf="isDistributionMode">
+        <div class="nav-item" (click)="backupDatabase()"
+          [title]="sidebarCollapsed ? 'Backup Database' : ''">
+          <span class="nav-icon">💾</span>
+          <span class="nav-label" *ngIf="!sidebarCollapsed">Backup</span>
+        </div>
+        <div class="nav-item" (click)="restoreDatabase()"
+          [title]="sidebarCollapsed ? 'Restore Database' : ''">
+          <span class="nav-icon">♻️</span>
+          <span class="nav-label" *ngIf="!sidebarCollapsed">Restore</span>
+        </div>
+        <div class="nav-item"
+          (click)="resetAutoBackupLocation()"
+          [title]="sidebarCollapsed ? ('Auto-Backup Location' + (autoBackupPath ? ': ' + autoBackupPath : ': not set')) : ''">
+          <span class="nav-icon">📍</span>
+          <span class="nav-label" *ngIf="!sidebarCollapsed">
+            Auto-Backup Location
+            <span class="auto-backup-path" *ngIf="autoBackupPath">{{ autoBackupPath }}</span>
+            <span class="auto-backup-path not-set" *ngIf="!autoBackupPath">Not set yet</span>
+          </span>
+        </div>
+      </ng-container>
+    </nav>
+
+    <div class="sidebar-footer">
+      <!-- License Status in Footer (Collapsed Mode) -->
+      <div class="license-status-collapsed" *ngIf="sidebarCollapsed" [title]="licenseStatus">
+        <span class="status-icon-small">{{ isLicenseActivated ? '✅' : (showLicenseWarning ? '⚠️' : '🚀') }}</span>
+      </div>
+
+
+      
+      <div class="nav-item logout" (click)="logout()"
+        [title]="sidebarCollapsed ? 'Logout' : ''">
+        <span class="nav-icon">🚪</span>
+        <span class="nav-label" *ngIf="!sidebarCollapsed">Logout</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="business-tabs" *ngIf="showBusinessTabs">
+      <button class="business-tab" [class.active]="activeBusinessTab === 'broiler'" (click)="switchBusinessTab('broiler')">🐔 Broiler</button>
+      <button class="business-tab" [class.active]="activeBusinessTab === 'layer'" (click)="switchBusinessTab('layer')">🥚 Layers</button>
+      <button class="business-tab" [class.active]="activeBusinessTab === 'distribution'" (click)="switchBusinessTab('distribution')">📦 Distribution</button>
+      <button class="business-tab" [class.active]="activeBusinessTab === 'overview'" (click)="switchBusinessTab('overview')">📊 Overview</button>
+    </div>
+    <div class="content-header">
+      <div class="header-left">
+        <h2>{{ currentFarm?.farm_name }}</h2>
+        <span class="flock-badge" *ngIf="currentFlock() && !isDistributionMode && !isOverviewMode">
+          {{ currentFlock().flock_name || currentFlock().batch_name }}
+        </span>
+      </div>
+      <div class="header-right">
+        <!-- License indicator in header -->
+        <span class="license-indicator" [class.expired]="showLicenseWarning" [class.active]="!showLicenseWarning && isLicenseActivated">
+          {{ isLicenseActivated ? '✅ Licensed' : (showLicenseWarning ? '⚠️ Expiring Soon' : '🚀 Trial') }}
+        </span>
+      </div>
+    </div>
+    <div class="content-body">
+      <div *ngIf="!currentFlock() && !isDistributionMode && !isOverviewMode" class="no-flock-message">
+        <p>{{ isLayerMode ? 'No batch found. Create your first batch to get started.' : 'No flock found. Create your first flock to get started.' }}</p>
+        <button class="btn-primary" (click)="goToFlockManagement()">
+          + {{ isLayerMode ? 'Create First Batch' : 'Create First Flock' }}
+        </button>
+      </div>
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+
+</div>

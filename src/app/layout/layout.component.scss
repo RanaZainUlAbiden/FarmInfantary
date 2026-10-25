@@ -1,0 +1,653 @@
+.app-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+app-layout .sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: #1a5c38;
+  display: flex;
+  flex-direction: column;
+  color: white;
+  transition: width 0.25s ease, min-width 0.25s ease;
+  overflow: hidden;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 8px 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 10px;
+    transition: background 0.2s ease;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.auto-backup-path {
+  display: block;
+  font-size: 10px;
+  color: #8a8a8a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+
+  &.not-set {
+    color: #b45309;
+    font-style: italic;
+  }
+}
+app-layout .sidebar.collapsed {
+  width: 64px;
+  min-width: 64px;
+}
+
+.sidebar-header {
+  padding: 20px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(255,255,255,0.05);
+  }
+}
+
+
+
+.farm-info {
+  flex: 1;
+  overflow: hidden;
+  h3 {
+    font-size: 12px;
+    font-weight: 600;
+    margin: 0 0 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  p {
+    font-size: 11px;
+    color: rgba(255,255,255,0.55);
+    margin: 0;
+  }
+}
+
+.collapse-icon {
+  font-size: 18px;
+  color: rgba(255,255,255,0.5);
+  line-height: 1;
+  flex-shrink: 0;
+
+  &.expanded {
+    margin: 0 auto;
+  }
+}
+
+.unit-selector {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  position: relative;
+}
+
+.unit-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 5px;
+}
+
+.unit-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.1);
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(255,255,255,0.18);
+  }
+
+  .arrow {
+    font-size: 9px;
+    opacity: 0.6;
+    transition: transform 0.2s;
+
+    &.open {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+.unit-dropdown {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: calc(100% - 4px);
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  z-index: 200;
+  overflow: hidden;
+  border: 1px solid #e8e8e8;
+}
+
+.unit-option {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #2d2d2d;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.12s;
+
+  &:hover {
+    background: #f0faf4;
+  }
+
+  &.active {
+    background: #e6f4ec;
+    color: #1a5c38;
+    font-weight: 500;
+  }
+
+  &.no-units {
+    color: #999;
+    cursor: default;
+    font-size: 12px;
+    pointer-events: none;
+
+    &:hover {
+      background: transparent;
+    }
+  }
+}
+
+.unit-status {
+  font-size: 10px;
+  background: #e6f4ec;
+  color: #1a5c38;
+  padding: 2px 7px;
+  border-radius: 20px;
+  text-transform: capitalize;
+
+  &.closed {
+    background: #fde8e8;
+    color: #c62828;
+  }
+}
+
+.flock-selector {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  position: relative;
+}
+
+.flock-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 5px;
+}
+
+.flock-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.1);
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(255,255,255,0.18);
+  }
+
+  .arrow {
+    font-size: 9px;
+    opacity: 0.6;
+    transition: transform 0.2s;
+
+    &.open {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+.flock-dropdown {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: calc(100% - 4px);
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  z-index: 200;
+  overflow: hidden;
+  border: 1px solid #e8e8e8;
+}
+
+.flock-option {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #2d2d2d;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.12s;
+
+  &:hover {
+    background: #f0faf4;
+  }
+
+  &.active {
+    background: #e6f4ec;
+    color: #1a5c38;
+    font-weight: 500;
+  }
+
+  &.add-new {
+    color: #1a5c38;
+    font-weight: 600;
+    border-top: 1px solid #f0f0f0;
+    font-size: 12px;
+
+    &:hover {
+      background: #e6f4ec;
+    }
+  }
+}
+
+.flock-status {
+  font-size: 10px;
+  background: #e6f4ec;
+  color: #1a5c38;
+  padding: 2px 7px;
+  border-radius: 20px;
+  text-transform: capitalize;
+
+  &.closed {
+    background: #fde8e8;
+    color: #c62828;
+  }
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 18px;
+  cursor: pointer;
+  transition: background 0.12s;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(255,255,255,0.08);
+  }
+
+  &.active {
+    background: rgba(255,255,255,0.14);
+    border-right: 3px solid white;
+  }
+
+  &.logout {
+    color: rgba(255,255,255,0.65);
+    &:hover {
+      background: rgba(220,50,50,0.15);
+      color: white;
+    }
+  }
+}
+
+.nav-icon {
+  font-size: 16px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.nav-label {
+  font-size: 13px;
+}
+
+.sidebar-footer {
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding: 6px 0;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f0f4f8;
+  transition: all 0.25s ease;
+}
+
+.content-header {
+  background: white;
+  padding: 14px 24px;
+  border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  align-items: center;
+
+  h2 {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+  }
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.flock-badge {
+  background: #e6f4ec;
+  color: #1a5c38;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.content-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.no-flock-message {
+  text-align: center;
+  padding: 60px 20px;
+  color: #888;
+  p { margin-bottom: 16px; font-size: 15px; }
+}
+
+.btn-primary {
+  background: #1a5c38;
+  color: white;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover { background: #144d2e; }
+}
+
+.farm-logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.farm-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* or 'contain' depending on your preference */
+}
+
+// ── Business Tabs ──────────────────────────────────────────
+.business-tabs {
+  display: flex;
+  background: #1a5c38;
+  padding: 0;
+  gap: 0;
+}
+
+.business-tab {
+  flex: 1;
+  padding: 10px 16px;
+  background: transparent;
+  color: rgba(255,255,255,0.7);
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 3px solid transparent;
+
+  &:hover {
+    background: rgba(255,255,255,0.08);
+    color: white;
+  }
+
+  &.active {
+    color: white;
+    background: rgba(255,255,255,0.12);
+    border-bottom-color: #ffd54f;
+  }
+}
+
+// ── LICENSE STATUS BAR ─────────────────────────────────────
+
+.license-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e8e8e8;
+  margin: 0 0 8px 0;
+  border-radius: 0;
+  transition: all 0.3s ease;
+
+  .license-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 500;
+
+    .status-icon {
+      font-size: 14px;
+    }
+
+    .status-text {
+      color: #555;
+    }
+
+    &.active {
+      .status-text {
+        color: #1a5c38;
+      }
+    }
+
+    &.expired {
+      .status-text {
+        color: #b91c1c;
+        animation: pulse-warning 1.5s ease-in-out infinite;
+      }
+    }
+  }
+
+  .license-activate {
+    .btn-activate-small {
+      padding: 3px 12px;
+      background: #1a5c38;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: #2e7d32;
+        transform: scale(1.05);
+      }
+    }
+  }
+}
+
+// ── LICENSE STATUS COLLAPSED ──────────────────────────────
+
+.license-status-collapsed {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+  cursor: default;
+
+  .status-icon-small {
+    font-size: 16px;
+  }
+}
+
+// ── LICENSE INDICATOR IN HEADER ───────────────────────────
+
+.license-indicator {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 500;
+  background: #e8f5e9;
+  color: #1a5c38;
+
+  &.expired {
+    background: #fef2f2;
+    color: #b91c1c;
+    animation: pulse-warning 1.5s ease-in-out infinite;
+  }
+
+  &.active {
+    background: #e8f5e9;
+    color: #1a5c38;
+  }
+}
+
+// ── HEADER RIGHT ────────────────────────────────────────────
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+// ── PULSE ANIMATION ────────────────────────────────────────
+
+@keyframes pulse-warning {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+// ── RESPONSIVE ──────────────────────────────────────────────
+
+@media (max-width: 768px) {
+  .license-status-bar {
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 12px;
+
+    .license-status {
+      font-size: 11px;
+    }
+
+    .license-activate {
+      .btn-activate-small {
+        font-size: 10px;
+        padding: 2px 10px;
+      }
+    }
+  }
+
+  .license-indicator {
+    font-size: 10px;
+    padding: 2px 8px;
+  }
+}
+/* ── Licence expiry banner ──────────────────────────────────────────────
+   Fixed to the top so it never reflows the sidebar/content flex row, and
+   never unmounts the active screen. The layout is inset by the banner
+   height only while the banner is visible. */
+.license-expired-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2000;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  background: linear-gradient(90deg, #b45309, #d97706);
+  color: #fff;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+
+  .banner-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .banner-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .btn-banner-activate {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+.app-layout.has-license-banner {
+  box-sizing: border-box;
+  padding-top: 48px;
+}

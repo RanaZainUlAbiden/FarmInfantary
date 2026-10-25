@@ -1,0 +1,439 @@
+<!-- ── CARD GRID ─────────────────────────────────────────────── -->
+<div class="module-container" *ngIf="!selectedAsset">
+  <div class="module-header">
+    <div>
+      <h3>Assets</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }} · Account-wide, across all farms</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="printReport()" [disabled]="isLoading || filteredAssets.length === 0">🖨️ Print</button>
+      <button class="btn-primary" (click)="openAddForm()" [disabled]="isLoading">+ Add Asset</button>
+    </div>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="filter-bar" *ngIf="!isLoading && assets.length > 0">
+    <input class="inline-input search-input" type="text" [(ngModel)]="searchTerm" placeholder="Search by asset name..."/>
+    <div class="filter-group">
+      <label>From</label>
+      <input type="date" [(ngModel)]="filterDateFrom"/>
+    </div>
+    <div class="filter-group">
+      <label>To</label>
+      <input type="date" [(ngModel)]="filterDateTo"/>
+    </div>
+    <button class="btn-clear" (click)="clearFilters()">✕ Clear</button>
+  </div>
+
+  <div class="loading-state" *ngIf="isLoading"><p>Loading...</p></div>
+
+  <ng-container *ngIf="!isLoading">
+    <div class="summary-row" *ngIf="assets.length > 0">
+      <div class="summary-card">
+        <span class="summary-label">Active Assets</span>
+        <span class="summary-value">{{ activeAssets.length }}</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Active Asset Value</span>
+        <span class="summary-value">Rs. {{ totalActiveValue | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Total Paid</span>
+        <span class="summary-value">Rs. {{ totalPaid | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Outstanding Installments</span>
+        <span class="summary-value" [class.loss]="totalOutstanding > 0">
+          Rs. {{ totalOutstanding | number:'1.0-0' }}
+        </span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Realised Gain / Loss</span>
+        <span class="summary-value" [class.gain]="totalRealizedGainLoss > 0" [class.loss]="totalRealizedGainLoss < 0">
+          Rs. {{ totalRealizedGainLoss | number:'1.0-0' }}
+        </span>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="assets.length === 0">
+      <p>No assets yet. Click "Add Asset" to get started.</p>
+    </div>
+
+    <div class="empty-state" *ngIf="assets.length > 0 && filteredAssets.length === 0">
+      <p>No assets match the current search/filter.</p>
+    </div>
+
+    <div class="card-grid" *ngIf="filteredAssets.length > 0">
+      <div class="asset-card" *ngFor="let a of filteredAssets"
+           [class.sold]="a.status === 'sold'"
+           (click)="openAsset(a)">
+        <div class="card-top">
+          <h4 class="asset-name">{{ a.asset_name }}</h4>
+          <span class="status-badge" [class.sold]="a.status === 'sold'">
+            {{ a.status === 'sold' ? 'Sold' : 'Active' }}
+          </span>
+        </div>
+        <p class="card-meta">
+          {{ a.category || '—' }} · {{ a.purchase_date | dateOnly }}
+          <ng-container *ngIf="a.status === 'sold'">· Sold {{ a.sale_date | dateOnly }}</ng-container>
+        </p>
+
+        <div class="card-figures">
+          <div class="figure">
+            <span class="figure-label">Total Price</span>
+            <span class="figure-value">{{ priceLabel(a) }}</span>
+          </div>
+          <div class="figure">
+            <span class="figure-label">Paid</span>
+            <span class="figure-value paid">Rs. {{ paidAmount(a) | number:'1.0-0' }}</span>
+          </div>
+          <div class="figure" *ngIf="a.status !== 'sold'">
+            <span class="figure-label">Outstanding</span>
+            <span class="figure-value" [class.loss]="(outstanding(a) ?? 0) > 0" [class.paid]="isFullyPaid(a)">
+              {{ outstandingLabel(a) }}
+            </span>
+          </div>
+          <div class="figure" *ngIf="a.status === 'sold'">
+            <span class="figure-label">Gain / Loss</span>
+            <span class="figure-value" [class.gain]="(gainLoss(a) ?? 0) > 0" [class.loss]="(gainLoss(a) ?? 0) < 0">
+              {{ gainLossLabel(a) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="progress-track" [title]="(paidPercent(a) | number:'1.0-0') + '% paid'">
+          <div class="progress-fill" [class.complete]="isFullyPaid(a)" [style.width.%]="paidPercent(a)"></div>
+        </div>
+
+        <div class="card-footer">
+          <span class="payment-count">
+            {{ a.payment_count || 0 }} {{ (a.payment_count === 1) ? 'payment' : 'payments' }}
+          </span>
+          <span class="open-hint">View →</span>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>
+
+<!-- ── DETAIL VIEW ───────────────────────────────────────────── -->
+<div class="module-container" *ngIf="selectedAsset">
+  <div class="module-header">
+    <div>
+      <button class="btn-back" (click)="closeAsset()">← Assets</button>
+      <h3>{{ selectedAsset.asset_name }}</h3>
+      <p class="subtitle">
+        {{ selectedAsset.category || '—' }} · Bought {{ selectedAsset.purchase_date | dateOnly }}
+        · {{ selectedAsset.status === 'sold' ? 'Sold ' + (selectedAsset.sale_date | dateOnly) : 'Active' }}
+      </p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary" (click)="openPaymentForm()" *ngIf="!isFullyPaid(selectedAsset)">+ Add Payment</button>
+      <button class="btn-edit" *ngIf="selectedAsset.status !== 'sold'" (click)="openSellForm(selectedAsset)">Sell</button>
+      <button class="btn-edit" (click)="openEditForm(selectedAsset)">Edit</button>
+      <button class="btn-delete" (click)="confirmDelete(selectedAsset.asset_id)">Delete</button>
+    </div>
+  </div>
+
+  <div class="error-message" *ngIf="detailError">{{ detailError }}</div>
+
+  <div class="summary-row">
+    <div class="summary-card">
+      <span class="summary-label">
+        Total Price
+        <button class="btn-icon-edit" *ngIf="!editingPrice" (click)="startEditPrice()" title="Edit total price">✏️</button>
+      </span>
+      <span class="summary-value" *ngIf="!editingPrice">{{ priceLabel(selectedAsset) }}</span>
+      <div class="price-edit" *ngIf="editingPrice">
+        <input class="inline-input" type="number" [(ngModel)]="priceEditValue"/>
+        <div class="error-message" *ngIf="priceEditError">{{ priceEditError }}</div>
+        <div class="price-edit-actions">
+          <button class="btn-secondary" (click)="cancelEditPrice()">Cancel</button>
+          <button class="btn-primary" (click)="saveEditPrice()">Save</button>
+        </div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <span class="summary-label">Amount Paid</span>
+      <span class="summary-value gain">Rs. {{ paidAmount(selectedAsset) | number:'1.0-0' }}</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-label">Outstanding</span>
+      <span class="summary-value" [class.loss]="(outstanding(selectedAsset) ?? 0) > 0">
+        {{ outstandingLabel(selectedAsset) }}
+      </span>
+      <span class="field-hint" *ngIf="!hasPrice(selectedAsset)">No total price set yet — add one above to calculate outstanding.</span>
+      <span class="overpaid-flag" *ngIf="isOverpaid(selectedAsset)">
+        ⚠ Overpaid by Rs. {{ overpaidAmount(selectedAsset) | number:'1.0-0' }}
+      </span>
+    </div>
+    <div class="summary-card" *ngIf="selectedAsset.status === 'sold'">
+      <span class="summary-label">Sold For</span>
+      <span class="summary-value">Rs. {{ selectedAsset.sale_amount | number:'1.0-0' }}</span>
+    </div>
+    <div class="summary-card" *ngIf="selectedAsset.status === 'sold'">
+      <span class="summary-label">Gain / Loss on Sale</span>
+      <span class="summary-value" [class.gain]="(gainLoss(selectedAsset) ?? 0) > 0" [class.loss]="(gainLoss(selectedAsset) ?? 0) < 0">
+        {{ gainLossLabel(selectedAsset) }}
+      </span>
+      <span class="field-hint" *ngIf="!hasPrice(selectedAsset)">No total price was on file — gain/loss cannot be measured against an unknown price.</span>
+    </div>
+  </div>
+
+  <div class="detail-note" *ngIf="selectedAsset.notes">{{ selectedAsset.notes }}</div>
+
+  <h4 class="section-heading">Payment History</h4>
+
+  <p class="settlement-note" *ngIf="!isLoadingPayments && settlementPayment">
+    Rs. {{ settlementPayment.amount | number:'1.0-0' }} was still owed when this asset was sold.
+    The sale settled it — the payment below dated
+    {{ settlementPayment.date | dateOnly }} was added automatically, which is why
+    outstanding now reads zero.
+  </p>
+
+  <div class="loading-state" *ngIf="isLoadingPayments"><p>Loading payments...</p></div>
+
+  <ng-container *ngIf="!isLoadingPayments">
+    <div class="empty-state" *ngIf="payments.length === 0">
+      <p>No payments recorded yet. Click "Add Payment" to record one.</p>
+    </div>
+
+    <div class="table-card" *ngIf="payments.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Paid From</th>
+            <th>Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of payments" [class.settlement-row]="isSettlement(p)">
+            <td>{{ p.date | dateOnly }}</td>
+            <td class="amount">Rs. {{ p.amount | number:'1.0-0' }}</td>
+            <td>{{ paymentSourceLabel(p) }}</td>
+            <td>
+              <span class="settlement-badge" *ngIf="isSettlement(p)">Auto · Settled on sale</span>
+              {{ p.notes || (isSettlement(p) ? '' : '—') }}
+            </td>
+            <td class="actions">
+              <button class="btn-delete" (click)="confirmDeletePayment(p.payment_id)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total Paid</td>
+            <td class="amount">Rs. {{ paidAmount(selectedAsset) | number:'1.0-0' }}</td>
+            <td colspan="3"></td>
+          </tr>
+          <tr>
+            <td>Still Outstanding</td>
+            <td class="amount" [class.loss]="(outstanding(selectedAsset) ?? 0) > 0">
+              {{ outstandingLabel(selectedAsset) }}
+            </td>
+            <td colspan="3"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </ng-container>
+</div>
+
+<!-- ── MODALS ────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showForm">
+  <div class="modal-card">
+    <h4>{{ editingId ? 'Edit Asset' : 'Add Asset' }}</h4>
+    <div class="error-message" *ngIf="formError">{{ formError }}</div>
+
+    <input class="inline-input" type="text" [(ngModel)]="form.asset_name" placeholder="Asset name"/>
+
+    <select class="inline-input" [(ngModel)]="form.category">
+      <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+    </select>
+
+    <input class="inline-input" type="date" [(ngModel)]="form.purchase_date"/>
+    <input class="inline-input" type="number" [(ngModel)]="form.total_price" placeholder="Total price (optional — leave blank if not agreed yet)"/>
+
+    <input class="inline-input" *ngIf="!editingId" type="number" [(ngModel)]="form.initial_payment"
+           placeholder="Paid now (leave blank if nothing paid yet)"/>
+
+    <!-- Source of the initial payment. Only shown once there is one to pay:
+         choosing Bank posts a real withdrawal against that account. -->
+    <ng-container *ngIf="!editingId && form.initial_payment > 0">
+      <label class="field-label">Paid from</label>
+      <select class="inline-input" [(ngModel)]="form.payment_source"
+              (ngModelChange)="form.bank_id = null; formError = ''">
+        <option value="cash">Cash</option>
+        <option value="bank" [disabled]="!hasHouseBanks">Bank</option>
+      </select>
+      <select class="inline-input" *ngIf="form.payment_source === 'bank'" [(ngModel)]="form.bank_id">
+        <option [ngValue]="null">Select bank account</option>
+        <option *ngFor="let b of houseBanks" [ngValue]="b.bank_id">
+          {{ bankOptionLabel(b) }}
+          (Rs. {{ b.current_balance | number:'1.0-0' }})
+        </option>
+      </select>
+      <p class="field-hint" *ngIf="form.payment_source === 'bank'">
+        This records a withdrawal of Rs. {{ form.initial_payment | number:'1.0-0' }} against that account.
+      </p>
+      <p class="field-hint" *ngIf="!hasHouseBanks">
+        To pay from a bank, add one of your own accounts under Overview &gt; Bank first.
+      </p>
+    </ng-container>
+
+    <p class="field-hint" *ngIf="editingId">
+      Payments are managed from the asset's payment history, not here — that is
+      also where each one's cash or bank source is set.
+    </p>
+
+    <textarea class="inline-input" [(ngModel)]="form.notes" placeholder="Notes (optional)" rows="2"></textarea>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="cancelForm()">Cancel</button>
+      <button class="btn-primary" (click)="saveForm()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showPaymentForm">
+  <div class="modal-card">
+    <h4>Add Payment</h4>
+    <p class="subtitle">
+      {{ selectedAsset?.asset_name }} · {{ outstandingLabel(selectedAsset) }} outstanding
+    </p>
+    <div class="error-message" *ngIf="paymentError">{{ paymentError }}</div>
+    <div class="warning-message" *ngIf="paymentWarning">{{ paymentWarning }}</div>
+
+    <input class="inline-input" type="date" [(ngModel)]="paymentForm.date"/>
+    <input class="inline-input" type="number" [(ngModel)]="paymentForm.amount" placeholder="Payment amount"
+           (ngModelChange)="overpayConfirmed = false; paymentWarning = ''"/>
+
+    <label class="field-label">Paid from</label>
+    <select class="inline-input" [(ngModel)]="paymentForm.payment_source"
+            (ngModelChange)="paymentForm.bank_id = null; paymentError = ''">
+      <option value="cash">Cash</option>
+      <option value="bank" [disabled]="!hasHouseBanks">Bank</option>
+    </select>
+    <select class="inline-input" *ngIf="paymentForm.payment_source === 'bank'" [(ngModel)]="paymentForm.bank_id">
+      <option [ngValue]="null">Select bank account</option>
+      <option *ngFor="let b of houseBanks" [ngValue]="b.bank_id">
+        {{ bankOptionLabel(b) }}
+        (Rs. {{ b.current_balance | number:'1.0-0' }})
+      </option>
+    </select>
+    <p class="field-hint" *ngIf="paymentForm.payment_source === 'bank' && paymentForm.amount > 0">
+      This records a withdrawal of Rs. {{ paymentForm.amount | number:'1.0-0' }} against that account.
+    </p>
+    <p class="field-hint" *ngIf="!hasHouseBanks">
+      To pay from a bank, add one of your own accounts under Overview &gt; Bank first.
+    </p>
+
+    <textarea class="inline-input" [(ngModel)]="paymentForm.notes" placeholder="Notes (optional)" rows="2"></textarea>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="cancelPaymentForm()">Cancel</button>
+      <button class="btn-primary" (click)="savePayment()">Save Payment</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showSellForm">
+  <div class="modal-card">
+    <h4>Sell Asset</h4>
+    <p class="subtitle">{{ sellingAsset?.asset_name }}</p>
+    <div class="error-message" *ngIf="sellError">{{ sellError }}</div>
+
+    <p class="field-hint" *ngIf="sellWillSettle">
+      {{ outstandingLabel(sellingAsset) }} is still owed on this asset.
+      Selling it settles that balance: a payment for the full
+      {{ outstandingLabel(sellingAsset) }} is recorded on the sale date
+      and added to the payment history, so outstanding drops to zero.
+    </p>
+    <p class="field-hint" *ngIf="sellingAsset && !hasPrice(sellingAsset)">
+      This asset has no total price on file, so there is no outstanding balance to settle on sale.
+    </p>
+
+    <input class="inline-input" type="date" [(ngModel)]="sellForm.sale_date"/>
+    <input class="inline-input" type="number" [(ngModel)]="sellForm.sale_amount" placeholder="Sale amount"/>
+
+    <!-- WHERE THE SALE MONEY WENT. Money IN, which is the opposite direction to
+         the settlement selector below, and a separate pair of fields: one sale
+         can take the proceeds into one account and clear the outstanding
+         balance out of another. Cash leaves no bank entry, which is exactly how
+         it reaches Cash in Hand instead. -->
+    <label class="field-label">Sale money received in</label>
+    <select class="inline-input" [(ngModel)]="sellForm.proceeds_source"
+            (ngModelChange)="sellForm.proceeds_bank_id = null; sellError = ''">
+      <option value="cash">Cash</option>
+      <option value="bank" [disabled]="!hasHouseBanks">Bank</option>
+    </select>
+    <select class="inline-input" *ngIf="sellForm.proceeds_source === 'bank'" [(ngModel)]="sellForm.proceeds_bank_id">
+      <option [ngValue]="null">Select bank account</option>
+      <option *ngFor="let b of houseBanks" [ngValue]="b.bank_id">
+        {{ bankOptionLabel(b) }}
+        (Rs. {{ b.current_balance | number:'1.0-0' }})
+      </option>
+    </select>
+    <p class="field-hint" *ngIf="sellForm.proceeds_source === 'bank'">
+      This records a deposit of Rs. {{ (sellForm.sale_amount || 0) | number:'1.0-0' }} into that account.
+    </p>
+    <p class="field-hint" *ngIf="sellForm.proceeds_source !== 'bank'">
+      Cash adds Rs. {{ (sellForm.sale_amount || 0) | number:'1.0-0' }} to Cash in Hand.
+    </p>
+
+    <!-- The settlement above is a real payment, so it needs a real source. It
+         is asked for rather than copied off the asset: defaulting it to a bank
+         account would post a withdrawal of the whole remaining balance that
+         nobody chose to make. -->
+    <ng-container *ngIf="sellWillSettle">
+      <label class="field-label">Settle that Rs. {{ outstanding(sellingAsset) | number:'1.0-0' }} from</label>
+      <select class="inline-input" [(ngModel)]="sellForm.payment_source"
+              (ngModelChange)="sellForm.bank_id = null; sellError = ''">
+        <option value="cash">Cash</option>
+        <option value="bank" [disabled]="!hasHouseBanks">Bank</option>
+      </select>
+      <select class="inline-input" *ngIf="sellForm.payment_source === 'bank'" [(ngModel)]="sellForm.bank_id">
+        <option [ngValue]="null">Select bank account</option>
+        <option *ngFor="let b of houseBanks" [ngValue]="b.bank_id">
+          {{ bankOptionLabel(b) }}
+          (Rs. {{ b.current_balance | number:'1.0-0' }})
+        </option>
+      </select>
+      <p class="field-hint" *ngIf="sellForm.payment_source === 'bank'">
+        This records a withdrawal of Rs. {{ outstanding(sellingAsset) | number:'1.0-0' }} against that account.
+        Leave it on Cash if the balance was not paid out of a bank.
+      </p>
+    </ng-container>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="cancelSellForm()">Cancel</button>
+      <button class="btn-primary" (click)="confirmSell()">Confirm Sale</button>
+    </div>
+  </div>
+</div>
+
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Asset"
+  message="This deletes the asset and its whole payment history. This cannot be undone."
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"/>
+
+<app-confirm-dialog
+  *ngIf="showDeletePaymentDialog"
+  title="Delete Payment"
+  [message]="deletingPaymentIsSettlement
+    ? 'This is the settlement the sale wrote to clear the balance. Deleting it puts that whole amount back into outstanding installments on an asset that has already been sold.'
+    : 'Are you sure? The amount goes back to outstanding.'"
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeletePaymentConfirmed()"
+  (cancelled)="onDeletePaymentCancelled()"/>

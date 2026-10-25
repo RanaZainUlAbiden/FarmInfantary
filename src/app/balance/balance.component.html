@@ -1,0 +1,199 @@
+<div class="module-container">
+
+  <div class="module-header">
+    <div>
+      <h3>Balance / Statement</h3>
+      <p class="subtitle" *ngIf="currentFlock">
+        {{ currentFlock.flock_name }}
+      </p>
+    </div>
+    <button
+      class="btn-primary"
+      [disabled]="isSaving"
+      (click)="addNewRow()"
+      *ngIf="currentFlock && !showNewRow">
+      + Add Entry
+    </button>
+  </div>
+
+  <!-- Balance Hero -->
+  <div class="balance-hero" *ngIf="currentFlock">
+    <div class="balance-label">Current Balance</div>
+    <div class="balance-amount" [class.negative]="currentBalance < 0">
+      Rs. {{ currentBalance | number:'1.0-0' }}
+    </div>
+    <div class="balance-sub">
+      <span class="credit-total">↑ Credit: Rs. {{ totalCredit | number:'1.0-0' }}</span>
+      <span class="debit-total">↓ Debit: Rs. {{ totalDebit | number:'1.0-0' }}</span>
+    </div>
+  </div>
+
+  <!-- Empty states -->
+  <div class="empty-state" *ngIf="!currentFlock">
+    <p>Please select a flock first.</p>
+  </div>
+  <div class="empty-state"
+    *ngIf="currentFlock && entries.length === 0 && !showNewRow">
+    <p>No entries yet. Click "Add Entry" to start tracking balance.</p>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card" *ngIf="entries.length > 0 || showNewRow">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Type</th>
+          <th>Amount (Rs.)</th>
+          <th>Balance (Rs.)</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- NEW ROW at top -->
+        <tr *ngIf="showNewRow" class="new-row">
+          <td>
+            <input class="inline-input" type="date"
+              [(ngModel)]="newRow.date" />
+          </td>
+          <td>
+            <input class="inline-input" type="text"
+              [(ngModel)]="newRow.description"
+              placeholder="Details..." />
+          </td>
+          <td>
+            <div class="type-toggle-inline">
+              <button
+                class="type-btn-sm"
+                [class.active-credit]="newRow.type === 'credit'"
+                [disabled]="isSaving"
+                (click)="newRow.type = 'credit'">
+                ↑ Credit
+              </button>
+              <button
+                class="type-btn-sm"
+                [class.active-debit]="newRow.type === 'debit'"
+                [disabled]="isSaving"
+                (click)="newRow.type = 'debit'">
+                ↓ Debit
+              </button>
+            </div>
+          </td>
+          <td>
+            <input class="inline-input" type="number"
+              [(ngModel)]="newRow.amount"
+              placeholder="0" />
+          </td>
+          <td>—</td>
+          <td class="actions">
+            <button
+              class="btn-save"
+              [disabled]="isSaving"
+              (click)="saveNewRow()">
+              {{ isSaving ? 'Saving…' : 'Save' }}
+            </button>
+            <button
+              class="btn-cancel-edit"
+              [disabled]="isSaving"
+              (click)="cancelNewRow()">
+              Cancel
+            </button>
+          </td>
+        </tr>
+
+        <!-- EXISTING ENTRIES -->
+        <tr *ngFor="let entry of entries; let i = index"
+          [class.editing]="editingId === entry.balance_id">
+
+          <!-- VIEW MODE -->
+          <ng-container *ngIf="editingId !== entry.balance_id">
+            <td>{{ entry.date | dateOnly }}</td>
+            <td>{{ entry.description || '—' }}</td>
+            <td>
+              <span class="type-badge"
+                [class.credit]="entry.type === 'credit'"
+                [class.debit]="entry.type === 'debit'">
+                {{ entry.type === 'credit' ? '↑ Credit' : '↓ Debit' }}
+              </span>
+            </td>
+            <td [class.credit-amt]="entry.type === 'credit'"
+              [class.debit-amt]="entry.type === 'debit'">
+              {{ entry.type === 'credit' ? '+' : '-' }}
+              Rs. {{ entry.amount | number:'1.0-0' }}
+            </td>
+            <td class="running-balance">
+              Rs. {{ getRunningBalance(i) | number:'1.0-0' }}
+            </td>
+            <td class="actions">
+              <button
+                class="btn-edit"
+                [disabled]="isSaving"
+                (click)="startEdit(entry)">
+                Edit
+              </button>
+              <button
+                class="btn-delete"
+                [disabled]="isSaving"
+                (click)="confirmDelete(entry.balance_id)">
+                Delete
+              </button>
+            </td>
+          </ng-container>
+
+          <!-- EDIT MODE -->
+          <ng-container *ngIf="editingId === entry.balance_id">
+            <td>
+              <input class="inline-input" type="date"
+                [(ngModel)]="editForm.date" />
+            </td>
+            <td>
+              <input class="inline-input" type="text"
+                [(ngModel)]="editForm.description" />
+            </td>
+            <td>
+              <select class="inline-input" [(ngModel)]="editForm.type">
+                <option value="credit">↑ Credit</option>
+                <option value="debit">↓ Debit</option>
+              </select>
+            </td>
+            <td>
+              <input class="inline-input" type="number"
+                [(ngModel)]="editForm.amount" />
+            </td>
+            <td>—</td>
+            <td class="actions">
+              <button
+                class="btn-save"
+                [disabled]="isSaving"
+                (click)="saveEdit(entry.balance_id)">
+                {{ isSaving ? 'Saving…' : 'Save' }}
+              </button>
+              <button
+                class="btn-cancel-edit"
+                [disabled]="isSaving"
+                (click)="cancelEdit()">
+                Cancel
+              </button>
+            </td>
+          </ng-container>
+
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Entry"
+  message="Are you sure you want to delete this balance entry?"
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"
+/>

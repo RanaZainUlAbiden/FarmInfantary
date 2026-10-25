@@ -1,0 +1,269 @@
+.module-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.module-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; h3 { font-size: 20px; font-weight: 600; } .subtitle { font-size: 13px; color: #888; } }
+.empty-state { text-align: center; padding: 60px; color: #aaa; background: white; border-radius: 12px; border: 1px dashed #e0e0e0; }
+.loading-state { text-align: center; padding: 40px; color: #aaa; }
+.error-message { margin-bottom: 16px; padding: 10px 12px; border-radius: 8px; background: #fef2f2; color: #b91c1c; font-size: 13px; }
+
+.btn-primary { background: #1a5c38; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 500; }
+.btn-secondary { background: white; border: 1.5px solid #e0e0e0; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+.btn-edit { background: #e8f5e9; color: #1a5c38; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.btn-delete { background: #fce4ec; color: #c62828; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+
+// ── Search / date filter ─────────────────────────────────────
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e8e8e8;
+
+  .search-input { width: auto; flex: 1; min-width: 200px; }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    label { font-size: 11px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    input {
+      padding: 6px 10px;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 13px;
+      background: white;
+      min-width: 120px;
+
+      &:focus { outline: none; border-color: #1a5c38; }
+    }
+  }
+
+  .btn-clear {
+    padding: 6px 14px;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #666;
+
+    &:hover { background: #eeeeee; }
+  }
+}
+
+.summary-row { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.summary-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+
+  .summary-label { font-size: 12px; color: #888; }
+  .summary-value { font-size: 20px; font-weight: 600; }
+}
+
+.table-card { background: white; border-radius: 12px; overflow-x: auto; border: 1px solid #e0e0e0; }
+table { width: 100%; border-collapse: collapse; }
+th { background: #f8f9fa; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #666; text-align: left; }
+td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
+.asset-name { font-weight: 600; }
+.amount { font-weight: 600; }
+.actions { display: flex; gap: 8px; }
+
+.gain { color: #1a5c38; }
+.loss { color: #c62828; }
+
+.status-badge {
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  background: #e8f5e9;
+  color: #1a5c38;
+
+  &.sold { background: #eceff1; color: #546e7a; }
+}
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-card { background: white; border-radius: 12px; padding: 24px; width: 340px; display: flex; flex-direction: column; gap: 10px; }
+.modal-card h4 { margin: 0 0 8px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+.inline-input { width: 100%; padding: 7px 10px; border: 1.5px solid #1a5c38; border-radius: 6px; background: #f0faf4; font-size: 13px; box-sizing: border-box; }
+textarea.inline-input { resize: vertical; font-family: inherit; }
+
+// ── Card grid ────────────────────────────────────────────────
+// Follows the ledger-card conventions in account-ledger.component.scss: a
+// clickable white card that lifts on hover, in an auto-fitting grid.
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.asset-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    border-color: #1a5c38;
+  }
+
+  &.sold { background: #fafafa; }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+
+    h4 { margin: 0; font-size: 16px; }
+  }
+
+  .card-meta { font-size: 12px; color: #888; margin: 4px 0 14px; }
+
+  .card-figures {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+
+    .figure { display: flex; flex-direction: column; gap: 2px; }
+    .figure-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.4px; }
+    .figure-value { font-size: 15px; font-weight: 600; }
+    .figure-value.paid { color: #1a5c38; }
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    font-size: 12px;
+
+    .payment-count { color: #888; }
+    .open-hint { color: #1a5c38; font-weight: 500; }
+  }
+}
+
+.progress-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #f0f0f0;
+  overflow: hidden;
+
+  .progress-fill {
+    height: 100%;
+    background: #f9a825;
+    transition: width 0.2s;
+
+    &.complete { background: #1a5c38; }
+  }
+}
+
+// ── Detail view ──────────────────────────────────────────────
+.btn-back {
+  background: none;
+  border: none;
+  color: #1a5c38;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 0 6px;
+}
+
+.header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.section-heading { font-size: 15px; font-weight: 600; margin: 24px 0 12px; }
+
+.detail-note {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-size: 13px;
+  color: #555;
+}
+
+.field-hint { font-size: 12px; color: #888; margin: 0; }
+// Modal fields are otherwise a bare stack of inputs with placeholders; the
+// Cash/Bank selects have no placeholder to explain them, so they get a label.
+.field-label { font-size: 12px; font-weight: 600; color: #555; margin: 4px 0 -4px; }
+.warning-message {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff8e1;
+  color: #8a6100;
+  font-size: 13px;
+}
+
+// ── Inline total-price edit ──────────────────────────────────
+.price-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  input { margin: 0; }
+
+  .price-edit-actions { display: flex; gap: 6px; }
+}
+
+.btn-icon-edit {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 0 0 6px;
+  opacity: 0.7;
+
+  &:hover { opacity: 1; }
+}
+
+.overpaid-flag { color: #c62828; font-size: 12px; font-weight: 600; }
+
+// ── Automatic settlement on sale ─────────────────────────────
+// The payment the app writes for itself when a still-owed asset is sold. It is
+// shown like any other payment and then marked, so the balance clearing is
+// visibly accounted for rather than looking like it was quietly written off.
+.settlement-note {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #eef6ff;
+  border: 1px solid #cfe3fa;
+  color: #1a4f82;
+  font-size: 13px;
+}
+
+tbody tr.settlement-row { background: #f6faff; }
+
+.settlement-badge {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #e3f0fc;
+  color: #1a4f82;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+tfoot td {
+  background: #f8f9fa;
+  font-weight: 600;
+  border-bottom: none;
+}

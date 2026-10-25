@@ -1,0 +1,93 @@
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2100; // above the confirm-dialog it precedes
+}
+
+.dialog-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px;
+  width: 340px;
+  max-width: 90vw;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.dialog-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  &.danger { color: #c0392b; }
+}
+
+.dialog-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.dialog-message {
+  font-size: 13px;
+  color: #666;
+  margin: 0 0 16px;
+  line-height: 1.4;
+}
+
+.code-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+  text-align: center;
+  letter-spacing: 2px;
+
+  &:focus {
+    outline: none;
+    border-color: #c0392b;
+  }
+}
+
+.code-error {
+  color: #c0392b;
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn-cancel {
+  flex: 1;
+  padding: 10px;
+  background: #f0f0f0;
+  color: #333;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+
+  &:hover { background: #e4e4e4; }
+}
+
+.btn-confirm {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #fff;
+
+  &.danger { background: #c0392b; }
+  &.danger:hover:not(:disabled) { background: #a5311f; }
+  &:disabled { opacity: 0.6; cursor: default; }
+}

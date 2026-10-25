@@ -1,0 +1,330 @@
+.module-container {
+  max-width: 1100px;
+}
+
+.module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 4px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: #888;
+    margin: 0;
+  }
+}
+
+.balance-hero {
+  background: #1a5c38;
+  border-radius: 14px;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  color: white;
+  text-align: center;
+}
+
+.balance-label {
+  font-size: 13px;
+  opacity: 0.7;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.balance-amount {
+  font-size: 40px;
+  font-weight: 700;
+  margin-bottom: 16px;
+
+  &.negative {
+    color: #ff8a80;
+  }
+}
+
+.balance-sub {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.credit-total { color: #b9f6ca; }
+.debit-total { color: #ff8a80; }
+
+.form-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border: 1px solid #e0e0e0;
+
+  h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 20px;
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 6px;
+  }
+
+  input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+    &:focus { border-color: #1a5c38; }
+  }
+}
+
+.type-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.type-btn {
+  flex: 1;
+  padding: 10px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: #666;
+
+  &:hover { background: #f5f5f5; }
+
+  &.active-credit {
+    background: #e8f5e9;
+    border-color: #1a5c38;
+    color: #1a5c38;
+  }
+
+  &.active-debit {
+    background: #fce4ec;
+    border-color: #c62828;
+    color: #c62828;
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.table-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th {
+      background: #f8f9fa;
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    td {
+      padding: 13px 16px;
+      font-size: 14px;
+      color: #333;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tr.credit-row td { border-left: 3px solid #1a5c38; }
+    tr.debit-row td { border-left: 3px solid #e53935; }
+    tr:hover td { background: #fafafa; }
+  }
+}
+
+.type-badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+
+  &.credit { background: #e8f5e9; color: #1a5c38; }
+  &.debit { background: #fce4ec; color: #c62828; }
+}
+
+.credit-amt { color: #1a5c38; font-weight: 500; }
+.debit-amt { color: #e53935; font-weight: 500; }
+
+.running-balance {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.actions { display: flex; gap: 8px; }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #aaa;
+  font-size: 15px;
+  background: white;
+  border-radius: 12px;
+  border: 1px dashed #e0e0e0;
+}
+
+.inline-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1.5px solid #1a5c38;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  background: #f0faf4;
+  &:focus { background: white; }
+}
+
+tr.editing td { background: #f0faf4 !important; }
+
+.btn-primary {
+  background: #1a5c38;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover { background: #144d2e; }
+}
+
+.btn-secondary {
+  background: white;
+  color: #666;
+  border: 1.5px solid #e0e0e0;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  &:hover { background: #f5f5f5; }
+}
+
+.btn-edit {
+  background: #e8f5e9;
+  color: #1a5c38;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover { background: #c8e6c9; }
+}
+
+.btn-delete {
+  background: #fce4ec;
+  color: #c62828;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover { background: #f8bbd0; }
+}
+
+.btn-save {
+  background: #1a5c38;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover { background: #144d2e; }
+}
+
+.btn-cancel-edit {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #e0e0e0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  &:hover { background: #ebebeb; }
+}
+
+.type-toggle-inline {
+  display: flex;
+  gap: 4px;
+}
+
+.type-btn-sm {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #666;
+  white-space: nowrap;
+
+  &:hover { background: #f5f5f5; }
+
+  &.active-credit {
+    background: #e8f5e9;
+    border-color: #1a5c38;
+    color: #1a5c38;
+  }
+
+  &.active-debit {
+    background: #fce4ec;
+    border-color: #c62828;
+    color: #c62828;
+  }
+}
+
+.new-row td {
+  background: #f0faf4 !important;
+}

@@ -1,0 +1,342 @@
+<div class="module-container">
+
+  <!-- ══════════════════════════════════════════════════════════
+       LEDGER LIST VIEW
+  ══════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="!selectedLedger">
+    <div class="module-header">
+      <div>
+        <h3>Ledger Accounts</h3>
+        <p class="subtitle" *ngIf="currentFlock">
+          {{ currentFlock.flock_name }}
+        </p>
+      </div>
+      <button
+        class="btn-primary"
+        [disabled]="isSaving"
+        (click)="openLedgerForm()"
+        *ngIf="currentFlock">
+        + New Ledger
+      </button>
+    </div>
+
+    <!-- New Ledger Form -->
+    <div class="form-card" *ngIf="showLedgerForm">
+      <h4>Create New Ledger</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Ledger Name *</label>
+          <input
+            type="text"
+            [(ngModel)]="ledgerForm.ledger_name"
+            placeholder="e.g. Labor, Generator, Feed..."
+            (keyup.enter)="saveLedger()" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button
+          class="btn-secondary"
+          [disabled]="isSaving"
+          (click)="showLedgerForm = false">
+          Cancel
+        </button>
+        <button
+          class="btn-primary"
+          [disabled]="isSaving"
+          (click)="saveLedger()">
+          {{ isSaving ? 'Saving…' : 'Create Ledger' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty states -->
+    <div class="empty-state" *ngIf="!currentFlock">
+      <p>Please select a flock first.</p>
+    </div>
+    <div class="empty-state"
+      *ngIf="currentFlock && ledgers.length === 0 && !showLedgerForm">
+      <p>No ledgers yet. Create your first ledger account.</p>
+    </div>
+
+    <!-- Search bar -->
+    <div class="search-bar" *ngIf="ledgers.length > 0">
+      <span class="search-icon">🔍</span>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        placeholder="Search ledgers..."
+        autocomplete="off" />
+    </div>
+
+    <!-- Ledger Cards -->
+    <div class="ledger-grid" *ngIf="filteredLedgers.length > 0">
+      <div class="ledger-card"
+        *ngFor="let ledger of filteredLedgers"
+        (click)="selectLedger(ledger)">
+        <div class="ledger-card-header">
+          <div class="ledger-icon">📒</div>
+          <button
+            class="btn-delete-ledger"
+            [disabled]="isSaving"
+            (click)="$event.stopPropagation(); confirmDeleteLedger(ledger.ledger_id)">
+            ✕
+          </button>
+        </div>
+        <div class="ledger-name">{{ ledger.ledger_name }}</div>
+        <div class="ledger-total">Rs. {{ ledger.total | number:'1.0-0' }}</div>
+        <div class="ledger-footer">Click to view entries →</div>
+      </div>
+    </div>
+    <!-- No-results message -->
+    <div class="empty-state" *ngIf="ledgers.length > 0 && filteredLedgers.length === 0">
+      <p>No ledgers match "{{ searchTerm }}".</p>
+    </div>
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════════════
+       LEDGER ENTRIES VIEW
+  ══════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="selectedLedger">
+    <div class="module-header">
+      <div class="header-with-back">
+        <button
+          class="btn-back"
+          [disabled]="isSaving"
+          (click)="backToLedgers()">
+          ← Back
+        </button>
+        <div>
+          <h3>{{ selectedLedger.ledger_name }}</h3>
+          <p class="subtitle">{{ currentFlock.flock_name }}</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <ng-container *ngIf="hasPendingRows">
+          <button class="btn-secondary" (click)="cancelAllRows()">
+            Cancel
+          </button>
+          <button class="btn-primary" (click)="saveAllRows()"
+            [disabled]="isSavingAll">
+            {{ isSavingAll ? 'Saving...' : 'Save All' }}
+          </button>
+        </ng-container>
+        <button class="btn-add" (click)="addPendingRow()"
+          *ngIf="!hasPendingRows" title="Add row (Ctrl+A)">
+          +
+        </button>
+      </div>
+    </div>
+
+    <div class="shortcuts-hint" *ngIf="hasPendingRows">
+      <span>Ctrl+A — new row</span>
+      <span>Ctrl+S — save all</span>
+    </div>
+
+    <div class="filter-bar" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <label style="font-size:13px;font-weight:500;">Filter by Date:</label>
+      <input type="date" class="inline-input" style="width:160px;" [(ngModel)]="selectedDateFilter"/>
+      <button class="btn-apply" (click)="applyDateFilter()" style="padding:4px 12px;">Apply</button>
+      <button class="btn-clear" *ngIf="filteredByDate" (click)="clearDateFilter()" style="padding:4px 12px;">Clear</button>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary-card" *ngIf="entries.length > 0">
+      <div class="summary-item">
+        <span class="summary-label">Total Entries</span>
+        <span class="summary-value">{{ entries.length }}</span>
+      </div>
+      <div class="summary-item credit">
+        <span class="summary-label">Total Credit</span>
+        <span class="summary-value">Rs. {{ totalCredit | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-item debit">
+        <span class="summary-label">Total Debit</span>
+        <span class="summary-value">Rs. {{ totalDebit | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-item total">
+        <span class="summary-label">Grand Total</span>
+        <span class="summary-value">Rs. {{ totalAmount | number:'1.0-0' }}</span>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state"
+      *ngIf="entries.length === 0 && pendingRows.length === 0">
+      <p>No entries yet. Click + or press Ctrl+A to add entries.</p>
+    </div>
+
+    <!-- Entries Table -->
+    <div class="table-card" *ngIf="entries.length > 0 || pendingRows.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Type</th>
+            <th>Amount (Rs.)</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- PENDING NEW ROWS -->
+          <tr *ngFor="let row of pendingRows; let i = index" class="pending-row">
+            <td class="row-plus-cell">
+              <button class="row-plus-btn"
+                (click)="addRowAfter(i)"
+                title="Add row below">+</button>
+            </td>
+            <td>
+              <input class="inline-input" type="date"
+                [(ngModel)]="row.date" />
+            </td>
+            <td>
+              <input class="inline-input" type="text"
+                [(ngModel)]="row.description"
+                placeholder="Description" />
+            </td>
+            <td>
+              <select class="inline-input" [(ngModel)]="row.type">
+                <option value="credit">↑ Credit</option>
+                <option value="debit">↓ Debit</option>
+              </select>
+            </td>
+            <td>
+              <input class="inline-input" type="number"
+                [(ngModel)]="row.amount"
+                placeholder="Amount" />
+            </td>
+            <td class="actions">
+              <button class="btn-remove-row"
+                (click)="removePendingRow(i)"
+                title="Remove row">✕</button>
+            </td>
+          </tr>
+
+          <!-- EXISTING ENTRIES -->
+          <tr *ngFor="let entry of paginatedEntries"
+            [class.editing]="editingEntryId === entry.entry_id"
+            [class.credit-row]="entry.type === 'credit'"
+            [class.debit-row]="entry.type === 'debit'">
+
+            <!-- VIEW MODE -->
+            <ng-container *ngIf="editingEntryId !== entry.entry_id">
+              <td></td>
+              <td>{{ entry.date | dateOnly }}</td>
+              <td>{{ entry.description || '—' }}</td>
+              <td>
+                <span class="type-badge"
+                  [class.credit]="entry.type === 'credit'"
+                  [class.debit]="entry.type === 'debit'">
+                  {{ entry.type === 'credit' ? '↑ Credit' : '↓ Debit' }}
+                </span>
+              </td>
+              <td [class.credit-amt]="entry.type === 'credit'"
+                [class.debit-amt]="entry.type === 'debit'">
+                Rs. {{ entry.amount | number:'1.0-0' }}
+              </td>
+              <td class="actions">
+                <button
+                  class="btn-edit"
+                  [disabled]="isSaving"
+                  (click)="startEditEntry(entry)">
+                  Edit
+                </button>
+                <button
+                  class="btn-delete"
+                  [disabled]="isSaving"
+                  (click)="confirmDeleteEntry(entry.entry_id)">
+                  Delete
+                </button>
+              </td>
+            </ng-container>
+
+            <!-- EDIT MODE -->
+            <ng-container *ngIf="editingEntryId === entry.entry_id">
+              <td></td>
+              <td>
+                <input class="inline-input" type="date"
+                  [(ngModel)]="editEntryForm.date" />
+              </td>
+              <td>
+                <input class="inline-input" type="text"
+                  [(ngModel)]="editEntryForm.description"
+                  placeholder="Description" />
+              </td>
+              <td>
+                <select class="inline-input" [(ngModel)]="editEntryForm.type">
+                  <option value="credit">↑ Credit</option>
+                  <option value="debit">↓ Debit</option>
+                </select>
+              </td>
+              <td>
+                <input class="inline-input" type="number"
+                  [(ngModel)]="editEntryForm.amount" />
+              </td>
+              <td class="actions">
+                <button
+                  class="btn-save"
+                  [disabled]="isSaving"
+                  (click)="saveEditEntry(entry.entry_id)">
+                  {{ isSaving ? 'Saving…' : 'Save' }}
+                </button>
+                <button
+                  class="btn-cancel-edit"
+                  [disabled]="isSaving"
+                  (click)="cancelEditEntry()">
+                  Cancel
+                </button>
+              </td>
+            </ng-container>
+
+          </tr>
+
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4" class="total-label">Grand Total</td>
+            <td class="total-amount">Rs. {{ totalAmount | number:'1.0-0' }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+      <app-pagination [currentPage]="currentPage" [totalItems]="filteredEntries.length" [pageSize]="pageSize" (pageChange)="currentPage = $event"></app-pagination>
+    </div>
+  </ng-container>
+
+</div>
+
+<!-- ── Confirm Dialogs ─────────────────────────────────────────── -->
+<app-confirm-dialog
+  *ngIf="showDeleteLedgerDialog"
+  title="Delete Ledger"
+  message="This will delete the ledger and all its entries. Cannot be undone."
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteLedgerConfirmed()"
+  (cancelled)="onDeleteLedgerCancelled()"
+/>
+
+<app-confirm-dialog
+  *ngIf="showDeleteEntryDialog"
+  title="Delete Entry"
+  message="Are you sure you want to delete this entry?"
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteEntryConfirmed()"
+  (cancelled)="onDeleteEntryCancelled()"
+/>
+
+<app-confirm-dialog
+  *ngIf="showValidationDialog"
+  title="Validation Notice"
+  [message]="validationMessage"
+  confirmText="OK"
+  type="warning"
+  [hideCancel]="true"
+  (confirmed)="showValidationDialog = false"
+  (cancelled)="showValidationDialog = false">
+</app-confirm-dialog>

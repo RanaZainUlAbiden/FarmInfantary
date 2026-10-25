@@ -1,0 +1,42 @@
+<div class="module-container">
+  <!-- Reachable only from the sidebar, so there was no way back out of it
+       except clicking another sidebar item. It belongs to the Account Ledger
+       family — that dashboard links to the customer screens beside it — so it
+       returns there, like the five ledger screens do. -->
+  <app-back-link to="account-ledger" label="Account Ledger"/>
+  <div class="module-header">
+    <div><h3>Customer Management</h3><p class="subtitle">{{ currentFarm?.farm_name }}</p></div>
+    <button class="btn-primary" (click)="addNewRow()" *ngIf="!showNewRow">+ Add Customer</button>
+  </div>
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="empty-state" *ngIf="customers.length === 0 && !showNewRow"><p>No customers yet.</p></div>
+  <div class="table-card" *ngIf="customers.length > 0 || showNewRow">
+    <table>
+      <thead><tr><th>Customer Name</th><th>Phone</th><th>Address</th><th>Outstanding</th><th>Actions</th></tr></thead>
+      <tbody>
+        <tr *ngIf="showNewRow" class="new-row">
+          <td><input class="inline-input" type="text" [(ngModel)]="newRow.customer_name" placeholder="Customer name"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="newRow.phone" placeholder="Phone"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="newRow.address" placeholder="Address"/></td>
+          <td>Rs. 0</td>
+          <td class="actions"><button class="btn-save" (click)="saveNewRow()">Save</button><button class="btn-cancel-edit" (click)="cancelNewRow()">Cancel</button></td>
+        </tr>
+        <tr *ngFor="let c of customers" [class.editing]="editingId === c.customer_id">
+          <ng-container *ngIf="editingId !== c.customer_id">
+            <td class="customer-name">{{ c.customer_name }}</td><td>{{ c.phone || '—' }}</td><td>{{ c.address || '—' }}</td>
+            <td [class.outstanding]="c.outstanding_balance > 0">Rs. {{ c.outstanding_balance | number:'1.0-0' }}</td>
+            <td class="actions"><button class="btn-edit" (click)="startEdit(c)">Edit</button><button class="btn-delete" (click)="confirmDelete(c.customer_id)">Delete</button></td>
+          </ng-container>
+          <ng-container *ngIf="editingId === c.customer_id">
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.customer_name"/></td>
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.phone"/></td>
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.address"/></td>
+            <td><input class="inline-input" type="number" [(ngModel)]="editForm.outstanding_balance" placeholder="0"/></td>
+            <td class="actions"><button class="btn-save" (click)="saveEdit(c.customer_id)">Save</button><button class="btn-cancel-edit" (click)="cancelEdit()">Cancel</button></td>
+          </ng-container>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+<app-confirm-dialog *ngIf="showDeleteDialog" title="Delete Customer" message="Are you sure?" confirmText="Delete" cancelText="Cancel" type="danger" (confirmed)="onDeleteConfirmed()" (cancelled)="onDeleteCancelled()"/>

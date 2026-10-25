@@ -1,0 +1,562 @@
+.module-container {
+  max-width: 1100px;
+}
+
+.module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 4px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: #888;
+    margin: 0;
+  }
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-generate {
+  background: #1a5c38;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+
+  &:hover { background: #144d2e; }
+
+  &:disabled {
+    background: #aaa;
+    cursor: not-allowed;
+  }
+}
+
+// Filter Bar
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  background: white;
+  border-radius: 12px;
+  padding: 14px 20px;
+  border: 1px solid #e0e0e0;
+
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    input[type="date"] {
+      padding: 6px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+  }
+
+  .btn-primary {
+    background: #1a5c38;
+    color: white;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .btn-secondary {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+}
+
+// Summary Grid
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  text-align: center;
+
+  &.products   { border-top: 4px solid #1565c0; }
+  &.inventory  { border-top: 4px solid #1a5c38; }
+  &.purchases  { border-top: 4px solid #e65100; }
+  &.sales      { border-top: 4px solid #0d47a1; }
+  &.cogs       { border-top: 4px solid #6a1b9a; }
+  &.cust-outstanding { border-top: 4px solid #00897b; }
+  &.supp-outstanding { border-top: 4px solid #c62828; }
+  // Cash and Bank are deliberately different hues from each other: the client
+  // reads them as a pair and the whole point is telling at a glance which half
+  // of the money is where. Green for notes in hand, indigo for the accounts.
+  &.cash-in-hand { border-top: 4px solid #2e7d32; }
+  &.bank-balance { border-top: 4px solid #3949ab; }
+}
+
+.card-icon  { font-size: 24px; margin-bottom: 8px; }
+.card-label { font-size: 12px; color: #888; font-weight: 500; margin-bottom: 6px; }
+.card-value {
+  font-size: 18px; font-weight: 700; color: #1a1a1a; font-variant-numeric: tabular-nums;
+
+  // A cash position can legitimately go negative on a database whose spending
+  // is recorded but whose receipts are not, so it is shown rather than hidden.
+  &.negative { color: #c62828; }
+}
+
+// Reconciliation — makes it visible that purchased stock is an asset, not a loss
+.reconciliation-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+
+.recon-head {
+  margin-bottom: 14px;
+
+  .recon-title {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+
+  .recon-sub {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    color: #888;
+  }
+}
+
+.recon-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 28px;
+}
+
+.recon-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed #eee;
+  font-size: 13px;
+  color: #444;
+
+  .num {
+    font-weight: 600;
+    color: #1a1a1a;
+    white-space: nowrap;
+  }
+
+  &.strong {
+    border-bottom: 1px solid #d0d0d0;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+
+  &.muted {
+    border-bottom: none;
+    color: #888;
+    font-size: 12px;
+
+    .num { color: #888; font-weight: 500; }
+  }
+}
+
+.recon-note {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  font-size: 12px;
+  color: #6d4c00;
+
+  ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+
+  li { margin-bottom: 4px; }
+}
+
+@media (max-width: 900px) {
+  .recon-grid { grid-template-columns: 1fr; }
+}
+
+// ── Opening Balance panel ───────────────────────────────────
+.panel {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+}
+
+.panel-body {
+  padding: 14px 20px;
+}
+
+.note {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #666;
+  margin: 0;
+}
+
+.opening-balance-panel {
+  border-color: #cbe7d7;
+
+  .panel-header { background: #f6fff9; }
+}
+
+.opening-balance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 14px;
+
+  span:last-child { font-weight: 600; }
+
+  &.total {
+    border-top: 1px solid #e0e0e0;
+    margin-top: 6px;
+    padding-top: 10px;
+    margin-bottom: 10px;
+    font-size: 16px;
+
+    span:last-child { font-weight: 700; color: #1a5c38; }
+  }
+
+  span.negative { color: #c62828; }
+}
+
+.btn-edit-small {
+  background: #e8f5e9;
+  color: #1a5c38;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover { background: #d7ecdd; }
+}
+
+.opening-balance-edit {
+  label {
+    display: block;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 10px;
+  }
+
+  .inline-input {
+    display: block;
+    width: 200px;
+    margin-top: 6px;
+    padding: 7px 10px;
+    border: 1.5px solid #1a5c38;
+    border-radius: 6px;
+    background: #f0faf4;
+    font-size: 14px;
+  }
+
+  .edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .btn-save {
+    background: #1a5c38;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
+  }
+
+  .btn-cancel-edit {
+    background: #f5f5f5;
+    color: #666;
+    border: 1px solid #e0e0e0;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
+  }
+}
+
+// Section Selector
+.sections-panel {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.sections-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.sections-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+}
+
+.sections-bulk {
+  display: flex;
+  gap: 8px;
+}
+
+.bulk-btn {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #555;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover { background: #e8e8e8; }
+}
+
+.sections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.section-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  transition: background 0.1s;
+  user-select: none;
+
+  &:hover { background: #fafafa; }
+
+  &.checked {
+    background: #f6fff9;
+  }
+
+  input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    accent-color: #1a5c38;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+}
+
+.checkbox-icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.checkbox-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.checkbox-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.checkbox-meta {
+  font-size: 12px;
+  color: #888;
+}
+
+// Table Card
+.table-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+
+  h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 16px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+
+    thead th {
+      background: #f8f9fa;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #666;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      color: #333;
+    }
+
+    tbody tr:hover {
+      background: #f8fdf9;
+    }
+
+    tbody tr.total-row {
+      background: #f0faf4;
+      font-weight: 600;
+      td {
+        border-top: 2px solid #1a5c38;
+        padding: 12px;
+      }
+    }
+  }
+}
+
+// Badges
+.payment-badge {
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  &.cash { background: #e8f5e9; color: #1a5c38; }
+  &:not(.cash) { background: #fff3e0; color: #e65100; }
+}
+
+.status-badge {
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  &.paid { background: #e8f5e9; color: #1a5c38; }
+  &.unpaid { background: #fce4ec; color: #c62828; }
+}
+
+.product-name { font-weight: 600; }
+.bill-number { font-family: monospace; font-weight: 600; color: #1a5c38; }
+.amount { font-weight: 600; color: #1a5c38; }
+
+// Which account the money moved through. 'Cash' stays muted; a named bank
+// account is the thing worth spotting on a page of figures.
+.account-cell {
+  font-size: 12px;
+  color: #777;
+  white-space: nowrap;
+
+  &.bank {
+    color: #1565c0;
+    font-weight: 600;
+  }
+}
+
+// Still owed to a supplier — red, like every other unsettled figure here.
+td.amount.outstanding { color: #c62828; }
+
+// A second table inside one section card (payments by account under payables).
+h4.sub-head {
+  margin-top: 24px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #aaa;
+  font-size: 15px;
+  background: white;
+  border-radius: 12px;
+  border: 1px dashed #e0e0e0;
+}
+
+.generate-hint {
+  text-align: center;
+  font-size: 13px;
+  color: #aaa;
+  padding: 12px;
+}

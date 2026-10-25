@@ -1,0 +1,385 @@
+<div class="module-container">
+
+  <div class="module-header">
+    <div>
+      <h3>Farm Report</h3>
+      <p class="subtitle">
+        {{ unitName }} — {{ isLayer ? 'Layer' : 'Broiler' }}
+        <span *ngIf="report">&nbsp;•&nbsp;{{ rangeLabel }}</span>
+      </p>
+    </div>
+    <button class="btn-generate"
+      (click)="generatePDF()"
+      *ngIf="report && report.hasActivity"
+      [disabled]="isGenerating">
+      {{ isGenerating ? 'Printing...' : '🖨️ Print Report' }}
+    </button>
+  </div>
+
+  <!-- Date range filter -->
+  <div class="filter-panel">
+    <div class="filter-field">
+      <label>From</label>
+      <input type="date" [(ngModel)]="dateFrom" />
+    </div>
+    <div class="filter-field">
+      <label>To</label>
+      <input type="date" [(ngModel)]="dateTo" />
+    </div>
+    <button class="btn-apply" (click)="generate()" [disabled]="isLoading">
+      {{ isLoading ? 'Generating...' : 'Generate' }}
+    </button>
+    <button class="btn-reset" (click)="resetDateFilter()" [disabled]="isLoading">This Year</button>
+  </div>
+
+  <!--
+    Opening Balance — shown whenever a report has resolved for a real farm,
+    regardless of the date range or whether that range has any activity. It is
+    a fixed, hand-entered starting figure with no date of its own, so it is
+    never hidden by a filter or an empty period. See report.openingBalanceLabel.
+  -->
+  <div class="panel opening-balance-panel" *ngIf="report && !report.isAccountWideFallback">
+    <div class="panel-header">
+      <span class="panel-title">🏦 Opening Balance (carried forward)</span>
+    </div>
+    <div class="panel-body">
+      <div class="opening-balance-row">
+        <span>Opening balance (carried forward from previous system)</span>
+        <span [class.negative]="report.openingBalance < 0">Rs. {{ report.openingBalance | number:'1.0-0' }}</span>
+      </div>
+      <div class="opening-balance-row">
+        <span>{{ report.netProfit >= 0 ? 'Net Profit (this period, app-calculated)' : 'Net Loss (this period, app-calculated)' }}</span>
+        <span [class.negative]="report.netProfit < 0">Rs. {{ report.netProfit | number:'1.0-0' }}</span>
+      </div>
+      <div class="opening-balance-row total">
+        <span>{{ report.totalWithOpeningBalance >= 0 ? 'Total (Opening Balance + Net Profit)' : 'Total (Opening Balance + Net Loss)' }}</span>
+        <span [class.negative]="report.totalWithOpeningBalance < 0">Rs. {{ report.totalWithOpeningBalance | number:'1.0-0' }}</span>
+      </div>
+      <p class="note">{{ report.openingBalanceLabel }}</p>
+    </div>
+  </div>
+
+<!--
+    Where the money actually is. OUTSIDE the `report.hasActivity` block below,
+    for the same reason Opening Balance is: both are balances rather than
+    totals for the period, so an empty period must not hide them. Stated AS OF
+    the closing date and repeated in the footer at the very bottom; each figure
+    is read from ONE object, so the two places cannot disagree.
+
+    THE TWO CARDS ARE SCOPED DIFFERENTLY, AND SAY SO. Cash is this farm's own
+    recorded movements, which is what the client asked for. The bank total is
+    account-wide and cannot be anything else: a bank account belongs to the
+    owner, not to a farm. Labelling either one loosely is how two screens end
+    up quietly disagreeing, so both notes name their scope outright.
+  -->
+  <div class="summary-grid cash-grid" *ngIf="farmCash as fc">
+    <div class="summary-card cash-in-hand">
+      <div class="card-icon">💵</div>
+      <div class="card-label">Cash from {{ unitName }}</div>
+      <div class="card-value" [class.negative]="fc.farmCashInHand < 0">Rs. {{ fc.farmCashInHand | number:'1.0-0' }}</div>
+      <div class="card-note">
+        This farm only, as of {{ asOfLabel }} — its own recorded cash sales and income
+        less its own cash expenses and wages
+      </div>
+    </div>
+    <div class="summary-card bank-balance" *ngIf="cashPosition as cp">
+      <div class="card-icon">🏦</div>
+      <div class="card-label">Total Bank Balance</div>
+      <div class="card-value" [class.negative]="cp.totalBankBalance < 0">Rs. {{ cp.totalBankBalance | number:'1.0-0' }}</div>
+      <div class="card-note">Whole account, as of {{ asOfLabel }} — your own accounts only</div>
+    </div>
+  </div>
+
+  <!-- ── Empty states ─────────────────────────────────────── -->
+  <div class="empty-state" *ngIf="!currentFarm">
+    <p>No account is active. Please log in again.</p>
+  </div>
+
+  <div class="empty-state" *ngIf="currentFarm && noFarmSelected">
+    <p>Please select a farm from the sidebar first.</p>
+  </div>
+
+  <div class="empty-state" *ngIf="currentFarm && !noFarmSelected && isLoading && !report">
+    <p>Generating report…</p>
+  </div>
+
+  <div class="empty-state" *ngIf="report && !report.hasFlocks">
+    <p>
+      No {{ flockWordPlural.toLowerCase() }} have been recorded for
+      <strong>{{ unitName }}</strong> yet.
+    </p>
+    <p class="empty-hint">
+      Add {{ isLayer ? 'a batch on the Batches screen' : 'a flock on the Flocks screen' }},
+      then generate this report again.
+    </p>
+  </div>
+
+  <div class="empty-state" *ngIf="report && report.hasFlocks && !report.hasActivity">
+    <p>
+      No transactions were recorded for <strong>{{ unitName }}</strong>
+      between {{ rangeLabel }}.
+    </p>
+    <p class="empty-hint">
+      The farm has {{ flockWordPlural.toLowerCase() }}, but none of them has revenue or
+      costs dated inside this range. Widen the date range and generate again.
+    </p>
+  </div>
+
+  <!-- ── Report ───────────────────────────────────────────── -->
+  <div *ngIf="report && report.hasActivity">
+
+    <div class="notice" *ngIf="report.isAccountWideFallback">
+      No farms have been created for this account yet, so this report covers every
+      {{ isLayer ? 'batch' : 'flock' }} in the {{ isLayer ? 'Layer' : 'Broiler' }} business.
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-grid">
+      <div class="summary-card income">
+        <div class="card-icon">📈</div>
+        <div class="card-label">Total Revenue</div>
+        <div class="card-value">Rs. {{ report.revenue.total | number:'1.0-0' }}</div>
+      </div>
+      <div class="summary-card expense">
+        <div class="card-icon">💰</div>
+        <div class="card-label">Total Expenses</div>
+        <div class="card-value">Rs. {{ report.expenses.total | number:'1.0-0' }}</div>
+      </div>
+      <div class="summary-card"
+        [class.profit]="report.netProfit >= 0"
+        [class.loss]="report.netProfit < 0">
+        <div class="card-icon">{{ report.netProfit >= 0 ? '✅' : '❌' }}</div>
+        <div class="card-label">{{ report.netProfit >= 0 ? 'Net Profit' : 'Net Loss' }}</div>
+        <div class="card-value">Rs. {{ report.netProfit | number:'1.0-0' }}</div>
+      </div>
+      <div class="summary-card sale">
+        <div class="card-icon">🐔</div>
+        <div class="card-label">{{ flockWordPlural }} in Period</div>
+        <div class="card-value">{{ report.flocks.length | number:'1.0-0' }}</div>
+      </div>
+      <div class="summary-card" *ngIf="report.owedToDistribution.billed > 0">
+        <div class="card-icon">🏠</div>
+        <div class="card-label">Owed to Distribution</div>
+        <div class="card-value">Rs. {{ report.owedToDistribution.outstanding | number:'1.0-0' }}</div>
+      </div>
+    </div>
+
+    <!--
+      Read-only, and deliberately outside Net Profit above: the cost of the stock
+      these bills paid for is already inside Total Expenses, on the day it
+      arrived. This is the unpaid part of those same bills — a debt, not a
+      second cost.
+    -->
+    <div class="panel" *ngIf="report.owedToDistribution.billed > 0">
+      <div class="panel-header">
+        <h4>🏠 Owed to your distribution business</h4>
+      </div>
+      <div class="panel-body">
+        <p>
+          Your distribution business has supplied this farm with
+          <strong>Rs. {{ report.owedToDistribution.billed | number:'1.0-0' }}</strong> of stock, of
+          which <strong>Rs. {{ report.owedToDistribution.outstanding | number:'1.0-0' }}</strong> is
+          still unpaid across
+          {{ report.owedToDistribution.unpaidBillCount | number:'1.0-0' }}
+          {{ report.owedToDistribution.unpaidBillCount === 1 ? 'bill' : 'bills' }}.
+        </p>
+        <p>
+          This is <em>not</em> counted again in Total Expenses or Net Profit above — the cost of that
+          stock was charged to this farm when it arrived, and this is the unpaid balance on the same
+          bills. Settle it on the Customer Ledger screen, under
+          <strong>{{ report.unitName }}</strong>'s own-farm customer.
+        </p>
+      </div>
+    </div>
+
+    <!-- How to read this report -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">📋 How to read this report</span>
+      </div>
+      <div class="panel-body">
+        <p class="note">{{ report.dateRuleLabel }}</p>
+        <p class="note">{{ report.transferLabel }}</p>
+        <p class="note" *ngIf="report.mortality.note">{{ report.mortality.note }}</p>
+      </div>
+    </div>
+
+    <!-- Expense breakdown -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">💸 Expense Breakdown</span>
+        <span class="panel-meta">Total Rs. {{ report.expenses.total | number:'1.0-0' }}</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>Cost Head</th><th class="right">Amount (Rs.)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Feed</td><td class="right">{{ report.expenses.feed | number:'1.0-0' }}</td></tr>
+          <tr><td>Medicine</td><td class="right">{{ report.expenses.medicine | number:'1.0-0' }}</td></tr>
+          <tr><td>Chicks</td><td class="right">{{ report.expenses.chicks | number:'1.0-0' }}</td></tr>
+          <tr><td>Vaccination</td><td class="right">{{ report.expenses.vaccination | number:'1.0-0' }}</td></tr>
+          <tr><td>Labour</td><td class="right">{{ report.expenses.labour | number:'1.0-0' }}</td></tr>
+          <tr><td>General Expenses</td><td class="right">{{ report.expenses.general | number:'1.0-0' }}</td></tr>
+          <tr><td>Ledger Debit</td><td class="right">{{ report.expenses.ledgerDebits | number:'1.0-0' }}</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td>Total Expenses</td><td class="right">{{ report.expenses.total | number:'1.0-0' }}</td></tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Revenue breakdown -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">📈 Revenue Breakdown</span>
+        <span class="panel-meta">Total Rs. {{ report.revenue.total | number:'1.0-0' }}</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>Source</th><th class="right">Amount (Rs.)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ isLayer ? 'Egg Sales' : 'Bird Sales' }}</td>
+            <td class="right">{{ report.revenue.sales | number:'1.0-0' }}</td>
+          </tr>
+          <tr *ngIf="isLayer">
+            <td>Hen Sales</td>
+            <td class="right">{{ report.revenue.henSales | number:'1.0-0' }}</td>
+          </tr>
+          <tr><td>Other Income</td><td class="right">{{ report.revenue.income | number:'1.0-0' }}</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td>Total Revenue</td><td class="right">{{ report.revenue.total | number:'1.0-0' }}</td></tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Per-flock / per-batch -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">🐣 {{ flockWord }} Performance</span>
+        <span class="panel-meta">{{ report.flocks.length }} {{ flockWordPlural.toLowerCase() }}</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{{ flockWord }}</th>
+            <th>Start Date</th>
+            <th class="right">Birds Placed</th>
+            <th class="right">{{ isLayer ? 'Birds Sold' : 'Weight Sold (kg)' }}</th>
+            <th class="right">Revenue (Rs.)</th>
+            <th class="right">Exp Costs (Rs.)</th>
+            <th class="right">Profit / Loss (Rs.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let f of report.flocks">
+            <td>{{ f.name }}</td>
+            <td>{{ formatDate(f.startDate) }}</td>
+            <td class="right">{{ f.birdsPlaced | number:'1.0-0' }}</td>
+            <td class="right">{{ (isLayer ? f.birdsSold : f.weightSoldKg) | number:'1.0-0' }}</td>
+            <td class="right">{{ f.revenue | number:'1.0-0' }}</td>
+            <td class="right">{{ f.expenses | number:'1.0-0' }}</td>
+            <td class="right"
+              [class.profit-text]="f.profit >= 0"
+              [class.loss-text]="f.profit < 0">
+              {{ f.profit | number:'1.0-0' }}
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td></td>
+            <td class="right">{{ report.mortality.birdsPlaced | number:'1.0-0' }}</td>
+            <td class="right">{{ (isLayer ? report.mortality.birdsSold : report.mortality.weightSoldKg) | number:'1.0-0' }}</td>
+            <td class="right">{{ report.revenue.total | number:'1.0-0' }}</td>
+            <td class="right">{{ report.expenses.total | number:'1.0-0' }}</td>
+            <td class="right">{{ report.netProfit | number:'1.0-0' }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Mortality -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">⚠️ Mortality Summary</span>
+      </div>
+      <table class="data-table">
+        <tbody>
+          <tr>
+            <td>Birds Placed</td>
+            <td class="right">{{ report.mortality.birdsPlaced | number:'1.0-0' }}</td>
+          </tr>
+          <tr *ngIf="isLayer">
+            <td>Birds Sold</td>
+            <td class="right">{{ report.mortality.birdsSold | number:'1.0-0' }}</td>
+          </tr>
+          <tr *ngIf="!isLayer">
+            <td>Weight Sold (kg)</td>
+            <td class="right">{{ report.mortality.weightSoldKg | number:'1.0-0' }} kg</td>
+          </tr>
+          <tr>
+            <td>Mortality</td>
+            <td class="right">{{ report.mortality.mortality | number:'1.0-0' }}</td>
+          </tr>
+          <tr>
+            <td>Mortality Rate</td>
+            <td class="right">{{ report.mortality.mortalityRate | number:'1.0-2' }}%</td>
+          </tr>
+          <tr *ngIf="report.mortality.avgWeightPerBirdKg != null">
+            <td>Avg. Weight / Bird (kg)</td>
+            <td class="right">{{ report.mortality.avgWeightPerBirdKg | number:'1.2-2' }} kg</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Warnings -->
+    <div class="panel warnings" *ngIf="report.warnings.length > 0">
+      <div class="panel-header">
+        <span class="panel-title">⚠️ Warnings</span>
+      </div>
+      <div class="panel-body">
+        <p class="note" *ngFor="let w of report.warnings">• {{ w }}</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!--
+    ── CLOSING SUMMARY ── the last thing on the screen, mirroring the last
+    block of the printed PDF: "as of this date you have Rs. X in cash and
+    Rs. Y in bank". It is NOT a section — it summarises the whole account, so
+    it sits outside every `report` guard and shows even when the range is
+    empty, when no flock exists and when the report could not be built. It
+    reads the same `cashPosition` the cards at the top do.
+  -->
+  <div class="money-footer" *ngIf="cashPosition as cp">
+    <div class="money-footer-title">Money Position (as of {{ asOfLabel }})</div>
+    <div class="money-row">
+      <span>Cash from {{ unitName }} (as of {{ asOfLabel }})</span>
+      <span [class.negative]="farmCashInHand < 0">Rs. {{ farmCashInHand | number:'1.0-0' }}</span>
+    </div>
+    <div class="money-row">
+      <span>Total Bank Balance, whole account (as of {{ asOfLabel }})</span>
+      <span [class.negative]="cp.totalBankBalance < 0">Rs. {{ cp.totalBankBalance | number:'1.0-0' }}</span>
+    </div>
+    <div class="money-row total">
+      <span>Total Money</span>
+      <span [class.negative]="totalMoney < 0">Rs. {{ totalMoney | number:'1.0-0' }}</span>
+    </div>
+    <p class="note">
+      Balances as of {{ asOfLabel }}, not totals for the period. The cash line covers
+      {{ unitName }} alone — its own recorded cash transactions, nothing the distribution
+      business or the owner's own accounts did. The bank line is the whole account: a bank
+      account belongs to the owner rather than to one farm.
+    </p>
+    <p class="note" *ngFor="let w of cp.warnings">⚠️ {{ w }}</p>
+    <p class="note" *ngFor="let w of (farmCash?.warnings || [])">⚠️ {{ w }}</p>
+  </div>
+
+</div>

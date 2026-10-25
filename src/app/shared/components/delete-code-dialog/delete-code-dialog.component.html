@@ -1,0 +1,27 @@
+<div class="dialog-overlay">
+  <div class="dialog-box">
+    <div class="dialog-icon danger">
+      <span>🔒</span>
+    </div>
+    <h3 class="dialog-title">Delete Code Required</h3>
+    <p class="dialog-message">This action deletes data permanently. Enter the delete code to continue.</p>
+
+    <input
+      #codeInput
+      type="password"
+      class="code-input"
+      [(ngModel)]="code"
+      placeholder="Delete code"
+      (keydown.enter)="submit()"
+      autocomplete="off"
+    />
+    <p class="code-error" *ngIf="error">{{ error }}</p>
+
+    <div class="dialog-actions">
+      <button class="btn-cancel" (click)="cancel()">Cancel</button>
+      <button class="btn-confirm danger" (click)="submit()" [disabled]="isVerifying || !code.trim()">
+        {{ isVerifying ? 'Checking...' : 'Confirm' }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,249 @@
+<div class="module-container">
+  <div class="module-header">
+    <div>
+      <h3>Sales Returns</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }}</p>
+    </div>
+    <button class="btn-secondary" *ngIf="selectedBill" (click)="clearSelection()">
+      ← Back to Bills
+    </button>
+  </div>
+
+  <!-- Alerts -->
+  <div class="alert alert-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="alert alert-success" *ngIf="successMessage && !selectedBill">{{ successMessage }}</div>
+
+  <!-- Loading -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading data...</p>
+  </div>
+
+  <!-- ═══ BILL LIST VIEW ════════════════════════════════════════ -->
+  <ng-container *ngIf="!isLoading && !selectedBill">
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <span class="summary-label">Eligible Bills</span>
+        <strong>{{ filteredBills.length }}</strong>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Total Returns</span>
+        <strong>{{ returns.length }}</strong>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Total Returned</span>
+        <strong>Rs. {{ totalReturnsAmount | number:'1.0-0' }}</strong>
+      </div>
+    </div>
+
+    <!-- Bills Table -->
+    <div class="section-title">Bills Available for Return</div>
+
+    <div class="search-container" style="margin-bottom: 12px;">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Search by bill number or customer..."
+          [(ngModel)]="billSearchTerm"
+          (ngModelChange)="filterBills()"
+        />
+        <button class="search-clear" *ngIf="billSearchTerm" (click)="clearBillSearch()">✕</button>
+      </div>
+      <span class="search-results" *ngIf="billSearchTerm">Found {{ filteredBills.length }} result(s)</span>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Bill #</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th class="text-right">Total</th>
+            <th class="text-right">Paid</th>
+            <th class="text-right">Returned</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let bill of filteredBills">
+            <td class="strong bill-num">{{ bill.bill_number }}</td>
+            <td>{{ bill.bill_date | dateOnly }}</td>
+            <td>{{ bill.customer_name || '—' }}</td>
+            <td class="text-right amount">Rs. {{ bill.total_amount | number:'1.0-0' }}</td>
+            <td class="text-right">Rs. {{ bill.amount_paid | number:'1.0-0' }}</td>
+            <td class="text-right returned-amt">
+              {{ bill.returned_amount > 0 ? ('Rs. ' + (bill.returned_amount | number:'1.0-0')) : '—' }}
+            </td>
+            <td>
+              <span class="badge" [ngClass]="'badge-' + (bill.status || 'completed')">
+                {{ bill.status || 'completed' }}
+              </span>
+            </td>
+            <td>
+              <button class="btn-return"
+                [disabled]="bill.status === 'returned'"
+                (click)="selectBill(bill)">
+                ↩ Return
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredBills.length === 0 && bills.length > 0">
+            <td colspan="8" class="empty-row">No bills found matching "{{ billSearchTerm }}"</td>
+          </tr>
+          <tr *ngIf="bills.length === 0">
+            <td colspan="8" class="empty-row">No bills available for return.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Return History -->
+    <div class="section-title" *ngIf="returns.length > 0">Return History</div>
+    <div class="table-card history" *ngIf="returns.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>Return #</th>
+            <th>Date</th>
+            <th>Bill #</th>
+            <th>Customer</th>
+            <th class="text-right">Return Amt</th>
+            <th class="text-right">Refund</th>
+            <th>Method</th>
+            <th>Reason</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of returns">
+            <td class="strong bill-num">{{ r.return_number }}</td>
+            <td>{{ r.return_date | dateOnly }}</td>
+            <td>{{ r.bill_number }}</td>
+            <td>{{ r.customer_name || '—' }}</td>
+            <td class="text-right amount">Rs. {{ r.return_amount | number:'1.0-0' }}</td>
+            <td class="text-right">Rs. {{ r.refund_amount | number:'1.0-0' }}</td>
+            <td>
+              <span class="badge" [ngClass]="r.refund_method === 'bank' ? 'badge-bank' : 'badge-cash'">
+                {{ r.refund_method }}
+              </span>
+            </td>
+            <td class="reason-cell">{{ r.reason || '—' }}</td>
+            <td>
+              <button class="btn-return" *ngIf="canEditReturn(r)" (click)="editReturn(r)">✎ Edit</button>
+              <span *ngIf="!canEditReturn(r)" class="reason-cell" title="This bill has more than one return, so it can't be edited from here.">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </ng-container>
+
+  <!-- ═══ RETURN FORM VIEW ══════════════════════════════════════ -->
+  <ng-container *ngIf="!isLoading && selectedBill">
+
+    <!-- Bill info bar -->
+    <div class="bill-info-bar">
+      <div class="bill-info-main">
+        <span class="bill-info-num">{{ selectedBill.bill_number }}</span>
+        <span class="bill-info-customer">{{ selectedBill.customer_name || 'Walk-in Customer' }}</span>
+        <span class="badge" [ngClass]="'badge-' + (selectedBill.status || 'completed')">
+          {{ selectedBill.status || 'completed' }}
+        </span>
+        <span class="badge badge-bank" *ngIf="editingReturnId">Editing {{ editingReturnNumber }}</span>
+      </div>
+      <div class="bill-info-amounts">
+        <span>Original: <strong>Rs. {{ selectedBill.total_amount | number:'1.0-0' }}</strong></span>
+        <span>Paid: <strong>Rs. {{ selectedBill.amount_paid | number:'1.0-0' }}</strong></span>
+      </div>
+    </div>
+
+    <!-- Return controls -->
+    <div class="controls-bar">
+      <div class="control-group">
+        <label>Return Date</label>
+        <input type="date" class="ctrl-input" [(ngModel)]="returnDate" />
+      </div>
+      <div class="control-group">
+        <label>Refund Method</label>
+        <select class="ctrl-input" [(ngModel)]="refundMethod">
+          <option value="cash">Cash</option>
+          <option value="bank">Bank Transfer</option>
+        </select>
+      </div>
+      <div class="control-group reason-group">
+        <label>Reason (optional)</label>
+        <input type="text" class="ctrl-input" [(ngModel)]="reason" placeholder="e.g. Damaged goods, Wrong item..." />
+      </div>
+    </div>
+
+    <!-- Items table -->
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th class="text-right">Sold Qty</th>
+            <th class="text-right">Unit Price</th>
+            <th class="text-center">Return Qty</th>
+            <th class="text-right">Return Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of returnRows" [class.row-active]="(row.return_quantity || 0) > 0">
+            <td class="strong">{{ row.product_name }}</td>
+            <td class="text-right">{{ row.sold_quantity | number }}</td>
+            <td class="text-right">Rs. {{ row.unit_price | number:'1.2-2' }}</td>
+            <td class="text-center">
+              <input
+                class="qty-input"
+                type="number"
+                min="0"
+                [max]="row.sold_quantity"
+                [(ngModel)]="row.return_quantity"
+                placeholder="0"
+              />
+            </td>
+            <td class="text-right amount">
+              {{ getRowReturnAmount(row) > 0 ? ('Rs. ' + (getRowReturnAmount(row) | number:'1.0-0')) : '—' }}
+            </td>
+          </tr>
+          <tr *ngIf="returnRows.length === 0">
+            <td colspan="5" class="empty-row">All items in this bill have already been returned.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Summary footer -->
+    <div class="return-summary-bar">
+      <div class="summary-numbers">
+        <div class="sumrow">
+          <span>Total Return Amount</span>
+          <strong class="amount">Rs. {{ totalReturnAmount | number:'1.0-0' }}</strong>
+        </div>
+        <div class="sumrow">
+          <span>New Bill Total</span>
+          <strong>Rs. {{ newBillTotal | number:'1.0-0' }}</strong>
+        </div>
+        <div class="sumrow" *ngIf="refundDue > 0">
+          <span>Refund Due</span>
+          <strong class="refund-due">Rs. {{ refundDue | number:'1.0-0' }}</strong>
+        </div>
+      </div>
+      <button
+        class="btn-save"
+        [disabled]="isSaving || totalReturnAmount <= 0"
+        (click)="saveReturn()">
+        <span *ngIf="!isSaving">✔ {{ editingReturnId ? 'Update Return' : 'Save Return' }}</span>
+        <span *ngIf="isSaving">Saving...</span>
+      </button>
+    </div>
+
+  </ng-container>
+</div>

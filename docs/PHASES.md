@@ -175,18 +175,52 @@ Corrected table: `db/CLAUDE.md`.
 
 ## Phase 2 · Frontend
 
-- [ ] Copy `Talha Farm/src/app/` into `src/app/`
-- [ ] Define `PlatformApi` matching the `electronAPI` shape exactly
-- [ ] Implement it over `HttpClient`, preserving `{ success, error }` results and the `sql-error.util.ts` mapping
-- [ ] Point `DatabaseService` at it — signatures unchanged, so no call site moves
-- [ ] Replace `printPdfBase64` in 21 components with a browser print path
-- [ ] Remove the activation route, splash licensing checks, `getMachineId`, `license.service.ts`
-- [ ] Remove Electron build configuration from `package.json`
-- [ ] Walk all 60 screens against the Phase 0 reference data
+- [x] Copy `Talha Farm/src/app/` into `src/app/` — 121 TypeScript files, 57 screen folders
+- [x] Define `PlatformApi` matching the `electronAPI` shape exactly
+- [x] Implement it over `HttpClient`, preserving the `{ success, error }` result shape
+- [x] Point `DatabaseService` at it — signatures unchanged, so no call site moved
+- [x] Replace `printPdfBase64` in 19 components + `print-report.util.ts` with a browser print path
+- [x] Remove the activation route and component, `getMachineId`, the licence system
+- [x] Remove Electron build configuration from `package.json`
+- [x] **The app builds** — `dist/farminfantary`, 6.0 MB, **zero `electronAPI` in the bundle**
+- [x] Dev proxy so `ng serve` reaches the API
+- [ ] Walk all 60 screens against real data — needs a seeded account
 
 **Gate:** every screen works in a browser with no Electron present.
+**Status:** it builds and the API answers the app's exact calls. Screens not
+yet walked.
 
-**Blocked on:** confirming farm connectivity with the client (D9).
+### What changed, and what deliberately did not
+
+`DatabaseService` keeps every method signature. The only edits inside it are
+the six core calls, which now go through an injected `PlatformApi` instead of
+a `window` global — so **all 341 call sites are untouched**, which was the
+entire premise of the conversion.
+
+The `declare global { Window.electronAPI }` block is gone: the app no longer
+reaches for a global at all.
+
+Three things were stubbed rather than deleted, because deleting them would
+have meant editing templates for no behavioural gain:
+
+| Kept as | Why |
+|---|---|
+| `LicenseService` reporting "activated" | `layout.component.ts` renders licence state in its template. Phase 5 points the body at `GET /api/entitlement`. |
+| `getMachineId()` returning `'web'` | A licensing artefact, but removing it changes `DatabaseService`'s frozen surface. |
+| `getAutoBackupPath()` returning `null` | There is no local backup folder on a server. |
+
+`delete-auth.service.ts` now goes through `PlatformApi`, and carries an
+explicit Phase 3 note: **the PIN comparison must move server-side.** Fetching
+the PIN to the browser and comparing it there was adequate on a machine the
+owner controlled; it is not a control once staff accounts exist.
+
+### Verified
+
+- `ng build` succeeds; the bundle contains no reference to `electronAPI`
+- the dialect inventory re-pointed itself at `src/app` and **all 17 construct
+  counts still match**, confirming the copy is faithful
+- the API answers the exact request shape `HttpPlatformApi` sends, including a
+  login-shaped query with `?` placeholders
 
 ---
 

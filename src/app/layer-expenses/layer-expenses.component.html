@@ -1,0 +1,132 @@
+<div class="module-container">
+  <div class="module-header">
+    <div>
+      <h3>Layer Expenses</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }}</p>
+    </div>
+    <div class="header-actions">
+      <ng-container *ngIf="hasPendingRows">
+        <button class="btn-secondary" (click)="cancelAllRows()">Cancel</button>
+        <button class="btn-primary" (click)="saveAllRows()" [disabled]="isSavingAll">{{ isSavingAll ? 'Saving...' : 'Save All' }}</button>
+      </ng-container>
+      <button class="btn-add" (click)="addPendingRow()" *ngIf="batches.length > 0" title="Add row (Ctrl+A)">+</button>
+    </div>
+  </div>
+
+  <div class="filter-bar" *ngIf="batches.length > 0">
+    <div class="filter-group">
+      <label>Filter by Batch:</label>
+      <select [(ngModel)]="selectedBatchFilter" (change)="currentPage = 1">
+        <option value="all">All Batches</option>
+        <option *ngFor="let b of batches" [value]="b.batch_id">{{ b.batch_name }}</option>
+      </select>
+    </div>
+    <div class="filter-group total-group">
+      <label>Total:</label>
+      <span class="total-value">Rs. {{ totalExpenses | number:'1.0-0' }}</span>
+    </div>
+  </div>
+
+  <div class="shortcuts-hint" *ngIf="hasPendingRows">
+    <span>Ctrl+A — new row</span>
+    <span>Ctrl+S — save all</span>
+  </div>
+
+  <div class="error-banner" *ngIf="errorMessage" style="color:#c0392b;padding:8px 12px;margin:8px 0;background:#fdecea;border-radius:6px;">
+    {{ errorMessage }}
+  </div>
+
+  <div class="empty-state" *ngIf="batches.length === 0">
+    <p>No active batches found. Create a batch first in Batch Management.</p>
+  </div>
+
+  <div class="empty-state" *ngIf="batches.length > 0 && expenses.length === 0 && pendingRows.length === 0">
+    <p>No expenses recorded yet. Click + or press Ctrl+A to add one.</p>
+  </div>
+
+  <div class="table-card" *ngIf="expenses.length > 0 || pendingRows.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:32px"></th>
+          <th>Batch</th>
+          <th>Date</th>
+          <th>Category</th>
+          <th>Description</th>
+          <th>Amount</th>
+          <th>Notes</th>
+          <th>Paid By</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of pendingRows; let i = index" class="pending-row">
+          <td class="row-plus-cell"><button class="row-plus-btn" (click)="addRowAfter(i)" title="Add row below">+</button></td>
+          <td><select class="inline-input" [(ngModel)]="row.batch_id"><option *ngFor="let b of batches" [value]="b.batch_id">{{ b.batch_name }}</option></select></td>
+          <td><input class="inline-input" type="date" [(ngModel)]="row.date"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="row.category" placeholder="e.g. Diesel"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="row.description" placeholder="Description"/></td>
+          <td><input class="inline-input" type="number" min="0" [(ngModel)]="row.amount" placeholder="0"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="row.notes" placeholder="Notes"/></td>
+          <td>
+            <select class="inline-input" [(ngModel)]="row.payment_source">
+              <option value="cash">Cash</option>
+              <option value="bank">Bank</option>
+            </select>
+            <app-bank-picker [row]="row" [banks]="houseBanks"></app-bank-picker>
+          </td>
+          <td class="actions"><button class="btn-remove-row" (click)="removePendingRow(i)" title="Remove row">✕</button></td>
+        </tr>
+
+        <tr *ngFor="let e of paginatedExpenses" [class.editing]="editingId === e.expense_id">
+          <ng-container *ngIf="editingId !== e.expense_id">
+            <td></td>
+            <td>{{ getBatchName(e.batch_id) }}</td>
+            <td>{{ e.date | dateOnly }}</td>
+            <td>{{ e.category || defaultCategory }}</td>
+            <td>{{ e.description || '—' }}</td>
+            <td class="amount">Rs. {{ e.amount | number:'1.0-0' }}</td>
+            <td>{{ e.notes || '—' }}</td>
+            <td>
+              <span class="payment-badge" [class.cash]="(e.payment_source || 'cash') === 'cash'">
+                {{ (e.payment_source || 'cash') === 'bank' ? 'Bank' : 'Cash' }}
+              </span>
+              <app-bank-picker [row]="e" [banks]="houseBanks" readonly></app-bank-picker>
+            </td>
+            <td class="actions">
+              <button class="btn-edit" [disabled]="isSaving" (click)="startEdit(e)">Edit</button>
+              <button class="btn-delete" [disabled]="isSaving" (click)="confirmDelete(e.expense_id)">Delete</button>
+            </td>
+          </ng-container>
+          <ng-container *ngIf="editingId === e.expense_id">
+            <td></td>
+            <td><select class="inline-input" [(ngModel)]="editForm.batch_id"><option *ngFor="let b of batches" [value]="b.batch_id">{{ b.batch_name }}</option></select></td>
+            <td><input class="inline-input" type="date" [(ngModel)]="editForm.date"/></td>
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.category"/></td>
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.description"/></td>
+            <td><input class="inline-input" type="number" min="0" [(ngModel)]="editForm.amount"/></td>
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.notes"/></td>
+            <td>
+              <select class="inline-input" [(ngModel)]="editForm.payment_source">
+                <option value="cash">Cash</option>
+                <option value="bank">Bank</option>
+              </select>
+              <app-bank-picker [row]="editForm" [banks]="houseBanks"></app-bank-picker>
+            </td>
+            <td class="actions">
+              <button class="btn-save" [disabled]="isSaving" (click)="saveEdit(e.expense_id)">{{ isSaving ? 'Saving...' : 'Save' }}</button>
+              <button class="btn-cancel-edit" [disabled]="isSaving" (click)="cancelEdit()">Cancel</button>
+            </td>
+          </ng-container>
+        </tr>
+      </tbody>
+    </table>
+    <app-pagination [currentPage]="currentPage" [totalItems]="filteredExpenses.length" [pageSize]="pageSize" (pageChange)="currentPage = $event"></app-pagination>
+  </div>
+</div>
+
+<app-delete-code-dialog *ngIf="showDeleteCodeDialog" (verified)="onDeleteCodeVerified()" (cancelled)="onDeleteCodeCancelled()"/>
+<app-confirm-dialog *ngIf="showDeleteDialog" title="Delete Expense"
+  message="Are you sure you want to delete this expense?"
+  confirmText="Delete" cancelText="Cancel" type="danger"
+  (confirmed)="onDeleteConfirmed()" (cancelled)="onDeleteCancelled()"/>

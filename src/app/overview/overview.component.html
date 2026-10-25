@@ -1,0 +1,225 @@
+<div class="module-container">
+  <div class="module-header">
+    <div>
+      <h3>Overview Dashboard</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }} · Account-wide, across all farms</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-generate" (click)="generatePDF()" [disabled]="isGenerating || isLoading || !summary">
+        {{ isGenerating ? 'Printing...' : '🖨️ Print Report' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Date Filter -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>From:</label>
+      <input type="date" [(ngModel)]="dateFrom">
+      <label>To:</label>
+      <input type="date" [(ngModel)]="dateTo">
+      <button class="btn-primary" (click)="applyDateFilter()">Apply</button>
+      <button class="btn-secondary" (click)="clearDateFilter()">This Month</button>
+    </div>
+  </div>
+
+  <div class="empty-state" *ngIf="isLoading">
+    <p>Loading overview...</p>
+  </div>
+
+  <ng-container *ngIf="!isLoading && summary as s">
+
+    <!-- Warnings -->
+    <div class="warning-card" *ngFor="let w of s.warnings">
+      <span>⚠️</span>
+      <span>{{ w }}</span>
+    </div>
+
+    <!--
+      Where the money actually is, as at today. Its own grid above the assets
+      row rather than two more cards inside it, because every figure in that
+      row is scoped to the date filter and these two deliberately are not —
+      they read `cashPosition`, which the filter never touches.
+    -->
+    <div class="summary-grid" *ngIf="cashPosition as cp">
+      <div class="summary-card cash-in-hand">
+        <div class="card-icon">💵</div>
+        <div class="card-label">Cash in Hand <span class="asof-note">as at today</span></div>
+        <div class="card-value" [class.positive]="cp.cashInHand >= 0" [class.negative]="cp.cashInHand < 0">
+          Rs. {{ cp.cashInHand | number:'1.0-0' }}
+        </div>
+        <div class="card-note">Derived from recorded cash transactions</div>
+      </div>
+      <div class="summary-card bank-balance">
+        <div class="card-icon">🏦</div>
+        <div class="card-label">Total Bank Balance <span class="asof-note">as at today</span></div>
+        <div class="card-value" [class.positive]="cp.totalBankBalance >= 0" [class.negative]="cp.totalBankBalance < 0">
+          Rs. {{ cp.totalBankBalance | number:'1.0-0' }}
+        </div>
+        <div class="card-note">Your own accounts only</div>
+      </div>
+    </div>
+
+    <!--
+      LOANS. Outside the period-scoped row for the same reason the two cash
+      cards are: these are balances as at today, and the date filter must not
+      move them. Rendered only when there is something to show, so an account
+      that has never lent or borrowed sees no empty pair.
+
+      NEITHER FIGURE IS IN PROFIT, ON EITHER SIDE. A loan given is not an
+      expense and money received is not income — the cards sit here next to the
+      cash position because that is what a loan actually moves.
+    -->
+    <div class="summary-grid loans-grid"
+         *ngIf="loanTotals.receivable > 0 || loanTotals.payable > 0">
+      <div class="summary-card loan-receivable">
+        <div class="card-icon">💰</div>
+        <div class="card-label">Loan Receivable <span class="asof-note">as at today</span></div>
+        <div class="card-value" [class.positive]="loanTotals.receivable > 0">
+          Rs. {{ loanTotals.receivable | number:'1.0-0' }}
+        </div>
+        <div class="card-note">Still owed to you — not counted as income</div>
+      </div>
+      <div class="summary-card loan-payable">
+        <div class="card-icon">🤝</div>
+        <div class="card-label">Loan Payable <span class="asof-note">as at today</span></div>
+        <div class="card-value" [class.negative]="loanTotals.payable > 0">
+          Rs. {{ loanTotals.payable | number:'1.0-0' }}
+        </div>
+        <div class="card-note">You are holding or owe it — not counted as an expense</div>
+      </div>
+    </div>
+
+    <div class="warning-card" *ngFor="let w of cashPosition?.warnings || []">
+      <span>⚠️</span>
+      <span>{{ w }}</span>
+    </div>
+
+    <!-- Assets: what is owned, and what is still owed on it -->
+    <div class="summary-grid assets-grid">
+      <div class="summary-card assets">
+        <div class="card-icon">🏗️</div>
+        <div class="card-label">Assets Owned (value)</div>
+        <div class="card-value">Rs. {{ s.assets.activeValue | number:'1.0-0' }}</div>
+      </div>
+      <div class="summary-card assets">
+        <div class="card-icon">📉</div>
+        <div class="card-label">Outstanding Installments</div>
+        <div class="card-value" [class.negative]="s.assets.outstanding > 0">
+          Rs. {{ s.assets.outstanding | number:'1.0-0' }}
+        </div>
+      </div>
+      <div class="summary-card assets">
+        <div class="card-icon">{{ s.profit >= 0 ? '📈' : '📉' }}</div>
+        <div class="card-label">Overall {{ s.profit >= 0 ? 'Profit' : 'Loss' }} (all farms)</div>
+        <div class="card-value" [class.positive]="s.profit >= 0" [class.negative]="s.profit < 0">
+          Rs. {{ s.profit | number:'1.0-0' }}
+        </div>
+      </div>
+      <div class="summary-card assets">
+        <div class="card-icon">{{ s.profitWithOpeningBalance >= 0 ? '📈' : '📉' }}</div>
+        <div class="card-label">Net Position (Opening Balance + Result)</div>
+        <div class="card-value" [class.positive]="s.profitWithOpeningBalance >= 0" [class.negative]="s.profitWithOpeningBalance < 0">
+          Rs. {{ s.profitWithOpeningBalance | number:'1.0-0' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-farm breakdown -->
+    <div class="table-card">
+      <h4>Per-Farm Breakdown</h4>
+      <p class="table-caption">
+        Each row is that business's own P&amp;L, including what it bought from or sold to
+        the owner's other farms. Rows will not sum to the headline Profit/Loss above, which
+        eliminates those internal transfers. Opening Balance is each farm's carried-forward
+        starting figure from the Farms screen (Distribution's own figure comes from the
+        Distribution Report screen instead) — it is not part of that row's Profit column, and
+        "—" means the row has no owner to attribute an opening balance to (flocks/batches with
+        no farm assigned). Net Profit is simply that row's Opening Balance plus its Profit.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Farm</th>
+            <th>Module</th>
+            <th class="num">Opening Balance</th>
+            <th class="num">Expenses</th>
+            <th class="num">Total Revenue</th>
+            <th class="num">Profit</th>
+            <th class="num">
+              Net Profit
+              <span class="formula-hint">= Opening Balance + Profit</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let f of s.perFarm" [class.unassigned-row]="f.unitId === null && f.moduleType !== 'distribution'">
+            <td>
+              {{ f.unitName }}
+              <span class="unassigned-note" *ngIf="f.unitId === null && f.moduleType !== 'distribution'">
+                ⚠️ no farm assigned
+              </span>
+            </td>
+            <td class="module-badge"><span [class]="'badge ' + f.moduleType">{{ f.moduleType }}</span></td>
+            <td class="num" [class.negative]="f.openingBalance < 0">
+              {{ hasOpeningBalance(f) ? ('Rs. ' + (f.openingBalance | number:'1.0-0')) : '—' }}
+            </td>
+            <td class="num">Rs. {{ f.expenses | number:'1.0-0' }}</td>
+            <td class="num">Rs. {{ f.revenue | number:'1.0-0' }}</td>
+            <td class="num" [class.positive]="f.profit >= 0" [class.negative]="f.profit < 0">
+              Rs. {{ f.profit | number:'1.0-0' }}
+            </td>
+            <td class="num net-profit" [class.positive]="netProfit(f) >= 0" [class.negative]="netProfit(f) < 0">
+              {{ hasOpeningBalance(f) ? ('Rs. ' + (netProfit(f) | number:'1.0-0')) : '—' }}
+            </td>
+          </tr>
+          <tr *ngIf="s.perFarm.length === 0">
+            <td colspan="7" class="empty-row">No activity in this period.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Asset totals: point-in-time as at the "To" date, same convention as
+         Opening Balance — the From date does not apply. An asset bought
+         before the visible window is still something the farm owns today. -->
+    <div class="table-card">
+      <h4>Asset Totals <span class="asof-note">as at {{ dateTo || 'today' }}</span></h4>
+      <p class="table-caption">
+        Point-in-time, like Opening Balance — every figure here reflects everything on file
+        up to {{ dateTo || 'today' }}, regardless of the "From" date above.
+      </p>
+      <div class="summary-grid assets-grid">
+        <div class="summary-card assets">
+          <div class="card-icon">🏗️</div>
+          <div class="card-label">Total Assets Owned</div>
+          <div class="card-value">
+            {{ s.assets.totals.count | number:'1.0-0' }} · Rs. {{ s.assets.totals.purchaseValue | number:'1.0-0' }}
+          </div>
+        </div>
+        <div class="summary-card assets">
+          <div class="card-icon">💵</div>
+          <div class="card-label">Total Paid So Far</div>
+          <div class="card-value">Rs. {{ s.assets.totals.paid | number:'1.0-0' }}</div>
+        </div>
+        <div class="summary-card assets">
+          <div class="card-icon">🏷️</div>
+          <div class="card-label">Total Sold For</div>
+          <div class="card-value">Rs. {{ s.assets.totals.soldFor | number:'1.0-0' }}</div>
+        </div>
+        <div class="summary-card assets">
+          <div class="card-icon">{{ s.assets.totals.profitLoss >= 0 ? '📈' : '📉' }}</div>
+          <div class="card-label">Profit / Loss on Sold Assets</div>
+          <div class="card-value" [class.positive]="s.assets.totals.profitLoss > 0" [class.negative]="s.assets.totals.profitLoss < 0">
+            Rs. {{ s.assets.totals.profitLoss | number:'1.0-0' }}
+          </div>
+          <div class="card-note" *ngIf="s.assets.totals.excludedFromProfitLoss > 0">
+            {{ s.assets.totals.excludedFromProfitLoss }} sold asset{{ s.assets.totals.excludedFromProfitLoss === 1 ? '' : 's' }}
+            excluded — no total price on file.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+</div>
