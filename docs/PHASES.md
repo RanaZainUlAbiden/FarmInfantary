@@ -188,7 +188,9 @@ Corrected table: `db/CLAUDE.md`.
 - [x] **Walk the app in a real browser** — login, all four module tabs, and the
       broiler screens, verified against the seeded figures
 - [x] Walk every screen in all four modules — **690 queries, 12 failures in 4 classes** (below)
-- [ ] Fix the 4 dialect gaps the walk found
+- [x] Fix the dialect gaps — all four, plus two more the walk could not reach
+- [x] **`verify_app_sql_prepares.mjs`** — translates and `PREPARE`s all 345 static
+      statements; **345/345 prepare cleanly**
 
 **Gate:** every screen works in a browser with no Electron present.
 **Status:** the app runs. Logged in through the real login screen and drove
@@ -296,15 +298,54 @@ SQLite allows bare columns alongside an aggregate and picks an arbitrary row.
 PostgreSQL requires each one grouped, aggregated, or functionally dependent on
 a grouped primary key. **Breaks the Purchase Orders screen.**
 
+### All six fixed, and a better detector built
+
+A, B and C are translated at the boundary; D and a sixth problem needed the
+query itself changed, because PostgreSQL's rules there cannot be translated
+away safely.
+
+| | Problem | Fix |
+|---|---|---|
+| A | `date(x, modifier)` | translated to `to_char(x::date ± INTERVAL …)`; unrecognised modifiers are **refused**, not guessed |
+| B | multi-statement SQL | split at the boundary, run in order in one transaction, params handed out by position |
+| C | `? IS NULL` | `?::text IS NULL` — narrow by design; `COALESCE(?, …)` already infers from its sibling |
+| D | bare columns with `GROUP BY` | query changed to group by the joined tables' primary keys |
+| E | `date + bigint` | knock-on of D15: PostgreSQL has `date + integer` only, so the computed modifier casts `::int` |
+| F | alias in `HAVING` | expression repeated; SQLite lets `HAVING` see a select-list alias, PostgreSQL does not |
+
+### The detector that replaced clicking
+
+Walking screens finds defects one blank card at a time, and only on the
+screens you happen to reach. `scripts/verify/verify_app_sql_prepares.mjs`
+extracts every self-contained SQL literal in the app, translates it, and
+`PREPARE`s it against PostgreSQL — which parses, resolves and type-checks
+without executing.
+
+**345 statements, all preparing cleanly.** It found the `HAVING` alias and
+seven of the eight `GROUP BY` candidates that no amount of clicking had
+reached.
+
+It took two corrections of its own before it could be trusted, and both are
+worth recording because they are the normal failure mode of a tool like this:
+
+- it grabbed **fragments** of statements built by concatenating template
+  literals, reporting a missing `GROUP BY` that existed in the next fragment —
+  7 of the first 10 "failures" were this
+- it numbered placeholders across a whole multi-statement string and then
+  split it, leaving piece two holding `$2` with no `$1`
+
+A checker that cries wolf gets ignored, so both were fixed before the real
+failures were acted on.
+
+**Scope, stated plainly:** 120 statements built with `${…}` interpolation are
+skipped, because their final text is not knowable without running the app. The
+script reports that count every run rather than implying full coverage.
+
 ### Honest status
 
-Phase 2's gate is **not met**. The app runs, every module loads, and the
-screens checked against the seed are correct — but four query classes fail,
-and two of them (A and D) break a screen outright.
-
-A and B are mechanical. C and D need judgement per query, and D in particular
-cannot be auto-rewritten safely: adding columns to `GROUP BY` changes results
-when they are not functionally dependent.
+The app runs, every module loads, every screen checked matches the seed, and
+every static statement in the app type-checks against PostgreSQL. What is not
+proven: the 120 interpolated statements, and the screens never opened.
 
 ### What changed, and what deliberately did not
 

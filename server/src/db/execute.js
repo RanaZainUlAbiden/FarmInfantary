@@ -32,6 +32,7 @@ import {
   withReturning, extractLastId, loadPrimaryKeys, insertsExplicitPk, resyncSequenceSql,
 } from './primary-keys.js';
 import { validateBatch, resolveParams } from './batch.js';
+import { splitStatements, countPlaceholders } from './scan.js';
 
 /**
  * Log a failed statement when LOG_SQL_ERRORS is set.
@@ -131,6 +132,16 @@ export function createDb(pool) {
   async function run(sql, params = [], token = null) {
     try {
       const { client } = target(token);
+
+      // The app sends multi-statement SQL in at least one place
+      // (`updateBatchStatuses()` issues three UPDATEs in one call), which
+      // SQLite ran happily. PostgreSQL allows that only without parameters,
+      // so each statement is translated and executed on its own instead.
+      const statements = splitStatements(sql);
+      if (statements.length > 1) {
+        return await runMany(statements, params, token);
+      }
+
       const c = compile(sql, params, primaryKeys);
       const res = await client.query(c.text, c.values);
       if (c.resync) await client.query(c.resync);
@@ -138,6 +149,71 @@ export function createDb(pool) {
     } catch (err) {
       logFailure(sql, params, err);
       return { success: false, error: message(err) };
+    }
+  }
+
+  /**
+   * Several statements from one `run()` call, in order and all-or-nothing.
+   *
+   * Params are handed out by position: each statement takes as many as it has
+   * `?` placeholders, in the order they appear — which is exactly how SQLite
+   * bound them across the whole string.
+   *
+   * The result reports the LAST statement's id, matching what a single
+   * trailing statement would have returned.
+   */
+  async function runMany(statements, params, token) {
+    const total = statements.reduce((n, s) => n + countPlaceholders(s), 0);
+    if (total !== params.length) {
+      return {
+        success: false,
+        error: `SQL has ${statements.length} statements expecting ${total} parameters in total, ` +
+               `but ${params.length} were supplied.`,
+      };
+    }
+
+    // A dedicated connection is required, not the pool.
+    //
+    // `pool.query()` checks out a connection PER CALL, so BEGIN, the
+    // statements and COMMIT could each land on a different one — the
+    // transaction would wrap nothing and a mid-sequence failure would leave
+    // the earlier statements committed.
+    //
+    // Inside an existing transaction the caller already holds a connection and
+    // owns the unwind, so this borrows that one and adds no BEGIN of its own.
+    const ownTransaction = !token;
+    let client;
+    let release = () => {};
+    if (ownTransaction) {
+      client = await pool.connect();
+      release = () => client.release();
+      await client.query('BEGIN');
+    } else {
+      ({ client } = target(token));
+    }
+
+    let lastId = null;
+    let cursor = 0;
+    try {
+      for (const statement of statements) {
+        const n = countPlaceholders(statement);
+        const slice = params.slice(cursor, cursor + n);
+        cursor += n;
+        const c = compile(statement, slice, primaryKeys);
+        const res = await client.query(c.text, c.values);
+        if (c.resync) await client.query(c.resync);
+        const id = extractLastId(res, c.idColumn);
+        if (id !== null) lastId = id;
+      }
+      if (ownTransaction) await client.query('COMMIT');
+      return { success: true, lastId };
+    } catch (err) {
+      if (ownTransaction) {
+        try { await client.query('ROLLBACK'); } catch { /* already unwound */ }
+      }
+      throw err;
+    } finally {
+      release();
     }
   }
 

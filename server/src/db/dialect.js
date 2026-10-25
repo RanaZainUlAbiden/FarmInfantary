@@ -146,28 +146,86 @@ export function translate(sql) {
     }
   }
 
-  // ── date('now') -> to_char(CURRENT_DATE,'YYYY-MM-DD') ───
-  // NOT bare CURRENT_DATE. Dates are stored as TEXT (D5), and PostgreSQL has
-  // no `text >= date` operator where SQLite compared them happily as strings:
-  //   ERROR: operator does not exist: text >= date
-  // to_char is used rather than ::text because ::text depends on the server's
-  // DateStyle, and the stored format is always 'YYYY-MM-DD'.
+  // ── date(...) -> a TEXT date ─────────────────────────────
+  //
+  // SQLite's date() takes a value plus any number of MODIFIERS:
+  //     date('now')                                  today
+  //     date('now', '+3 months')                     today plus three months
+  //     date(col, '+' || (n - 1) || ' days')         a column plus n-1 days
+  //
+  // PostgreSQL has no such function at all — not even the one-argument form:
+  //     ERROR: function date(text, text) does not exist
+  //
+  // Every result is wrapped in to_char(..., 'YYYY-MM-DD') because dates are
+  // stored as TEXT (D5). Returning a real date would reintroduce the
+  // `text >= date` operator error that bare CURRENT_DATE caused.
+  //
+  // Only the three forms the app actually uses are translated. Anything else
+  // is reported rather than guessed at — SQLite has a dozen modifiers
+  // ('start of month', 'weekday 0', 'localtime') whose semantics are not
+  // obvious to reproduce, and a wrong date is a silently wrong report.
   {
     const mask = codeMask(out);
-    const re = /(^|[^.\w])date\s*\(\s*'now'\s*\)/gi;
+    const re = /(^|[^.\w])date\s*\(/gi;
     const edits = [];
     let m;
     while ((m = re.exec(out))) {
-      if (!mask[m.index + m[1].length]) continue;
-      edits.push({
-        from: m.index + m[1].length,
-        to: m.index + m[0].length,
-        text: `to_char(CURRENT_DATE, 'YYYY-MM-DD')`,
-      });
+      const at = m.index + m[1].length;
+      if (!mask[at]) continue;
+      const open = at + m[0].length - m[1].length - 1;
+      const end = matchParen(out, open, mask);
+      if (end === -1) continue;
+
+      const args = splitTopLevelArgs(out.slice(open + 1, end - 1)).map((a) => a.trim());
+      if (args.length === 0 || args.length > 2) {
+        unhandled.push(`date() with ${args.length} arguments`);
+        continue;
+      }
+
+      const isNow = /^'now'$/i.test(args[0]);
+      const base = isNow ? 'CURRENT_DATE' : `(${args[0]})::date`;
+
+      if (args.length === 1) {
+        edits.push({ from: at, to: end, text: `to_char(${base}, 'YYYY-MM-DD')` });
+        continue;
+      }
+
+      // '+3 months' / '-10 days' — a literal interval.
+      const literal = /^'\s*([+-]?)\s*(\d+)\s+(day|days|month|months|year|years|hour|hours)\s*'$/i
+        .exec(args[1]);
+      if (literal) {
+        const sign = literal[1] === '-' ? '-' : '+';
+        edits.push({
+          from: at, to: end,
+          text: `to_char(${base} ${sign} INTERVAL '${literal[2]} ${literal[3].toLowerCase()}', 'YYYY-MM-DD')`,
+        });
+        continue;
+      }
+
+      // '+' || <expr> || ' days' — a computed number of days.
+      //
+      // The ::int cast is required, not tidiness. SQLite INTEGER maps to
+      // bigint (D15), and PostgreSQL has no `date + bigint` operator — only
+      // `date + integer`:
+      //     ERROR: operator does not exist: date + bigint
+      // A knock-on of the type mapping, and invisible until a real column is
+      // used in the modifier.
+      const computed = /^'\s*([+-])\s*'\s*\|\|\s*([\s\S]+?)\s*\|\|\s*'\s*days?\s*'$/i
+        .exec(args[1]);
+      if (computed) {
+        const sign = computed[1] === '-' ? '-' : '+';
+        edits.push({
+          from: at, to: end,
+          text: `to_char(${base} ${sign} (${computed[2]})::int, 'YYYY-MM-DD')`,
+        });
+        continue;
+      }
+
+      unhandled.push(`date(${args[0].slice(0, 24)}, ${args[1].slice(0, 40)}) — unrecognised modifier`);
     }
     if (edits.length) {
       for (const e of edits.reverse()) out = out.slice(0, e.from) + e.text + out.slice(e.to);
-      note("date('now')");
+      note('date()');
     }
   }
 
@@ -199,6 +257,37 @@ export function translate(sql) {
     if (edits.length) {
       for (const e of edits.reverse()) out = out.slice(0, e.from) + e.text + out.slice(e.to);
       note('CAST AS INTEGER');
+    }
+  }
+
+  // ── `? IS NULL` -> `?::text IS NULL` ─────────────────────
+  //
+  // PostgreSQL infers a parameter's type from how it is used. A placeholder
+  // used ONLY as the operand of IS NULL gives it nothing to work with:
+  //     ERROR: could not determine data type of parameter $3
+  // SQLite's parameters are untyped, so the app's optional-filter idiom
+  //     AND (? IS NULL OR s.date >= ?)
+  // was fine there and fails here.
+  //
+  // The cast is deliberately narrow — only a BARE placeholder immediately
+  // before IS [NOT] NULL. Nothing else needs it: `COALESCE(?, '9999-12-31')`
+  // already infers text from its sibling argument, and casting a placeholder
+  // that is compared against a number would break it.
+  //
+  // Each `?` becomes its own `$n` in the placeholder pass, so a parameter is
+  // never shared between an IS NULL test and a typed comparison.
+  {
+    const mask = codeMask(out);
+    const re = /\?(\s*IS\s+(?:NOT\s+)?NULL)/gi;
+    const edits = [];
+    let m;
+    while ((m = re.exec(out))) {
+      if (!mask[m.index]) continue;
+      edits.push({ from: m.index, to: m.index + m[0].length, text: `?::text${m[1]}` });
+    }
+    if (edits.length) {
+      for (const e of edits.reverse()) out = out.slice(0, e.from) + e.text + out.slice(e.to);
+      note('? IS NULL cast');
     }
   }
 

@@ -1188,7 +1188,11 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
        FROM batch_transactions
        WHERE reference_id = ? AND type IN ('sale', 'return')
        GROUP BY batch_id, product_id
-       HAVING net_qty > 0`,
+       -- The expression is repeated rather than referenced by its alias.
+       -- SQLite lets HAVING see a select-list alias; PostgreSQL evaluates
+       -- HAVING before the select list exists, so `HAVING net_qty > 0` fails
+       -- with: column "net_qty" does not exist.
+       HAVING SUM(CASE WHEN type = 'sale' THEN quantity WHEN type = 'return' THEN -quantity ELSE 0 END) > 0`,
       [billId]
     );
     check(netResult, 'Could not read the batch history for this bill');

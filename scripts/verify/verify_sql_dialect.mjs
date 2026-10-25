@@ -90,6 +90,11 @@ const PATTERNS = [
   // NOCASE collation and PostgreSQL does not, so these statements fail
   // outright until db/schema/000_collations.sql defines one.
   { key: 'COLLATE NOCASE',   re: /\bCOLLATE\s+NOCASE\b/gi,        fix: 'an ICU nocase collation — db/schema/000_collations.sql' },
+  // Found by walking the app and by verify_app_sql_prepares.mjs — not by any
+  // text search, because these are differences in what PostgreSQL ACCEPTS
+  // rather than in what the SQL says.
+  { key: 'date(x, modifier)', re: /\bdate\s*\([^()]*,[^()]*\)/gi,  fix: 'to_char(x::date +/- INTERVAL ..) — translated' },
+  { key: '? IS NULL',        re: /\?\s*IS\s+(?:NOT\s+)?NULL/gi,    fix: '?::text IS NULL — PG cannot infer the type otherwise' },
   { key: 'julianday',        re: /\bjulianday\s*\(/gi,            fix: "(x::date - CURRENT_DATE)" },
   { key: "date('now')",      re: /\bdate\s*\(\s*'now'\s*\)/gi,    fix: 'CURRENT_DATE' },
   { key: 'strftime',         re: /\bstrftime\s*\(/gi,             fix: 'to_char()' },
@@ -115,6 +120,8 @@ const EXPECTED = {
   // julianday at 11 (that was LINES, not occurrences), CAST at 19 (that
   // counted every CAST, not just AS INTEGER) and date('now') at 5.
   'COLLATE NOCASE': 7,
+  'date(x, modifier)': 2,
+  '? IS NULL': 2,
   'two-arg MAX/MIN': 22,
   'julianday': 22,
   "date('now')": 7,

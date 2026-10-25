@@ -94,7 +94,13 @@ export class PurchaseReturnsComponent implements OnInit {
            LEFT JOIN purchase_returns pr ON pr.purchase_id = po.purchase_id
            WHERE po.farm_id = ?
              AND COALESCE(po.status, 'completed') != 'returned'
-           GROUP BY po.purchase_id
+           -- p.product_id and s.supplier_id are grouped so PostgreSQL can see
+           -- that p.product_name and s.supplier_name are functionally
+           -- dependent on them. SQLite allowed the bare columns and picked an
+           -- arbitrary row; PostgreSQL refuses outright. Each purchase order
+           -- joins at most one product and one supplier, so the grouping is
+           -- unchanged in meaning.
+           GROUP BY po.purchase_id, p.product_id, s.supplier_id
            ORDER BY po.date DESC, po.purchase_id DESC`,
           [this.currentFarm.farm_id]
         ),

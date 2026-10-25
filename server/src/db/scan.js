@@ -202,3 +202,47 @@ export function splitTopLevelArgs(body) {
   args.push(body.slice(start));
   return args;
 }
+
+/**
+ * Split a string into individual statements on top-level semicolons.
+ *
+ * The app sends multi-statement SQL in at least one place —
+ * `updateBatchStatuses()` issues three UPDATEs in a single `run()` — which
+ * SQLite executed happily. PostgreSQL only allows that through the simple
+ * query protocol, i.e. with NO parameters, so a parameterised multi-statement
+ * string fails with a confusing message about the first statement.
+ *
+ * Splitting here lets each statement be translated, parameterised and
+ * executed on its own, which also means the Phase 3 guard can inspect each one
+ * — it will reject multi-statement input outright, as any such guard must.
+ *
+ * Semicolons inside string literals and comments are not separators, which is
+ * the whole reason this uses the scanner rather than `sql.split(';')`.
+ */
+export function splitStatements(sql) {
+  const mask = codeMask(sql);
+  const out = [];
+  // A piece that is only whitespace and comments is not a statement — a
+  // trailing `-- note` after the last semicolon would otherwise be executed
+  // and fail.
+  const hasCode = (piece) => codeOnly(piece).trim() !== '';
+  let start = 0;
+  for (let i = 0; i < sql.length; i++) {
+    if (mask[i] && sql[i] === ';') {
+      const piece = sql.slice(start, i);
+      if (hasCode(piece)) out.push(piece);
+      start = i + 1;
+    }
+  }
+  const tail = sql.slice(start);
+  if (hasCode(tail)) out.push(tail);
+  return out;
+}
+
+/** How many `?` placeholders a statement carries, literals excluded. */
+export function countPlaceholders(sql) {
+  const mask = codeMask(sql);
+  let n = 0;
+  for (let i = 0; i < sql.length; i++) if (mask[i] && sql[i] === '?') n++;
+  return n;
+}
