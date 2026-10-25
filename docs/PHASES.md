@@ -67,10 +67,35 @@ older still. The import path must handle a database that is behind the schema.
 - [x] Build the `?` → `$n` placeholder rewrite at the boundary — `server/src/db/placeholders.js`
 - [x] Stand up the database endpoints mirroring the IPC surface — `server/src/server.js`, 34 HTTP checks
 - [ ] Remaining endpoints: settings, backup, entitlement (small; auth-dependent)
-- [ ] Re-point all 29 verify scripts at the new schema module
+- [~] Re-point the 29 verify scripts at PostgreSQL — **harness built, 1 of 29 ported** (see below)
 
-**Gate:** the same 29 scripts green against PostgreSQL, and reference totals
-matching Phase 0 exactly.
+**Gate:** the same 29 scripts green against PostgreSQL.
+
+### The gate: porting the verify suite
+
+`scripts/verify/lib/pg-harness.mjs` does the two things that change, and
+nothing else:
+
+- the schema comes from `db/schema/` instead of `createTables()`
+- `get`/`run`/`runBatch` go through `server/src/db/execute.js` instead of sql.js
+
+The method bodies are still lifted verbatim out of `database.service.ts` and
+run as the real shipping code, and the assertions are untouched. That is what
+makes a green run mean something: same code, same checks, different database.
+
+Each script gets its own PostgreSQL schema, dropped afterwards, so scripts
+cannot see each other's rows.
+
+**Ported so far: 1 of 29** (`verify_categories_pg.mjs`, 20 checks green).
+
+That first port immediately found `COLLATE NOCASE` — 7 occurrences the dialect
+inventory had missed entirely, which PostgreSQL rejects outright. See below.
+
+Remaining work is mechanical but not small: 23 of the 29 extract TypeScript
+method bodies and need the same treatment; 6 are pure-SQL and are simpler.
+Expect roughly one working session per handful, and expect each batch to
+surface dialect or semantic differences the way the first one did — that is
+the point of the exercise, not a sign it is going badly.
 **Status:** schema executes against real PostgreSQL and matches the generator
 exactly. Query layer and endpoints not started.
 

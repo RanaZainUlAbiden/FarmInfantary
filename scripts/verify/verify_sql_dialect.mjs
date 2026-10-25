@@ -86,6 +86,10 @@ function findScalarMaxMin(src) {
 }
 
 const PATTERNS = [
+  // Found by the Phase 1 gate, not by inspection: SQLite ships a built-in
+  // NOCASE collation and PostgreSQL does not, so these statements fail
+  // outright until db/schema/000_collations.sql defines one.
+  { key: 'COLLATE NOCASE',   re: /\bCOLLATE\s+NOCASE\b/gi,        fix: 'an ICU nocase collation — db/schema/000_collations.sql' },
   { key: 'julianday',        re: /\bjulianday\s*\(/gi,            fix: "(x::date - CURRENT_DATE)" },
   { key: "date('now')",      re: /\bdate\s*\(\s*'now'\s*\)/gi,    fix: 'CURRENT_DATE' },
   { key: 'strftime',         re: /\bstrftime\s*\(/gi,             fix: 'to_char()' },
@@ -110,6 +114,7 @@ const EXPECTED = {
   // wrong: two-arg MAX/MIN at 11 (it is 22, and some are nested MIN(MAX(..)),
   // julianday at 11 (that was LINES, not occurrences), CAST at 19 (that
   // counted every CAST, not just AS INTEGER) and date('now') at 5.
+  'COLLATE NOCASE': 7,
   'two-arg MAX/MIN': 22,
   'julianday': 22,
   "date('now')": 7,
