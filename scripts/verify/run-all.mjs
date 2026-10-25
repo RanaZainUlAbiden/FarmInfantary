@@ -54,7 +54,7 @@ for (const d of dirs) {
 
 let scripts = dirs.flatMap((d) =>
   readdirSync(d)
-    .filter((f) => f.startsWith('verify_') && f.endsWith('.js'))
+    .filter((f) => f.startsWith('verify_') && (f.endsWith('.js') || f.endsWith('.mjs')))
     .map((f) => ({ dir: d, file: f }))
 );
 
@@ -63,7 +63,7 @@ scripts.sort((a, b) => a.file.localeCompare(b.file));
 if (only) scripts = scripts.filter((s) => s.file.includes(only));
 
 if (scripts.length === 0) {
-  console.error(only ? `No scripts match "${only}"` : 'No verify_*.js found');
+  console.error(only ? `No scripts match "${only}"` : 'No verify_*.js / .mjs found');
   process.exit(2);
 }
 
@@ -76,7 +76,7 @@ const failures = [];
 let totalChecks = 0;
 
 for (const { dir, file } of scripts) {
-  const name = basename(file, '.js');
+  const name = basename(file, file.endsWith('.mjs') ? '.mjs' : '.js');
   const t0 = Date.now();
 
   // cwd is the script's own tree: these scripts resolve sql.js and the source

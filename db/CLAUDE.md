@@ -1,4 +1,4 @@
-# db/ — PostgreSQL schema, migrations, data import
+# db/ — PostgreSQL schema and migrations
 
 60 tables ported from `Talha Farm/electron/database.js` (`createTables`).
 Source of truth for the tenancy classification: `docs/ARCHITECTURE.md`.
@@ -7,7 +7,7 @@ Source of truth for the tenancy classification: `docs/ARCHITECTURE.md`.
 schema/      001_tables · 002_indexes · 003_rls · 004_roles · 005_auth
 migrations/  numbered, forward-only, advisory-locked
 seeds/       permissions.sql — the 47-key catalogue
-import/      sqlite-to-postgres — existing sng_farm.db files
+(no import/ — D14: fresh app, no data migration)
 ```
 
 ## Type mapping — the two that corrupt silently
@@ -33,8 +33,7 @@ stay integers, **not** `BOOLEAN`.
 `PRAGMA foreign_keys` is never enabled in the desktop app, so nothing has ever
 cascaded. The app deletes child rows manually in a deliberate order, and orphan
 rows legitimately exist. **PostgreSQL enforces FKs by default** — creating the
-schema as declared breaks dozens of working delete paths and may block the
-initial import entirely.
+schema as declared breaks dozens of working delete paths.
 
 Omit them, or create them `NOT VALID` and deferrable. Real referential integrity
 is a worthwhile later project with its own data cleanup.
@@ -43,20 +42,49 @@ is a worthwhile later project with its own data cleanup.
 
 Roughly 20 lines total, nearly all in product-batch expiry/FIFO logic.
 
+Counts are **measured** by `scripts/verify/verify_sql_dialect.mjs`, which fails
+the build when one moves. They are not estimates: the first hand-counted list
+had four of these wrong.
+
 | SQLite | Count | PostgreSQL |
 |--------|-------|------------|
-| `julianday(a) - julianday('now')` | 11 | `(a::date - CURRENT_DATE)` |
-| `date('now')` | 5 | `CURRENT_DATE` |
-| `CAST(x AS INTEGER)` | 19 | `trunc(x)::int` — **SQLite truncates, PG rounds** |
+| `MAX(a, b)` / `MIN(a, b)` two-arg | 22 | `GREATEST(a,b)` / `LEAST(a,b)` |
+| `julianday(a) - julianday('now')` | 22 | `(a::date - CURRENT_DATE)` |
+| `CAST(x AS INTEGER)` | 10 | `trunc(x)::int` — **SQLite truncates, PG rounds** |
+| `date('now')` | 7 | `CURRENT_DATE` |
 | `GROUP_CONCAT(x, ', ')` | 2 | `STRING_AGG(x, ', ')` |
 | `INSERT OR IGNORE` | 1 | `ON CONFLICT DO NOTHING` |
-| `ON CONFLICT … excluded` | 1 | unchanged |
 | `?` placeholders | all | `$1..$n`, rewritten once at the boundary |
 
-`strftime`, `datetime`, `INSERT OR REPLACE`, `printf`, `RANDOM()`: zero uses.
+`strftime`, `datetime`, `INSERT OR REPLACE`, `printf`, `RANDOM()`,
+`last_insert_rowid`, `PRAGMA`, `sqlite_master`: zero uses.
 
-The `CAST` difference is the sneaky one — it doesn't error, it shifts expiry
-buckets by one month.
+### Two-argument MAX/MIN is the one that was missed
+
+SQLite's `MAX(a, b)` is a **scalar** function. PostgreSQL's `MAX()` is
+aggregate-only, so two-argument form is an error:
+
+```
+ERROR: function max(double precision, integer) does not exist
+```
+
+All 22 occurrences are in money paths — they implement the app's debt
+definition, and several are nested clamps:
+
+```sql
+-- SQLite
+MIN(MAX(COALESCE(bl.amount_paid, 0), 0), COALESCE(bl.total_amount, 0))
+-- PostgreSQL
+LEAST(GREATEST(COALESCE(bl.amount_paid, 0), 0), COALESCE(bl.total_amount, 0))
+```
+
+It is dangerous precisely because `MAX(x)` with ONE argument is valid in both
+and means something completely different. A search that is not
+parenthesis-aware misses it: every real occurrence is wrapped in `COALESCE`,
+so a `MAX\([^()]*,[^()]*\)` regex matches only the comments.
+
+The `CAST` difference is the other sneaky one — it doesn't error, it shifts
+expiry buckets by one month.
 
 ## Tenancy
 
@@ -101,8 +129,12 @@ launch with a hardcoded 7-column `INSERT...SELECT` that dropped `flock_id`,
 `cost`, `bill_id` and `bill_number` each time. Convert it to a one-time numbered
 migration. Do not carry the launch-time rebuild pattern forward.
 
-## Import
+## No importer
 
-`import/` moves existing customers' `sng_farm.db` files into PostgreSQL. It is
-how real data arrives, and it needs the same numeric-type care as everything
-else. Validate totals against the source file after each import.
+D14: this is a fresh application. Existing desktop data does not come across, so
+there is no SQLite-to-PostgreSQL importer and no id-remapping problem.
+
+The type rules above still apply in full. They are properties of the target, not
+of a migration: `numeric` would turn addition into concatenation on data typed
+fresh today, and two-argument `MAX` is a syntax error regardless of where the
+rows came from.

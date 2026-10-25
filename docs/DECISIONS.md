@@ -176,6 +176,38 @@ radius is unacceptable for an in-app button.
 
 ---
 
+## D14 · No data migration — this is a fresh application
+
+**Decided.** Existing desktop installations do not carry their data across.
+Accounts are created new on the web.
+
+**Supersedes** the migration half of D11 and removes `db/import/` from Phase 1
+entirely.
+
+**What this removes:**
+
+- The SQLite to PostgreSQL importer, and with it the id-remapping problem across
+  60 tables with database-wide sequences.
+- The need for a production dump to validate that import.
+- The requirement that the importer handle a database *behind* the schema.
+
+**What it does NOT remove:** the type and dialect rules. `numeric` would still
+turn addition into concatenation on data typed fresh; two-argument `MAX` is
+still a syntax error; `CAST` still rounds. Those are properties of the target,
+not of the migration.
+
+**What it narrows:** the oracle (`scripts/verify/oracle.mjs`) was built to diff
+totals before and after a migration. With no migration there is no "before" from
+production. It stays useful — it compares the same fixtures through sql.js and
+PostgreSQL, and guards against drift between code versions — but its original
+purpose is gone, and nobody should expect it to prove a data migration that will
+not happen.
+
+**Cost, stated plainly:** existing Talha Farm users re-enter their data. That is
+a business decision, taken deliberately.
+
+---
+
 ## D11 · First super admin is seeded out of band
 
 **Decided.** A one-time bootstrap command at first deploy, credentials supplied
@@ -184,11 +216,11 @@ by environment. Held by DevInfantary, who already control licensing.
 No existing row is a platform owner, so the super admin cannot be derived from
 data.
 
-**Migration of existing accounts:** each `farms` row becomes a tenant record
-plus one `farm_admin` user carrying its current name and password hash, with
-`must_change_password = true`. `staff_seat_limit` defaults to **0** and
-`can_admin_add_staff` to **false**, so every existing account keeps working
-exactly as it does today and staff appear only when deliberately provisioned.
+**Account creation.** Superseded in part by D14: there are no existing accounts
+to migrate. The super admin creates each farm and its `farm_admin` from scratch.
+`staff_seat_limit` still defaults to **0** and `can_admin_add_staff` to
+**false**, so a new farm starts with one admin and no staff until seats are
+deliberately granted.
 
 ---
 

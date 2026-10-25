@@ -1,0 +1,15 @@
+{
+  "name": "farminfantary-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FarmInfantary API — replaces the desktop app's Electron main process",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "db:schema": "node scripts/apply-schema.mjs",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}
