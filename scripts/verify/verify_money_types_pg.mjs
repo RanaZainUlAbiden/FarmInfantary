@@ -44,6 +44,8 @@ if (!url) {
 let pg
 try {
   pg = require(join(ROOT, 'server', 'node_modules', 'pg'))
+  const t = await import(new URL('../../server/src/db/types.js', import.meta.url))
+  t.registerTypeParsers(pg)
 } catch {
   console.log('SKIP — pg driver not installed (npm --prefix server install)')
   process.exit(0)
@@ -141,22 +143,42 @@ try {
     .reduce((s, r) => s + r.amount, 0)
   check('reduce() over rows totals correctly', total === 300.25, `got ${JSON.stringify(total)}`)
 
-  // ── D. the guard has teeth ───────────────────────────────
-  // Not an assumption: ask this database for a numeric and a bigint.
-  console.log('\n=== D. what numeric/bigint would actually do ===')
+  // ── D. integers, and the parser that makes them numbers ──
+  // SQLite INTEGER maps to bigint, which node-postgres returns as a STRING by
+  // default — 214 of the schema's 555 columns. Every id, every integer
+  // quantity, every flag. server/src/db/types.js registers a parser so they
+  // arrive as numbers; without it:
+  //     row.total_birds + row.mortality  ->  "4242"
+  //     row.flock_id === currentFlock.flock_id  ->  false  ("3" !== 3)
+  // The second is the quiet one: every screen scopes its data by comparing an
+  // id from the database against one held in localStorage.
+  console.log('')
+  console.log('=== D. integer columns arrive as numbers ===')
 
-  const bad = await one(`SELECT 1000.5::numeric AS num, 300.25::numeric AS num2, 9007199254740993::bigint AS big`)
+  const ints = await one(`SELECT 42::bigint AS big, 7::integer AS small, 1.5::numeric AS num`)
 
-  check('numeric comes back as a STRING (the whole reason for D4)',
-    typeof bad.num === 'string', `got ${typeof bad.num}`)
-  check('bigint comes back as a STRING',
-    typeof bad.big === 'string', `got ${typeof bad.big}`)
-  check('adding two numerics concatenates instead of adding',
-    bad.num + bad.num2 === '1000.5300.25', `got ${JSON.stringify(bad.num + bad.num2)}`)
+  check('bigint is a number, not a string', typeof ints.big === 'number', `got ${typeof ints.big}`)
+  check('integer is a number', typeof ints.small === 'number', `got ${typeof ints.small}`)
+  check('bigint arithmetic adds rather than concatenating',
+    ints.big + ints.big === 84, `got ${JSON.stringify(ints.big + ints.big)}`)
+  check('a bigint id compares equal to a numeric literal',
+    ints.big === 42, `got ${JSON.stringify(ints.big)}`)
+  check('numeric is a number too (tripwire — the schema should have none)',
+    typeof ints.num === 'number', `got ${typeof ints.num}`)
 
-  console.log(`\n  numeric 1000.5 + numeric 300.25  ->  ${JSON.stringify(bad.num + bad.num2)}`)
-  console.log(`  double  1000.5 + double  300.25  ->  ${JSON.stringify(a + b)}`)
-  console.log('  That is the defect this file exists to prevent.')
+  // Real columns, not casts: ids and counts straight out of the schema.
+  const row = await one(
+    `SELECT b.batch_id, b.initial_birds, s.sale_id FROM batches b, sales s WHERE b.batch_id=1 AND s.sale_id=1`
+  )
+  for (const [k, v] of Object.entries(row)) {
+    check(`${k} is a number`, typeof v === 'number', `got ${typeof v} ${JSON.stringify(v)}`)
+  }
+
+  // The parser's limit is enforced, not assumed. Silently rounding an id would
+  // be exactly the invisible corruption the parser exists to prevent.
+  let threw = false
+  try { await one(`SELECT 9007199254740993::bigint AS v`) } catch { threw = true }
+  check('a bigint beyond the safe integer range THROWS rather than rounding', threw)
 
   await client.query('ROLLBACK')
 } finally {

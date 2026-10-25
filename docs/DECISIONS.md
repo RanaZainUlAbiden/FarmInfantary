@@ -176,6 +176,48 @@ radius is unacceptable for an in-app button.
 
 ---
 
+## D15 · Integer columns are parsed to JavaScript numbers
+
+**Decided.** Register a `node-postgres` type parser for `bigint` (and
+`numeric`) so integer columns arrive as JavaScript numbers.
+`server/src/db/types.js`.
+
+**Found by running the query layer, not by reading it.** SQLite `INTEGER` is
+64-bit, so the generated schema maps it to `bigint` — **214 of the schema's 555
+columns**. node-postgres returns `bigint` as a STRING, because it can hold
+values a JS Number cannot represent exactly.
+
+That is every id, every integer quantity (`total_birds`, `mortality`,
+`total_eggs`, `initial_birds`), and every flag (`done`, `is_active`,
+`fcr_manual`). It breaks the app two ways, neither of which raises an error:
+
+```js
+row.total_birds + row.mortality        // "4242"  — concatenation
+row.flock_id === currentFlock.flock_id // false   — "3" !== 3
+```
+
+The second is the quieter and more damaging one. Every screen scopes its data
+by comparing an id from the database against one held in `localStorage`, and a
+strict comparison between a string and a number is silently false — a screen
+shows nothing, or a filter that should exclude a row does not.
+
+This is the same class of defect as D4, across more than twice as many columns.
+
+**The limit is enforced, not assumed.** A `bigint` beyond
+`Number.MAX_SAFE_INTEGER` **throws** rather than returning a rounded
+approximation. These are row ids many orders of magnitude below that bound, but
+"will never happen" is not "cannot happen", and silently rounding an id is
+exactly the invisible corruption the parser exists to prevent. If it ever
+fires, the answer is a deliberate decision about large ids — not a quieter
+parser.
+
+**Rejected alternative:** mapping ids to `integer` instead of `bigint`. It
+returns as a number natively and indexes smaller, but it caps the table at
+~2.1 billion rows and diverges from SQLite's 64-bit `INTEGER`. The parser keeps
+the schema faithful and the behaviour identical.
+
+---
+
 ## D14 · No data migration — this is a fresh application
 
 **Decided.** Existing desktop installations do not carry their data across.
