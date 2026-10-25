@@ -1,0 +1,98 @@
+<div class="activation-container">
+  <div class="activation-card">
+    <!-- Logo & Branding -->
+    <div class="logo-section">
+      <img src="devlogo.png" alt="DevInfantary Poultry Farm" class="logo" />
+      <h1>DevInfantary Poultry Farm</h1>
+      <p class="subtitle">Software Activation</p>
+    </div>
+
+    <!-- Tampered Clock State -->
+    <div class="tampered-state" *ngIf="isClockTampered">
+      <div class="tampered-icon">⚠️</div>
+      <h2>Security Alert</h2>
+      <p>System clock tampering detected. Please set correct date and time.</p>
+    </div>
+
+    <!-- Expired State -->
+    <div class="expired-state" *ngIf="isExpired && !isClockTampered">
+      <div class="expired-icon">🔒</div>
+      <h2>License Expired</h2>
+      <p class="expired-message">Your license has expired. Please contact your provider to renew.</p>
+      <div class="expiry-info">
+        <p>Expired on: <strong>{{ expirationDate }}</strong></p>
+      </div>
+
+      <!-- Renewal info the client sends back to support -->
+      <div class="machine-id-section">
+        <label>Renewal Code</label>
+        <div class="machine-id-box">
+          <code>{{ machineId }} | Cycle: {{ activationCycle }}</code>
+          <button class="btn-copy" (click)="copyRenewalInfo()" title="Copy to clipboard">
+            📋 Copy
+          </button>
+        </div>
+        <p class="hint">Send this along with your Machine ID to receive a new activation code.</p>
+      </div>
+
+      <div class="contact-info">
+        <p>📞 Contact: <strong>0302 6938217</strong></p>
+        <p>📧 Email: <strong>support&#64;devinfantary.com</strong></p>
+      </div>
+      <button class="btn-contact" onclick="window.location.href='mailto:support@devinfantary.com'">
+        📧 Contact Support
+      </button>
+    </div>
+
+    <!-- Activation Form -->
+    <div class="activation-form" *ngIf="!isExpired && !isClockTampered">
+      <!-- Machine ID -->
+      <div class="machine-id-section">
+        <label>Your Machine ID</label>
+        <div class="machine-id-box">
+          <code>{{ machineId }}</code>
+          <button class="btn-copy" (click)="copyMachineId()" title="Copy to clipboard">
+            📋 Copy
+          </button>
+        </div>
+        <p class="hint">Send this Machine ID to your software provider to receive your activation code.</p>
+      </div>
+
+      <!-- Activation Code Input -->
+      <div class="form-group">
+        <label for="activationKey">Activation Code</label>
+        <input
+          id="activationKey"
+          type="text"
+          class="form-control"
+          [(ngModel)]="activationKey"
+          placeholder="DIP-XXXX-XXXX"
+          [disabled]="isLoading"
+          (keyup.enter)="activate()"
+        />
+      </div>
+
+      <!-- Error Message -->
+      <div class="error-message" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+
+      <!-- Activate Button -->
+      <button class="btn-activate" (click)="activate()" [disabled]="isLoading">
+        {{ isLoading ? '⏳ Activating...' : '🔑 Activate Software' }}
+      </button>
+
+      <!-- Support -->
+      <div class="contact-support">
+        <p>Need help? Contact DevInfantary</p>
+        <p>📞 0302 6938217 | 📧 support&#64;devinfantary.com</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>© 2024 DevInfantry. All rights reserved.</p>
+      <p class="version">Version 1.0.0</p>
+    </div>
+  </div>
+</div>

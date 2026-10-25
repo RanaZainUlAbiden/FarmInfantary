@@ -1,0 +1,32 @@
+TALHA FARM MANAGEMENT SYSTEM - LICENSE AGREEMENT
+
+This is a proprietary software product. By using this software, you agree to the following terms:
+
+1. GRANT OF LICENSE
+   - You are granted a non-exclusive, non-transferable license to use this software
+   - The software is provided with a 7-day free trial period
+   - After the trial period, a valid activation key is required
+
+2. ACTIVATION
+   - Activation keys are provided by DevInfantary
+   - Each key is unique and tied to your farm/organization
+   - Keys are non-transferable
+
+3. DATA OWNERSHIP
+   - All data entered into the system remains the property of the user
+   - No data is collected or transmitted by the software
+
+4. SUPPORT
+   - Free support is provided for the first 30 days
+   - Extended support packages are available
+
+5. WARRANTY
+   - The software is provided "as is" without warranty of any kind
+
+6. CONTACT INFORMATION
+   DevInfantary
+   Phone: 0302 6938217
+   Email: support@devinfantary.com
+   Website: www.devinfantary.com
+
+© 2024 DevInfantary. All rights reserved.

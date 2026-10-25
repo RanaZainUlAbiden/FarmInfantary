@@ -1,0 +1,198 @@
+<div class="module-container">
+
+  <div class="module-header">
+    <div>
+      <h3>Flock Management</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }}</p>
+    </div>
+    <button
+      class="btn-primary"
+      [disabled]="isSaving"
+      (click)="addNewRow()"
+      *ngIf="!showNewRow">
+      + Add Flock
+    </button>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <!-- Empty state (no flocks at all) -->
+  <div class="empty-state" *ngIf="flocks.length === 0 && !showNewRow">
+    <p *ngIf="units.length > 0">No flocks yet. Click "Add Flock" to create your first flock.</p>
+    <p *ngIf="units.length === 0">No farms set up for Broiler yet. Go to the Farms page to create one before adding a flock.</p>
+  </div>
+
+  <!-- Search bar -->
+  <div class="search-bar" *ngIf="flocks.length > 0">
+    <span class="search-icon">🔍</span>
+    <input
+      type="text"
+      [(ngModel)]="searchTerm"
+      (ngModelChange)="onSearchChange()"
+      placeholder="Search flocks..."
+      autocomplete="off" />
+  </div>
+
+  <!--
+    Table is always kept in the DOM while flocks exist.
+    The "no results" feedback is an inline tbody row so Angular
+    never destroys/recreates the table — search stays instant.
+  -->
+  <div class="table-card" *ngIf="flocks.length > 0 || showNewRow">
+    <table>
+      <thead>
+        <tr>
+          <th>Flock Name</th>
+          <th>Farm</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- NEW ROW -->
+        <tr *ngIf="showNewRow" class="new-row">
+          <td>
+            <input class="inline-input" type="text"
+              [(ngModel)]="newRow.flock_name"
+              placeholder="e.g. F#1-Y26" />
+          </td>
+          <td>
+            <select class="inline-input" [(ngModel)]="newRow.unit_id">
+              <option *ngFor="let u of units" [ngValue]="u.unit_id">{{ u.unit_name }}</option>
+            </select>
+          </td>
+          <td>
+            <input class="inline-input" type="date"
+              [(ngModel)]="newRow.start_date" />
+          </td>
+          <td>
+            <input class="inline-input" type="date"
+              [(ngModel)]="newRow.end_date" />
+          </td>
+          <td>
+            <select class="inline-input" [(ngModel)]="newRow.status" (ngModelChange)="onStatusChangeForNew()">
+              <option value="active">Active</option>
+              <option value="closed">Closed</option>
+            </select>
+          </td>
+          <td class="actions">
+            <button
+              class="btn-save"
+              [disabled]="isSaving"
+              (click)="saveNewRow()">
+              {{ isSaving ? 'Saving…' : 'Save' }}
+            </button>
+            <button
+              class="btn-cancel-edit"
+              [disabled]="isSaving"
+              (click)="cancelNewRow()">
+              Cancel
+            </button>
+          </td>
+        </tr>
+
+        <!-- EXISTING FLOCKS -->
+        <tr *ngFor="let flock of paginatedFlocks"
+          [class.editing]="editingId === flock.flock_id"
+          [class.closed-row]="flock.status === 'closed'">
+
+          <!-- VIEW MODE -->
+          <ng-container *ngIf="editingId !== flock.flock_id">
+            <td class="flock-name">{{ flock.flock_name }}</td>
+            <td>{{ unitName(flock.unit_id) }}</td>
+            <td>{{ flock.start_date | dateOnly }}</td>
+            <td>{{ flock.end_date ? (flock.end_date | dateOnly) : '—' }}</td>
+            <td>
+              <span class="status-badge"
+                [class.active]="flock.status === 'active'"
+                [class.closed]="flock.status === 'closed'">
+                {{ flock.status }}
+              </span>
+            </td>
+            <td class="actions">
+              <button
+                class="btn-edit"
+                [disabled]="isSaving"
+                (click)="startEdit(flock)">
+                Edit
+              </button>
+              <button
+                class="btn-delete"
+                [disabled]="isSaving"
+                (click)="confirmDelete(flock.flock_id)">
+                Delete
+              </button>
+            </td>
+          </ng-container>
+
+          <!-- EDIT MODE -->
+          <ng-container *ngIf="editingId === flock.flock_id">
+            <td>
+              <input class="inline-input" type="text"
+                [(ngModel)]="editForm.flock_name" />
+            </td>
+            <td class="readonly-farm">{{ unitName(editForm.unit_id) }}</td>
+            <td>
+              <input class="inline-input" type="date"
+                [(ngModel)]="editForm.start_date" />
+            </td>
+            <td>
+              <input class="inline-input" type="date"
+                [(ngModel)]="editForm.end_date" />
+            </td>
+            <td>
+              <select class="inline-input" [(ngModel)]="editForm.status" (ngModelChange)="onStatusChangeForEdit()">
+                <option value="active">Active</option>
+                <option value="closed">Closed</option>
+              </select>
+            </td>
+            <td class="actions">
+              <button
+                class="btn-save"
+                [disabled]="isSaving"
+                (click)="saveEdit(flock.flock_id)">
+                {{ isSaving ? 'Saving…' : 'Save' }}
+              </button>
+              <button
+                class="btn-cancel-edit"
+                [disabled]="isSaving"
+                (click)="cancelEdit()">
+                Cancel
+              </button>
+            </td>
+          </ng-container>
+
+        </tr>
+
+        <!-- Inline "no results" row — avoids destroying the table -->
+        <tr *ngIf="searchTerm.trim() && filteredFlocks.length === 0 && !showNewRow">
+          <td colspan="6" class="no-results-cell">
+            No flocks match "{{ searchTerm }}".
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+    <app-pagination
+      [currentPage]="currentPage"
+      [totalItems]="filteredFlocks.length"
+      [pageSize]="pageSize"
+      (pageChange)="currentPage = $event">
+    </app-pagination>
+  </div>
+
+</div>
+
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Flock"
+  message="This will permanently delete the flock and ALL its data including expenses, ledgers, medicine, sales, income and health records. This cannot be undone."
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"
+/>

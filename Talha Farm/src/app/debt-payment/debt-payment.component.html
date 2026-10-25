@@ -1,0 +1,159 @@
+<!--
+  DEBT PAYMENT — a notebook. There is no Cash/Bank selector and no account
+  dropdown anywhere on this screen, deliberately: nothing here moves money in
+  this app. See the class comment in debt-payment.component.ts.
+
+  CELL COUNT, checked by hand against the <thead> — an off-by-one here is
+  invisible to every script in this repo:
+    7 columns; the body row has 7 tds and the empty row colspan="7".
+-->
+<div class="module-container">
+  <div class="module-header">
+    <div>
+      <h3>Debt Payment</h3>
+      <p class="subtitle">
+        {{ currentFarm?.farm_name }} · A record to remember by — these figures are
+        not counted in any report, cash total or bank balance
+      </p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary" (click)="openForm()" [disabled]="isLoading">+ Add Record</button>
+    </div>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="loading-state" *ngIf="isLoading"><p>Loading...</p></div>
+
+  <ng-container *ngIf="!isLoading">
+    <div class="summary-row" *ngIf="records.length > 0">
+      <div class="summary-card outstanding">
+        <span class="summary-label">Still owed</span>
+        <span class="summary-value">Rs. {{ outstandingTotal | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-card recovered">
+        <span class="summary-label">Got back</span>
+        <span class="summary-value">Rs. {{ recoveredTotal | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-card written-off">
+        <span class="summary-label">Written off</span>
+        <span class="summary-value">Rs. {{ writtenOffTotal | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-card count">
+        <span class="summary-label">Records</span>
+        <span class="summary-value">{{ records.length }}</span>
+      </div>
+    </div>
+
+    <div class="filter-row">
+      <input class="search-input" type="text" [(ngModel)]="searchTerm"
+             placeholder="Search a name, phone or note..."/>
+      <button class="chip" [class.active]="filter === 'all'" (click)="filter = 'all'">All</button>
+      <button class="chip" [class.active]="filter === 'outstanding'" (click)="filter = 'outstanding'">Still owed</button>
+      <button class="chip" [class.active]="filter === 'recovered'" (click)="filter = 'recovered'">Got back</button>
+      <button class="chip" [class.active]="filter === 'written_off'" (click)="filter = 'written_off'">Written off</button>
+    </div>
+
+    <div class="empty-state" *ngIf="records.length === 0">
+      <p>Nothing written down yet.</p>
+      <p class="hint">
+        Use this for money someone took and did not return — a name, the amount, when it happened,
+        and whatever you want to remember about it.
+      </p>
+    </div>
+
+    <div class="table-card" *ngIf="records.length > 0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th class="right">Amount</th>
+            <th>Status</th>
+            <th>Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of filteredRecords" [class.settled]="statusOf(r) !== 'outstanding'">
+            <td>{{ r.date ? (r.date | dateOnly) : '—' }}</td>
+            <td class="strong">{{ r.person_name }}</td>
+            <td class="muted">{{ r.phone || '—' }}</td>
+            <td class="right strong">Rs. {{ r.amount | number:'1.0-0' }}</td>
+            <td>
+              <!-- The status is changed from the row itself, which is the
+                   commonest edit: he hears that someone paid up. -->
+              <select class="status-select" [ngModel]="statusOf(r)"
+                      (ngModelChange)="setStatus(r, $event)"
+                      [class.outstanding]="statusOf(r) === 'outstanding'"
+                      [class.recovered]="statusOf(r) === 'recovered'"
+                      [class.written-off]="statusOf(r) === 'written_off'">
+                <option *ngFor="let s of STATUSES" [value]="s.value">{{ s.label }}</option>
+              </select>
+            </td>
+            <td class="muted notes-cell">{{ r.notes || '—' }}</td>
+            <td class="actions">
+              <button class="btn-edit" (click)="editRecord(r)">Edit</button>
+              <button class="btn-delete" (click)="confirmDelete(r.debt_id)">Delete</button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredRecords.length === 0">
+            <td colspan="7" class="empty-row">Nothing matches this view.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+</div>
+
+<!-- ══ THE FORM ══════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showForm">
+  <div class="modal-card">
+    <h4>{{ editingId ? 'Edit Record' : 'Add Record' }}</h4>
+    <p class="subtitle">Just for your own reference — nothing here affects any total in the app.</p>
+    <div class="error-message" *ngIf="formError">{{ formError }}</div>
+
+    <label class="field-label">Name</label>
+    <input class="inline-input" type="text" [(ngModel)]="form.person_name" placeholder="Who is this about"/>
+
+    <label class="field-label">Phone (optional)</label>
+    <input class="inline-input" type="text" [(ngModel)]="form.phone" placeholder="Optional"/>
+
+    <label class="field-label">Date (optional)</label>
+    <input class="inline-input" type="date" [(ngModel)]="form.date"/>
+
+    <label class="field-label">Amount</label>
+    <input class="inline-input" type="number" min="0" [(ngModel)]="form.amount" placeholder="0"/>
+
+    <label class="field-label">Status</label>
+    <select class="inline-input" [(ngModel)]="form.status">
+      <option *ngFor="let s of STATUSES" [value]="s.value">{{ s.label }}</option>
+    </select>
+
+    <label class="field-label">Notes (optional)</label>
+    <textarea class="inline-input" rows="3" [(ngModel)]="form.notes"
+              placeholder="What happened, what was said, anything worth remembering"></textarea>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="closeForm()" [disabled]="isSaving">Cancel</button>
+      <button class="btn-primary" (click)="saveRecord()" [disabled]="isSaving">
+        {{ isSaving ? 'Saving...' : 'Save' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<app-delete-code-dialog
+  *ngIf="showDeleteCodeDialog"
+  (verified)="onDeleteCodeVerified()"
+  (cancelled)="onDeleteCodeCancelled()">
+</app-delete-code-dialog>
+
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete this record?"
+  message="This removes the note. Nothing else in the app changes, because nothing else reads it. Cannot be undone."
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()">
+</app-confirm-dialog>

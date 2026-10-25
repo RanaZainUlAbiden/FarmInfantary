@@ -1,0 +1,47 @@
+# ── Dependencies ────────────────────────────────────────────
+node_modules/
+**/node_modules/
+
+# ── Build output ────────────────────────────────────────────
+dist/
+.angular/
+server/dist/
+*.tsbuildinfo
+
+# ── Desktop reference app ───────────────────────────────────
+# Its SOURCE is tracked on purpose (the verify scripts read it as text).
+# Its build artefacts are not.
+Talha Farm/node_modules/
+Talha Farm/dist/
+Talha Farm/release/
+Talha Farm/.angular/
+Talha Farm/qa-results/
+
+# ── Secrets & environment ───────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Local databases & dumps ─────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+db/dumps/
+
+# ── Logs ────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# ── Test & coverage output ──────────────────────────────────
+coverage/
+qa-results/
+
+# ── Editor / OS ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

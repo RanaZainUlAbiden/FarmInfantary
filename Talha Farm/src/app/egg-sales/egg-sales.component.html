@@ -1,0 +1,281 @@
+<div class="module-container">
+  <div class="module-header">
+    <div>
+      <h3>Egg Sales</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }}</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-print" (click)="printAllSales()" *ngIf="filteredSales.length > 0" title="Print egg sales list">🖨️ Print List</button>
+      <div class="default-rate-box" *ngIf="currentFarm" style="display:inline-flex; align-items:center; gap: 6px; margin-right: 10px; background: white; padding: 4px 8px; border-radius: 6px; border: 1px solid #e0e0e0;">
+        <label style="font-size: 12px; font-weight: 500; color: #666; margin: 0;">Default Rate (new rows):</label>
+        <ng-container *ngIf="screenMode === 'per_egg'">
+          <input type="number" [(ngModel)]="defaultRatePerEgg" class="inline-input" style="width: 70px; padding: 4px; margin: 0;" placeholder="Rs."/>
+          <span style="font-size: 11px; color: #999;">/egg</span>
+        </ng-container>
+        <ng-container *ngIf="screenMode === 'per_carton'">
+          <input type="number" [(ngModel)]="defaultRatePerCarton" class="inline-input" style="width: 70px; padding: 4px; margin: 0;" placeholder="Rs."/>
+          <span style="font-size: 11px; color: #999;">/carton</span>
+          <label style="font-size: 12px; font-weight: 500; color: #666; margin: 0 0 0 6px;">Eggs/Carton:</label>
+          <input type="number" [(ngModel)]="defaultEggsPerCarton" class="inline-input" style="width: 60px; padding: 4px; margin: 0;" placeholder="360"/>
+        </ng-container>
+        <button class="btn-secondary" style="padding: 4px 8px; font-size: 11px;" *ngIf="hasPendingRows" (click)="applyDefaultRateToAll()" title="Apply to all pending rows">Apply All</button>
+      </div>
+      <ng-container *ngIf="hasPendingRows">
+        <button class="btn-secondary" (click)="cancelAllRows()">Cancel</button>
+        <button class="btn-primary" (click)="saveAllRows()" [disabled]="isSavingAll">{{ isSavingAll ? 'Saving...' : 'Save All' }}</button>
+      </ng-container>
+      <button class="btn-add" (click)="addPendingRow()" *ngIf="batches.length > 0" title="Add row (Ctrl+A)">+</button>
+    </div>
+  </div>
+
+  <!-- Pricing mode — chosen once per sale; locked while rows are pending -->
+  <div class="mode-bar" *ngIf="batches.length > 0">
+    <div class="mode-tabs">
+      <button type="button" class="mode-tab" [class.active]="screenMode === 'per_egg'"
+        [disabled]="hasPendingRows && screenMode !== 'per_egg'"
+        (click)="setScreenMode('per_egg')">Per Egg</button>
+      <button type="button" class="mode-tab" [class.active]="screenMode === 'per_carton'"
+        [disabled]="hasPendingRows && screenMode !== 'per_carton'"
+        (click)="setScreenMode('per_carton')">Per Carton</button>
+    </div>
+    <span class="mode-lock-msg" *ngIf="hasPendingRows">🔒 Save or clear the pending rows to switch pricing mode.</span>
+  </div>
+
+  <!-- Egg Stock Summary Card -->
+  <div class="egg-stock-summary" *ngIf="batches.length > 0">
+    <div class="summary-card">
+      <div class="card-label">🥚 Collected</div>
+      <div class="card-value">{{ summaryCollected | number }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-label">🛒 Sold</div>
+      <div class="card-value sold">{{ summarySold | number }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-label">📦 In Stock</div>
+      <div class="card-value stock">{{ summaryInStock | number }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-label">Showing</div>
+      <div class="card-value batch-label">{{ summaryBatchLabel }}</div>
+    </div>
+  </div>
+
+  <div class="filter-bar" *ngIf="batches.length > 0">
+    <div class="filter-group">
+      <label>Filter by Batch:</label>
+      <select [(ngModel)]="selectedBatchFilter" (change)="currentPage = 1">
+        <option value="all">All Batches</option>
+        <option *ngFor="let b of batches" [value]="b.batch_id">{{ b.batch_name }}</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="shortcuts-hint" *ngIf="hasPendingRows">
+    <span>Ctrl+A — new row</span>
+    <span>Ctrl+S — save all</span>
+  </div>
+
+  <!-- AUTO-SETTLE THE OWN-FARM DEBT.
+       Shown only when a pending row is BANKED and its flock/batch's farm owes
+       distribution something. Deliberately outside every table: a cell added to
+       a table is the one defect no verify script in this repo can see. -->
+  <div class="autosettle-bar" *ngIf="autoSettlePreview as preview">
+    <label class="autosettle-check">
+      <input type="checkbox" [(ngModel)]="autoSettle"/>
+      <span>Auto-settle <strong>Rs. {{ preview.amount | number:'1.0-0' }}</strong>
+        to Distribution from <strong>{{ preview.account }}</strong></span>
+    </label>
+    <span class="autosettle-note">{{ preview.farms }} owes Rs. {{ preview.debt | number:'1.0-0' }}.
+      Oldest bill first; the money stays in this account.</span>
+  </div>
+
+  <div class="error-banner" *ngIf="errorMessage" style="color:#c0392b;padding:8px 12px;margin:8px 0;background:#fdecea;border-radius:6px;">
+    {{ errorMessage }}
+  </div>
+
+  <div class="empty-state" *ngIf="batches.length === 0">
+    <p>No active batches found. Create a batch first in Batch Management.</p>
+  </div>
+
+  <div class="empty-state" *ngIf="batches.length > 0 && sales.length === 0 && pendingRows.length === 0">
+    <p>No egg sales yet. Click + or press Ctrl+A to record sales.</p>
+  </div>
+
+  <div class="table-card" *ngIf="sales.length > 0 || pendingRows.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:32px"></th>
+          <th>Batch</th>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Grade</th>
+          <th>Mode</th>
+          <th>Quantity</th>
+          <th>Cartons</th>
+          <th>Rate</th>
+          <th>Amount</th>
+          <th>Payment</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of pendingRows; let i = index" class="pending-row">
+          <td class="row-plus-cell"><button class="row-plus-btn" (click)="addRowAfter(i)" title="Add row below">+</button></td>
+          <td><select class="inline-input" [(ngModel)]="row.batch_id"><option *ngFor="let b of batches" [value]="b.batch_id">{{ b.batch_name }}</option></select></td>
+          <td><input class="inline-input" type="date" [(ngModel)]="row.date"/></td>
+          <!--
+            The dropdown and the free-text box share ONE cell on purpose: the
+            Customer column already existed, so the table's column count is
+            unchanged and no row branch can drift out of step with the header.
+            Picking a customer fills the box; leaving it on "Walk-in" keeps the
+            box as the only record of who bought.
+          -->
+          <td>
+            <select class="inline-input" [(ngModel)]="row.customer_id" (change)="onCustomerPick(row)">
+              <option [ngValue]="null">Walk-in / other</option>
+              <option *ngFor="let c of customers" [ngValue]="c.customer_id">{{ c.customer_name }}</option>
+            </select>
+            <input *ngIf="!row.customer_id" class="inline-input" type="text" [(ngModel)]="row.customer_name"
+                   placeholder="Customer name" style="margin-top:4px"/>
+          </td>
+          <td>
+            <select class="inline-input" [(ngModel)]="row.grade">
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+              <option value="xl">XL</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </td>
+          <td><span class="mode-badge" [class.per-carton]="row.sale_mode === 'per_carton'">{{ row.sale_mode === 'per_carton' ? 'Per Carton' : 'Per Egg' }}</span></td>
+          <td>
+            <input *ngIf="row.sale_mode !== 'per_carton'" class="inline-input" type="number" min="0" [max]="getAvailableForGrade(row.batch_id, row.grade)" [(ngModel)]="row.quantity" placeholder="Qty"/>
+            <span *ngIf="row.sale_mode === 'per_carton'">{{ computeQuantity(row) | number }} eggs</span>
+            <div class="stock-hint" style="font-size:11px;color:#888;">Avail: {{ getAvailableForGrade(row.batch_id, row.grade) | number }}</div>
+          </td>
+          <td>
+            <ng-container *ngIf="row.sale_mode === 'per_carton'; else noCartons">
+              <input class="inline-input" type="number" min="0" [(ngModel)]="row.carton_count" placeholder="Cartons"/>
+              <div class="stock-hint" style="font-size:11px;color:#888;">
+                <input class="inline-input" type="number" min="1" [(ngModel)]="row.eggs_per_carton" placeholder="Eggs/carton" style="margin-top:4px;"/>
+                eggs/carton
+              </div>
+            </ng-container>
+            <ng-template #noCartons><span>—</span></ng-template>
+          </td>
+          <td><input class="inline-input" type="number" min="0" [(ngModel)]="row.rate_per_egg" [placeholder]="row.sale_mode === 'per_carton' ? 'Rate/carton' : 'Rate/egg'"/></td>
+          <td class="amount"><input class="inline-input amount-input" type="number" [(ngModel)]="row.amount" placeholder="Auto"/></td>
+          <td>
+            <select class="inline-input" [(ngModel)]="row.payment_type">
+              <option value="cash">Cash</option>
+              <option value="bank">Bank</option>
+              <option value="credit">Credit</option>
+            </select>
+            <app-bank-picker [row]="row" [banks]="houseBanks"></app-bank-picker>
+          </td>
+          <td class="actions">
+            <button class="btn-print-small" type="button" (click)="printSaleRow(row)" title="Print receipt">🖨️</button>
+            <button class="btn-remove-row" (click)="removePendingRow(i)">✕</button>
+          </td>
+        </tr>
+
+        <tr *ngFor="let s of paginatedSales" [class.editing]="editingId === s.egg_sale_id">
+          <ng-container *ngIf="editingId !== s.egg_sale_id">
+            <td></td>
+            <td>{{ getBatchName(s.batch_id) }}</td>
+            <td>{{ s.date | dateOnly }}</td>
+            <td>
+              {{ s.customer_name || '—' }}
+              <!-- A named customer is a ledger account, not just a label. -->
+              <small *ngIf="s.customer_id" style="display:block;color:#888">account customer</small>
+            </td>
+            <td><span class="grade-badge" [class]="s.grade">{{ s.grade | titlecase }}</span></td>
+            <td><span class="mode-badge" [class.per-carton]="s.sale_mode === 'per_carton'">{{ s.sale_mode === 'per_carton' ? 'Per Carton' : 'Per Egg' }}</span></td>
+            <td>{{ s.quantity | number }}</td>
+            <td>
+              <span *ngIf="s.sale_mode === 'per_carton'">{{ s.carton_count | number }} × {{ s.eggs_per_carton || 360 }}</span>
+              <span *ngIf="s.sale_mode !== 'per_carton'">—</span>
+            </td>
+            <td>Rs. {{ s.rate_per_egg | number:'1.0-2' }} <small>/{{ s.sale_mode === 'per_carton' ? 'carton' : 'egg' }}</small></td>
+            <td class="amount">Rs. {{ s.total_amount | number:'1.0-0' }}</td>
+            <td><span class="payment-badge" [class.cash]="s.payment_type==='cash'" [class.bank]="s.payment_type==='bank'" [class.credit]="s.payment_type==='credit'">{{ s.payment_type }}</span>
+              <!-- The receivable this sale raised, if any. Inside the existing
+                   Payment cell, so the table's column count is unchanged. -->
+              <small *ngIf="receivableNote(s)" style="display:block;color:#b26a00">{{ receivableNote(s) }}</small>
+              <app-bank-picker [row]="s" [banks]="houseBanks" readonly></app-bank-picker>
+            </td>
+            <td class="actions">
+              <button class="btn-print-small" (click)="printSaleRow(s)" title="Print receipt">🖨️</button>
+              <button class="btn-edit" [disabled]="isSaving" (click)="startEdit(s)">Edit</button>
+              <button class="btn-delete" [disabled]="isSaving" (click)="confirmDelete(s.egg_sale_id)">Delete</button>
+            </td>
+          </ng-container>
+          <ng-container *ngIf="editingId === s.egg_sale_id">
+            <td></td>
+            <td><select class="inline-input" [(ngModel)]="editForm.batch_id"><option *ngFor="let b of batches" [value]="b.batch_id">{{ b.batch_name }}</option></select></td>
+            <td><input class="inline-input" type="date" [(ngModel)]="editForm.date"/></td>
+            <td>
+              <select class="inline-input" [(ngModel)]="editForm.customer_id" (change)="onCustomerPick(editForm)">
+                <option [ngValue]="null">Walk-in / other</option>
+                <option *ngFor="let c of customers" [ngValue]="c.customer_id">{{ c.customer_name }}</option>
+              </select>
+              <input *ngIf="!editForm.customer_id" class="inline-input" type="text"
+                     [(ngModel)]="editForm.customer_name" style="margin-top:4px"/>
+            </td>
+            <td>
+              <select class="inline-input" [(ngModel)]="editForm.grade">
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
+                <option value="xl">XL</option>
+                <option value="mixed">Mixed</option>
+              </select>
+            </td>
+            <td>
+              <select class="inline-input" [(ngModel)]="editForm.sale_mode">
+                <option value="per_egg">Per Egg</option>
+                <option value="per_carton">Per Carton</option>
+              </select>
+            </td>
+            <td>
+              <input *ngIf="editForm.sale_mode !== 'per_carton'" class="inline-input" type="number" min="0" [(ngModel)]="editForm.quantity"/>
+              <span *ngIf="editForm.sale_mode === 'per_carton'">{{ computeQuantity(editForm) | number }} eggs</span>
+            </td>
+            <td>
+              <ng-container *ngIf="editForm.sale_mode === 'per_carton'; else noCartonsEdit">
+                <input class="inline-input" type="number" min="0" [(ngModel)]="editForm.carton_count" placeholder="Cartons"/>
+                <div class="stock-hint" style="font-size:11px;color:#888;">
+                  <input class="inline-input" type="number" min="1" [(ngModel)]="editForm.eggs_per_carton" placeholder="Eggs/carton" style="margin-top:4px;"/>
+                  eggs/carton
+                </div>
+              </ng-container>
+              <ng-template #noCartonsEdit><span>—</span></ng-template>
+            </td>
+            <td><input class="inline-input" type="number" min="0" [(ngModel)]="editForm.rate_per_egg" [placeholder]="editForm.sale_mode === 'per_carton' ? 'Rate/carton' : 'Rate/egg'"/></td>
+            <td class="amount"><input class="inline-input amount-input" type="number" [(ngModel)]="editForm.amount" placeholder="Auto"/></td>
+            <td>
+              <select class="inline-input" [(ngModel)]="editForm.payment_type">
+                <option value="cash">Cash</option>
+                <option value="bank">Bank</option>
+                <option value="credit">Credit</option>
+              </select>
+              <app-bank-picker [row]="editForm" [banks]="houseBanks"></app-bank-picker>
+            </td>
+            <td class="actions">
+              <button class="btn-save" [disabled]="isSaving" (click)="saveEdit(s.egg_sale_id)">Save</button>
+              <button class="btn-cancel-edit" [disabled]="isSaving" (click)="cancelEdit()">Cancel</button>
+            </td>
+          </ng-container>
+        </tr>
+      </tbody>
+    </table>
+    <app-pagination [currentPage]="currentPage" [totalItems]="filteredSales.length" [pageSize]="pageSize" (pageChange)="currentPage = $event"></app-pagination>
+  </div>
+</div>
+
+<app-confirm-dialog *ngIf="showDeleteDialog" title="Delete Egg Sale"
+  message="Are you sure you want to delete this egg sale?"
+  confirmText="Delete" cancelText="Cancel" type="danger"
+  (confirmed)="onDeleteConfirmed()" (cancelled)="onDeleteCancelled()"/>

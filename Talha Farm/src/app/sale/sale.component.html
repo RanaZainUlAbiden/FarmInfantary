@@ -1,0 +1,206 @@
+<div class="module-container">
+
+  <div class="module-header">
+    <div>
+      <h3>Sale</h3>
+      <p class="subtitle" *ngIf="currentFlock">
+        {{ currentFlock.flock_name }}
+      </p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-print" [disabled]="isSaving"
+        (click)="printBrokerSale()"
+        *ngIf="currentFlock && sales.length > 0 && selectedBrokerFilter !== 'all'"
+        title="Print broker sale summary">
+        🖨️ Print Broker Sale
+      </button>
+      <button class="btn-secondary" [disabled]="isSaving"
+        (click)="openBrokerForm()"
+        *ngIf="currentFlock && !showBrokerForm && !hasPendingRows">
+        + Manage Brokers
+      </button>
+      
+      <div class="default-rate-box" *ngIf="currentFlock" style="display:inline-flex; align-items:center; gap: 6px; margin-right: 10px; background: white; padding: 4px 8px; border-radius: 6px; border: 1px solid #e0e0e0;">
+        <label style="font-size: 12px; font-weight: 500; color: #666; margin: 0;">Default Rate:</label>
+        <input type="number" [(ngModel)]="defaultRate" class="inline-input" style="width: 70px; padding: 4px; margin: 0;" placeholder="Rs."/>
+        <button class="btn-secondary" style="padding: 4px 8px; font-size: 11px;" *ngIf="hasPendingRows" (click)="applyDefaultRateToAll()" title="Apply to all pending rows">Apply All</button>
+      </div>
+
+      <ng-container *ngIf="hasPendingRows">
+        <button class="btn-secondary" (click)="cancelAllRows()">Cancel</button>
+        <button class="btn-primary" (click)="saveAllRows()" [disabled]="isSavingAll">{{ isSavingAll ? 'Saving...' : 'Save All' }}</button>
+      </ng-container>
+      <button class="btn-add" (click)="addPendingRow()"
+        *ngIf="currentFlock && brokers.length > 0" title="Add row (Ctrl+A)">+</button>
+    </div>
+  </div>
+
+  <div class="shortcuts-hint" *ngIf="hasPendingRows">
+    <span>Ctrl+A — new row</span><span>Ctrl+S — save all</span>
+  </div>
+
+  <div class="warning-card" *ngIf="currentFlock && brokers.length === 0 && !showBrokerForm">
+    <span>⚠️</span><p>No brokers found. Please add brokers first.</p>
+  </div>
+
+  <div class="form-card" *ngIf="showBrokerForm">
+    <h4>Manage Brokers</h4>
+    <div class="broker-form-row">
+      <input type="text" [(ngModel)]="brokerForm.broker_name" placeholder="Broker name e.g. Ali Broker" (keyup.enter)="saveBroker()"/>
+      <button class="btn-primary" [disabled]="isSaving" (click)="saveBroker()">{{ isSaving ? 'Saving...' : 'Add' }}</button>
+      <button class="btn-secondary" [disabled]="isSaving" (click)="showBrokerForm = false">Done</button>
+    </div>
+    <div class="broker-list" *ngIf="brokers.length > 0">
+      <div class="broker-item" *ngFor="let broker of brokers">
+        <span>{{ broker.broker_name }}</span>
+        <button class="btn-delete-small" [disabled]="isSaving" (click)="confirmDeleteBroker(broker.broker_id)">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-bar" *ngIf="sales.length > 0">
+    <div class="filter-group">
+      <label>Filter by Broker</label>
+      <select [(ngModel)]="selectedBrokerFilter">
+        <option value="all">All Brokers</option>
+        <option *ngFor="let broker of brokers" [value]="broker.broker_name">{{ broker.broker_name }}</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Filter by Date</label>
+      <input type="date" [(ngModel)]="selectedDateFilter"/>
+      <button class="btn-apply" (click)="applyDateFilter()">Apply</button>
+      <button class="btn-clear" *ngIf="filteredByDate" (click)="clearDateFilter()">Clear</button>
+    </div>
+    <div class="summary-pills">
+      <span class="pill">Weight: {{ grandTotalWeight | number:'1.0-0' }} kg</span>
+      <span class="pill">Total: Rs. {{ grandTotalAmount | number:'1.0-0' }}</span>
+      <span class="pill">Vehicles: {{ filteredTotalVehicles }}</span>
+    </div>
+  </div>
+
+  <div class="empty-state" *ngIf="!currentFlock"><p>Please select a flock first.</p></div>
+  <div class="empty-state" *ngIf="currentFlock && sales.length === 0 && pendingRows.length === 0 && brokers.length > 0">
+    <p>No sales yet. Click + or Ctrl+A to record sales.</p>
+  </div>
+
+  <!-- AUTO-SETTLE THE OWN-FARM DEBT.
+       Shown only when a pending row is BANKED and its flock/batch's farm owes
+       distribution something. Deliberately outside every table: a cell added to
+       a table is the one defect no verify script in this repo can see. -->
+  <div class="autosettle-bar" *ngIf="autoSettlePreview as preview">
+    <label class="autosettle-check">
+      <input type="checkbox" [(ngModel)]="autoSettle"/>
+      <span>Auto-settle <strong>Rs. {{ preview.amount | number:'1.0-0' }}</strong>
+        to Distribution from <strong>{{ preview.account }}</strong></span>
+    </label>
+    <span class="autosettle-note">{{ preview.farms }} owes Rs. {{ preview.debt | number:'1.0-0' }}.
+      Oldest bill first; the money stays in this account.</span>
+  </div>
+
+  <!-- PENDING ROWS -->
+  <div class="table-card pending-card" *ngIf="pendingRows.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:32px"></th><th>Date</th><th>Vehicle #</th><th>Driver Name</th><th>Driver Phone</th>
+          <th>Broker</th><th>Empty (kg)</th><th>Load (kg)</th><th>Bird Wt</th><th>Rate (Rs.)</th><th>Amount</th><th>Payment</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of pendingRows; let i = index" class="pending-row">
+          <td class="row-plus-cell"><button class="row-plus-btn" (click)="addRowAfter(i)" title="Add row below">+</button></td>
+          <td><input class="inline-input" type="date" [(ngModel)]="row.date"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="row.vehicle_number" placeholder="Vehicle #"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="row.driver_name" placeholder="Driver name"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="row.driver_phone" placeholder="Driver phone"/></td>
+          <td><select class="inline-input" [(ngModel)]="row.broker_id"><option *ngFor="let broker of brokers" [ngValue]="broker.broker_id">{{ broker.broker_name }}</option></select></td>
+          <td><input class="inline-input" type="number" [(ngModel)]="row.empty_weight" (ngModelChange)="onRowAmountChange()" placeholder="0"/></td>
+          <td><input class="inline-input" type="number" [(ngModel)]="row.load_weight" (ngModelChange)="onRowAmountChange()" placeholder="0"/></td>
+          <td class="highlight">{{ getRowBirdWeight(row) | number:'1.0-0' }}</td>
+          <td><input class="inline-input" type="number" [(ngModel)]="row.rate" (ngModelChange)="onRowAmountChange()" placeholder="0"/></td>
+          <td class="amount"><input class="inline-input amount-input" type="number" [(ngModel)]="row.amount" placeholder="Auto"/></td>
+          <td><select class="inline-input" [(ngModel)]="row.payment_type" (ngModelChange)="onRowAmountChange()"><option value="cash">Cash</option><option value="bank">Bank</option><option value="credit">Credit</option></select>
+            <app-bank-picker [row]="row" [banks]="houseBanks"></app-bank-picker></td>
+           <td>
+            <button class="btn-print-small" type="button" (click)="printDriverReceipt(row)" title="Print driver receipt">🖨️</button>
+            <button class="btn-remove-row" (click)="removePendingRow(i)">✕</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Grouped Sales by Date -->
+  <div *ngFor="let group of paginatedGroupedSales" class="date-group">
+    <div class="date-header">
+      <span class="date-label">{{ group.date | dateOnly }}</span>
+      <div class="date-summary">
+        <span>Weight: {{ group.totalWeight | number:'1.0-0' }} kg</span>
+        <span>Total: Rs. {{ group.totalAmount | number:'1.0-0' }}</span>
+        <button class="btn-print-small" [disabled]="isSaving" (click)="printDailySale(group)" title="Print this day's sales">🖨️</button>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Vehicle #</th><th>Driver Name</th><th>Driver Phone</th><th>Broker</th>
+            <th>Empty (kg)</th><th>Load (kg)</th><th>Bird Wt (kg)</th><th>Rate (Rs.)</th><th>Amount (Rs.)</th><th>Payment</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let sale of group.sales" [class.editing]="editingId === sale.sale_id">
+
+            <!-- VIEW MODE -->
+            <ng-container *ngIf="editingId !== sale.sale_id">
+              <td>{{ sale.vehicle_number || '—' }}</td>
+              <td>{{ sale.driver_name || '—' }}</td>
+              <td>{{ sale.driver_phone || '—' }}</td>
+              <td>{{ sale.broker || '—' }}</td>
+              <td>{{ sale.empty_weight | number:'1.0-0' }}</td>
+              <td>{{ sale.load_weight | number:'1.0-0' }}</td>
+              <td class="highlight">{{ sale.bird_weight | number:'1.0-0' }}</td>
+              <td>{{ sale.rate | number:'1.0-0' }}</td>
+              <td class="amount">Rs. {{ sale.total_amount | number:'1.0-0' }}</td>
+              <td><span class="payment-badge" [class.cash]="sale.payment_type==='cash'" [class.bank]="sale.payment_type==='bank'" [class.credit]="sale.payment_type==='credit'">{{ sale.payment_type || 'cash' }}</span>
+                <app-bank-picker [row]="sale" [banks]="houseBanks" readonly></app-bank-picker></td>
+              <td class="actions">
+                <button class="btn-print-small" [disabled]="isSaving" (click)="printDriverReceipt(sale)" title="Print driver receipt">🖨️</button>
+                <button class="btn-edit" [disabled]="isSaving" (click)="startEdit(sale)">Edit</button>
+                <button class="btn-delete" [disabled]="isSaving" (click)="confirmDelete(sale.sale_id)">Delete</button>
+              </td>
+            </ng-container>
+
+            <!-- EDIT MODE -->
+            <ng-container *ngIf="editingId === sale.sale_id">
+              <td><input class="inline-input" type="text" [(ngModel)]="editForm.vehicle_number"/></td>
+              <td><input class="inline-input" type="text" [(ngModel)]="editForm.driver_name" placeholder="Driver name"/></td>
+              <td><input class="inline-input" type="text" [(ngModel)]="editForm.driver_phone" placeholder="Driver phone"/></td>
+              <td><select class="inline-input" [(ngModel)]="editForm.broker_id"><option [ngValue]="null">Select Broker</option><option *ngFor="let broker of brokers" [ngValue]="broker.broker_id">{{ broker.broker_name }}</option></select></td>
+              <td><input class="inline-input" type="number" [(ngModel)]="editForm.empty_weight"/></td>
+              <td><input class="inline-input" type="number" [(ngModel)]="editForm.load_weight"/></td>
+              <td class="highlight">{{ getEditBirdWeight() | number:'1.0-0' }}</td>
+              <td><input class="inline-input" type="number" [(ngModel)]="editForm.rate"/></td>
+              <td class="amount"><input class="inline-input amount-input" type="number" [(ngModel)]="editForm.amount" placeholder="Auto"/></td>
+              <td><select class="inline-input" [(ngModel)]="editForm.payment_type"><option value="cash">Cash</option><option value="bank">Bank</option><option value="credit">Credit</option></select>
+                <app-bank-picker [row]="editForm" [banks]="houseBanks"></app-bank-picker></td>
+              
+              <td class="actions">
+                <button class="btn-save" [disabled]="isSaving" (click)="saveEdit(sale.sale_id, sale.date)">{{ isSaving ? 'Saving...' : 'Save' }}</button>
+                <button class="btn-cancel-edit" [disabled]="isSaving" (click)="cancelEdit()">Cancel</button>
+              </td>
+            </ng-container>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <app-pagination [currentPage]="currentPage" [totalItems]="filteredGroupedSales.length" [pageSize]="pageSize" (pageChange)="currentPage = $event"></app-pagination>
+</div>
+
+<app-delete-code-dialog *ngIf="showDeleteCodeDialog" (verified)="onDeleteCodeVerified()" (cancelled)="onDeleteCodeCancelled()"/>
+<app-confirm-dialog *ngIf="showDeleteDialog" title="Delete Sale" message="Are you sure you want to delete this sale entry?" confirmText="Delete" cancelText="Cancel" type="danger" (confirmed)="onDeleteConfirmed()" (cancelled)="onDeleteCancelled()"/>
+<app-confirm-dialog *ngIf="showDeleteBrokerDialog" title="Delete Broker" message="Are you sure you want to delete this broker?" confirmText="Delete" cancelText="Cancel" type="danger" (confirmed)="onDeleteBrokerConfirmed()" (cancelled)="onDeleteBrokerCancelled()"/>
+<app-confirm-dialog *ngIf="showValidationDialog" title="Validation Notice" [message]="validationMessage" confirmText="OK" type="warning" (confirmed)="showValidationDialog = false" (cancelled)="showValidationDialog = false"/>

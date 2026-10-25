@@ -1,0 +1,317 @@
+<div class="module-container">
+  <div class="module-header">
+    <div>
+      <h3>Purchase Orders</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }}</p>
+    </div>
+    <div class="header-actions">
+      <ng-container *ngIf="hasPendingRows">
+        <button class="btn-secondary" (click)="cancelAllRows()">Cancel All</button>
+        <button class="btn-primary" (click)="saveAllRows()" [disabled]="isSavingAll">{{ isSavingAll ? 'Saving...' : 'Save All' }}</button>
+      </ng-container>
+      <!-- ✅ FIXED: Changed class from btn123 to btn-add -->
+      <button class="btn-add" (click)="addPendingRow()" *ngIf="products.length > 0">+ Add Row</button>
+    </div>
+  </div>
+
+  <!-- SEARCH BAR -->
+  <div class="search-container" *ngIf="!isLoading && orders.length > 0">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input 
+        type="text" 
+        class="search-input" 
+        [(ngModel)]="searchTerm" 
+        (ngModelChange)="filterOrders()" 
+        placeholder="Search by supplier, product, date or notes..."
+      />
+      <button class="search-clear" *ngIf="searchTerm" (click)="clearSearch()">✕</button>
+    </div>
+    <span class="search-results" *ngIf="searchTerm">Found {{ filteredOrders.length }} result(s)</span>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <!-- LOADING STATE -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading purchase orders...</p>
+  </div>
+
+  <!-- EMPTY STATES -->
+  <div class="empty-state" *ngIf="!isLoading && products.length === 0">
+    <p>No products found. Add products in Inventory first.</p>
+  </div>
+  <div class="empty-state" *ngIf="!isLoading && products.length > 0 && orders.length === 0 && pendingRows.length === 0">
+    <p>No purchase orders yet. Click "Add Row" to create a purchase order.</p>
+  </div>
+
+  <!-- NO SEARCH RESULTS -->
+  <div class="empty-state" *ngIf="!isLoading && searchTerm && filteredOrders.length === 0 && orders.length > 0">
+    <p>No purchase orders found matching "{{ searchTerm }}"</p>
+    <button class="btn-secondary" (click)="clearSearch()">Clear Search</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-card" *ngIf="!isLoading && (orders.length > 0 || pendingRows.length > 0)">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:32px"></th>
+          <th>Product</th>
+          <th>Batch No.</th>
+          <th>Supplier</th>
+          <th>Date</th>
+          <th>Qty</th>
+          <th>Cost Price</th>
+          <th>Total</th>
+          <th>Payment</th>
+          <th>Notes</th>
+          <th>Photo</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- PENDING ROWS -->
+        <tr *ngFor="let row of pendingRows; let i = index" class="pending-row">
+          <td class="row-plus-cell">
+            <button class="row-plus-btn" (click)="addRowAfter(i)">+</button>
+          </td>
+          <td>
+            <select 
+              class="inline-input" 
+              [(ngModel)]="row.product_id" 
+              (ngModelChange)="onProductSelect(row)"
+            >
+              <option [ngValue]="null">Select Product</option>
+              <option *ngFor="let p of products" [ngValue]="p.product_id">
+                {{ p.product_name }} (Rs. {{ p.cost_price || 0 }})
+              </option>
+            </select>
+          </td>
+          <td>
+            <input
+              class="inline-input"
+              type="text"
+              [(ngModel)]="row.batch_code"
+              (ngModelChange)="onFormChange()"
+              placeholder="e.g. H-204"
+            />
+          </td>
+          <td>
+            <select 
+              class="inline-input" 
+              [(ngModel)]="row.supplier_id"
+              (ngModelChange)="onFormChange()"
+            >
+              <!-- Named rather than a dash: the supplier is required, so the
+                   empty option has to read as "not chosen yet", not as a
+                   legitimate "none". -->
+              <option [ngValue]="null">Select supplier</option>
+              <option *ngFor="let s of suppliers" [ngValue]="s.supplier_id">{{ s.supplier_name }}</option>
+            </select>
+          </td>
+          <td>
+            <input 
+              class="inline-input" 
+              type="date" 
+              [(ngModel)]="row.date"
+              (ngModelChange)="onFormChange()"
+            />
+          </td>
+          <td>
+            <input 
+              class="inline-input" 
+              type="number" 
+              [(ngModel)]="row.quantity" 
+              (ngModelChange)="onFormChange()"
+              placeholder="0" 
+              min="0"
+            />
+          </td>
+          <td>
+            <input
+              class="inline-input"
+              type="number"
+              [(ngModel)]="row.cost_price"
+              (ngModelChange)="onFormChange()"
+              placeholder="0"
+              step="0.01"
+              min="0"
+            />
+            <span class="auto-fill-hint" *ngIf="row.cost_price && row.cost_price > 0">Auto-filled (editable)</span>
+          </td>
+          <td class="amount">Rs. {{ (row.quantity || 0) * (row.cost_price || 0) | number:'1.0-0' }}</td>
+          <td>
+            <select 
+              class="inline-input" 
+              [(ngModel)]="row.payment_type"
+              (ngModelChange)="onPaymentTypeChange(row)"
+            >
+              <option value="cash">Paid (Debit)</option>
+              <option value="credit">Unpaid (Credit)</option>
+            </select>
+            <!-- Only a PAID order can have come out of an account. An unpaid
+                 one has moved no money yet, so there is nothing to pick. -->
+            <ng-container *ngIf="row.payment_type === 'cash'">
+              <select class="inline-input" [(ngModel)]="row.payment_source" (ngModelChange)="onFormChange()">
+                <option value="cash">Cash</option>
+                <option value="bank">Bank</option>
+              </select>
+              <app-bank-picker [row]="row" [banks]="houseBanks"></app-bank-picker>
+            </ng-container>
+          </td>
+          <td>
+            <input 
+              class="inline-input" 
+              type="text" 
+              [(ngModel)]="row.notes" 
+              (ngModelChange)="onFormChange()"
+              placeholder="Notes"
+            />
+          </td>
+          <td>
+            <button class="btn-upload-photo" type="button" (click)="fileInput.click()" title="Upload photo">📷</button>
+            <input type="file" #fileInput hidden accept="image/*" (change)="onFileSelected($event, row)"/>
+            <div class="photo-thumb" *ngIf="row.receipt_image" (click)="openImage(row.receipt_image)"><img [src]="row.receipt_image"/></div>
+          </td>
+          <td>
+            <button class="btn-remove-row" (click)="removePendingRow(i)">✕</button>
+          </td>
+        </tr>
+
+        <!-- EXISTING ORDERS -->
+        <tr *ngFor="let o of paginatedOrders" [class.editing]="editingId === o.purchase_id">
+          <ng-container *ngIf="editingId !== o.purchase_id">
+            <td></td>
+            <td>{{ getProductName(o.product_id) }}</td>
+            <td>{{ o.batch_code || '—' }}</td>
+            <td>{{ getSupplierName(o.supplier_id) }}</td>
+            <td>{{ o.date | dateOnly }}</td>
+            <td>{{ o.quantity | number }}</td>
+            <td>Rs. {{ o.cost_price | number:'1.0-2' }}</td>
+            <td class="amount">Rs. {{ o.total_amount | number:'1.0-0' }}</td>
+            <td>
+              <span class="payment-badge" [class.cash]="o.payment_type==='cash'">
+                {{ o.payment_type === 'cash' ? 'Paid (Debit)' : 'Unpaid (Credit)' }}
+              </span>
+              <!-- A paid order shows the account it came out of; no account
+                   shown means it was paid in cash. -->
+              <app-bank-picker [row]="o" [banks]="houseBanks" readonly></app-bank-picker>
+            </td>
+            <td>{{ o.notes || '—' }}</td>
+            <td><div class="photo-thumb" *ngIf="o.receipt_image" (click)="openImage(o.receipt_image)"><img [src]="o.receipt_image" title="Click to view full"/></div></td>
+            <td class="actions">
+              <button class="btn-edit" (click)="startEdit(o)">Edit</button>
+              <button class="btn-delete" (click)="confirmDelete(o.purchase_id)">Delete</button>
+            </td>
+          </ng-container>
+
+          <!-- EDIT MODE -->
+          <ng-container *ngIf="editingId === o.purchase_id">
+            <td></td>
+            <td>
+              <select 
+                class="inline-input" 
+                [(ngModel)]="editForm.product_id" 
+                (ngModelChange)="onProductSelect(editForm)"
+              >
+                <option *ngFor="let p of products" [ngValue]="p.product_id">{{ p.product_name }}</option>
+              </select>
+            </td>
+            <td>
+              <input class="inline-input" type="text" [(ngModel)]="editForm.batch_code" placeholder="Batch no."/>
+            </td>
+            <td>
+              <select 
+                class="inline-input" 
+                [(ngModel)]="editForm.supplier_id"
+              >
+                <option [ngValue]="null">Select supplier</option>
+                <option *ngFor="let s of suppliers" [ngValue]="s.supplier_id">{{ s.supplier_name }}</option>
+              </select>
+            </td>
+            <td>
+              <input 
+                class="inline-input" 
+                type="date" 
+                [(ngModel)]="editForm.date"
+              />
+            </td>
+            <td>
+              <input 
+                class="inline-input" 
+                type="number" 
+                [(ngModel)]="editForm.quantity" 
+                min="0"
+              />
+            </td>
+            <td>
+              <input
+                class="inline-input"
+                type="number"
+                [(ngModel)]="editForm.cost_price"
+                placeholder="0"
+                step="0.01"
+                min="0"
+              />
+            </td>
+            <td class="amount">Rs. {{ (editForm.quantity || 0) * (editForm.cost_price || 0) | number:'1.0-0' }}</td>
+            <td>
+              <select class="inline-input" [(ngModel)]="editForm.payment_type" (ngModelChange)="onPaymentTypeChange(editForm)">
+                <option value="cash">Paid (Debit)</option>
+                <option value="credit">Unpaid (Credit)</option>
+              </select>
+              <ng-container *ngIf="editForm.payment_type === 'cash'">
+                <select class="inline-input" [(ngModel)]="editForm.payment_source">
+                  <option value="cash">Cash</option>
+                  <option value="bank">Bank</option>
+                </select>
+                <app-bank-picker [row]="editForm" [banks]="houseBanks"></app-bank-picker>
+              </ng-container>
+            </td>
+            <td>
+              <input 
+                class="inline-input" 
+                type="text" 
+                [(ngModel)]="editForm.notes"
+              />
+            </td>
+            <td>
+              <button class="btn-upload-photo" type="button" (click)="editFileInput.click()" title="Change photo">📷</button>
+              <input type="file" #editFileInput hidden accept="image/*" (change)="onFileSelected($event, editForm)"/>
+              <div class="photo-thumb" *ngIf="editForm.receipt_image" (click)="openImage(editForm.receipt_image)"><img [src]="editForm.receipt_image"/></div>
+              <button class="btn-remove-photo" *ngIf="editForm.receipt_image" (click)="editForm.receipt_image = null">✕</button>
+            </td>
+            <td class="actions">
+              <button class="btn-save" (click)="saveEdit(o.purchase_id)">Save</button>
+              <button class="btn-cancel-edit" (click)="cancelEdit()">Cancel</button>
+            </td>
+          </ng-container>
+        </tr>
+      </tbody>
+    </table>
+    <app-pagination 
+      [currentPage]="currentPage" 
+      [totalItems]="totalItems" 
+      [pageSize]="pageSize" 
+      (pageChange)="currentPage = $event"
+    ></app-pagination>
+  </div>
+</div>
+
+<app-delete-code-dialog
+  *ngIf="showDeleteCodeDialog"
+  (verified)="onDeleteCodeVerified()"
+  (cancelled)="onDeleteCodeCancelled()"
+/>
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Order"
+  message="Are you sure you want to delete this purchase order? This will also remove the inventory batches and supplier ledger entries."
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"
+/>

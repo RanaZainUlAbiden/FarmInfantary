@@ -1,0 +1,123 @@
+.module-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.module-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;
+  h3 { font-size: 20px; font-weight: 600; color: #1a1a1a; margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: #888; margin: 0; }
+}
+.header-actions { display: flex; gap: 10px; }
+.btn-generate {
+  background: #1a5c38; color: white; border: none; padding: 12px 24px; border-radius: 10px;
+  font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  &:hover { background: #144d2e; }
+  &:disabled { background: #aaa; cursor: not-allowed; }
+}
+
+// Filter Bar
+.filter-bar {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+  background: white; border-radius: 12px; padding: 14px 20px; border: 1px solid #e0e0e0;
+  .filter-group {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    label { font-size: 13px; font-weight: 600; color: #555; }
+    input[type="date"] { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+  }
+  .btn-primary {
+    background: #1a5c38; color: white; border: none; padding: 7px 14px; border-radius: 6px;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+  }
+  .btn-secondary {
+    background: #f3f4f6; color: #4b5563; border: none; padding: 7px 14px; border-radius: 6px;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+  }
+}
+
+.empty-state {
+  text-align: center; padding: 60px; color: #aaa; background: white;
+  border-radius: 12px; border: 1px dashed #e0e0e0;
+}
+
+.warning-card {
+  display: flex; gap: 10px; align-items: center; background: #fff8e1; border: 1px solid #ffe082;
+  padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #7a5c00;
+}
+
+// Headline block
+.headline-card {
+  background: white; border-radius: 12px; border: 1px solid #e0e0e0; padding: 24px 28px; margin-bottom: 24px;
+}
+.headline-row {
+  display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0;
+  &.emphasis { .headline-label, .headline-value { font-size: 17px; font-weight: 700; } }
+  &.final .headline-value { font-size: 22px; }
+}
+.headline-label { font-size: 14px; color: #444; }
+.headline-value { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+.headline-value.positive { color: #1a5c38; }
+.headline-value.negative { color: #c62828; }
+.headline-divider { height: 1px; background: #e8e8e8; margin: 8px 0; }
+.headline-breakdown {
+  margin: 2px 0 4px 0; padding: 10px 14px; background: #f8f9fa; border-radius: 8px;
+}
+.breakdown-row {
+  display: flex; justify-content: space-between; padding: 3px 0; font-size: 12.5px; color: #666;
+}
+
+// Assets section
+.summary-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 8px;
+}
+.summary-card {
+  background: white; border-radius: 12px; padding: 20px; border: 1px solid #e0e0e0; text-align: center;
+  &.assets { border-top: 4px solid #1565c0; }
+  // Cash and Bank are deliberately different hues from each other: the client
+  // reads them as a pair and the whole point is telling at a glance which half
+  // of the money is where. Green for notes in hand, indigo for the accounts.
+  &.cash-in-hand { border-top: 4px solid #2e7d32; }
+  &.bank-balance { border-top: 4px solid #3949ab; }
+  /* The two directions read opposite ways round, so they are coloured
+     opposite ways round — money coming back green, money to hand back amber. */
+  &.loan-receivable { border-top: 4px solid #1a5c38; }
+  &.loan-payable    { border-top: 4px solid #e65100; }
+}
+.card-icon { font-size: 22px; margin-bottom: 8px; }
+.card-label { font-size: 12px; color: #888; font-weight: 500; margin-bottom: 6px; }
+.card-value { font-size: 18px; font-weight: 700; color: #1a1a1a; }
+.card-value.positive { color: #1a5c38; }
+.card-value.negative { color: #c62828; }
+.cash-note { font-size: 11.5px; color: #aaa; margin: 8px 4px 24px; font-style: italic; }
+.card-note { font-size: 10.5px; color: #aaa; margin-top: 6px; font-style: italic; }
+.asof-note { font-size: 11px; font-weight: 400; color: #999; margin-left: 6px; }
+
+// Per-farm table
+.table-card {
+  background: white; border-radius: 12px; border: 1px solid #e0e0e0; padding: 20px 24px;
+  margin-bottom: 20px; overflow-x: auto;
+  h4 { font-size: 16px; font-weight: 600; color: #1a1a1a; margin: 0 0 16px; }
+  .table-caption { font-size: 12px; color: #777; margin: -10px 0 16px; line-height: 1.5; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: #f8f9fa; padding: 10px 12px; text-align: left; font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.5px; color: #666; border-bottom: 2px solid #e0e0e0;
+    &.num { text-align: right; }
+  }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; color: #333; }
+  tbody td.num { text-align: right; font-weight: 600; }
+  tbody td.num.positive { color: #1a5c38; }
+  tbody td.num.negative { color: #c62828; }
+  tbody td.net-profit { background: #f8fdf9; border-left: 2px solid #e0e0e0; }
+  tbody tr:hover { background: #f8fdf9; }
+  tbody tr.unassigned-row { background: #fffdf5; }
+}
+.formula-hint {
+  display: block; font-size: 9.5px; font-weight: 400; text-transform: none;
+  letter-spacing: 0; color: #999; margin-top: 2px;
+}
+.unassigned-note { display: block; font-size: 11px; color: #b8860b; margin-top: 2px; }
+.badge {
+  display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500;
+  text-transform: capitalize;
+  &.broiler { background: #fff3e0; color: #e65100; }
+  &.layer { background: #e3f2fd; color: #1565c0; }
+  &.distribution { background: #f3e5f5; color: #6a1b9a; }
+}
+.empty-row { text-align: center; color: #aaa; padding: 24px; }

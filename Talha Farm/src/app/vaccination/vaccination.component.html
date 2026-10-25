@@ -1,0 +1,90 @@
+<div class="module-container">
+  <div class="module-header">
+    <div>
+      <h3>Vaccination Schedule</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }}</p>
+    </div>
+    <div class="header-actions">
+      <ng-container *ngIf="hasPendingRows">
+        <button class="btn-secondary" (click)="cancelAllRows()">Cancel</button>
+        <button class="btn-primary" (click)="saveAllRows()" [disabled]="isSavingAll">{{ isSavingAll ? 'Saving...' : 'Save All' }}</button>
+      </ng-container>
+      <button class="btn-add" (click)="addPendingRow()" *ngIf="!hasNoTargets" title="Add row (Ctrl+A)">+</button>
+    </div>
+  </div>
+
+  <div class="shortcuts-hint" *ngIf="hasPendingRows">
+    <span>Ctrl+A — new row</span>
+    <span>Ctrl+S — save all</span>
+  </div>
+
+  <div class="empty-state" *ngIf="hasNoTargets && isLayerMode">
+    <p>No active batches found. Create a batch first in Batch Management.</p>
+  </div>
+
+  <div class="empty-state" *ngIf="hasNoTargets && !isLayerMode">
+    <p>No active flocks found. Create a flock first in Flock Management.</p>
+  </div>
+
+  <div class="empty-state" *ngIf="!hasNoTargets && vaccinations.length === 0 && pendingRows.length === 0">
+    <p>No vaccinations scheduled yet.</p>
+  </div>
+
+  <div class="table-card" *ngIf="vaccinations.length > 0 || pendingRows.length > 0">
+    <table>
+      <thead>
+        <tr><th style="width:32px"></th><th>Batch</th><th>Date</th><th>Vaccine Name</th><th>Dose</th><th>Notes</th><th>Cost (Rs.)</th><th>Bill #</th><th>Done</th><!-- <th>Actions</th> --></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of pendingRows; let i = index" class="pending-row">
+          <td class="row-plus-cell"><button class="row-plus-btn" (click)="addRowAfter(i)">+</button></td>
+          <td>{{ getTargetName(row) }}</td>
+          <td><input class="inline-input" type="date" [(ngModel)]="row.date"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="row.vaccine_name" placeholder="Vaccine name"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="row.dose" placeholder="e.g. 0.5ml"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="row.notes" placeholder="Notes"/></td>
+          <td><input class="inline-input" type="number" [(ngModel)]="row.cost" placeholder="0"/></td>
+          <td></td>
+          <td><input type="checkbox" [(ngModel)]="row.done"/></td>
+          <!-- <td class="actions"><button class="btn-remove-row" (click)="removePendingRow(i)">✕</button></td> -->
+        </tr>
+        <tr *ngFor="let v of vaccinations" [class.editing]="editingId === v.vaccination_id">
+          <ng-container *ngIf="editingId !== v.vaccination_id">
+            <td></td>
+            <td>{{ getTargetName(v) }}</td>
+            <td>{{ v.date | dateOnly }}</td>
+            <td>{{ v.vaccine_name }}</td>
+            <td>{{ v.dose || '—' }}</td>
+            <td>{{ v.notes || '—' }}</td>
+            <td>Rs. {{ (v.cost || 0) | number:'1.0-0' }}</td>
+            <td>{{ v.bill_number || '—' }}</td>
+            <td><span [class.done]="v.done" [class.pending]="!v.done">{{ v.done ? '✅' : '❌' }}</span></td>
+            <!-- <td class="actions">
+              <button class="btn-edit" (click)="startEdit(v)">Edit</button>
+              <button class="btn-delete" (click)="confirmDelete(v.vaccination_id)">Delete</button>
+            </td> -->
+          </ng-container>
+          <!-- <ng-container *ngIf="editingId === v.vaccination_id">
+            <td></td>
+            <td>{{ getTargetName(editForm) }}</td>
+            <td><input class="inline-input" type="date" [(ngModel)]="editForm.date"/></td>
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.vaccine_name"/></td>
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.dose"/></td>
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.notes"/></td>
+            <td><input class="inline-input" type="number" [(ngModel)]="editForm.cost"/></td>
+            <td><input type="checkbox" [(ngModel)]="editForm.done"/></td>
+            <td class="actions">
+              <button class="btn-save" (click)="saveEdit(v.vaccination_id)">Save</button>
+              <button class="btn-cancel-edit" (click)="cancelEdit()">Cancel</button>
+            </td>
+          </ng-container> -->
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<app-confirm-dialog *ngIf="showDeleteDialog" title="Delete Vaccination"
+  message="Are you sure you want to delete this vaccination record?"
+  confirmText="Delete" cancelText="Cancel" type="danger"
+  (confirmed)="onDeleteConfirmed()" (cancelled)="onDeleteCancelled()"/>

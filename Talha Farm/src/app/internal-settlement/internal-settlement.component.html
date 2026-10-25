@@ -1,0 +1,223 @@
+<div class="module-container">
+  <div class="module-header">
+    <div>
+      <h3>Internal Settlement</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }} · Your own farm paying what it owes distribution</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary" (click)="openForm()" [disabled]="isLoading || customers.length === 0">
+        + New Settlement
+      </button>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <label>
+      From
+      <input type="date" [(ngModel)]="fromDate" (change)="onRangeChange()"/>
+    </label>
+    <label>
+      To
+      <input type="date" [(ngModel)]="toDate" (change)="onRangeChange()"/>
+    </label>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="loading-state" *ngIf="isLoading"><p>Loading...</p></div>
+
+  <ng-container *ngIf="!isLoading">
+    <div class="summary-row">
+      <div class="summary-card">
+        <span class="summary-label">Settlements (Selected Range)</span>
+        <span class="summary-value">{{ settlements.length }}</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Settled (Selected Range)</span>
+        <span class="summary-value">Rs. {{ total | number:'1.0-0' }}</span>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="customers.length === 0">
+      <p>
+        No own-farm customers yet. One is created automatically the first time Distribution bills
+        a flock or batch of yours — record that sale under Distribution &gt; Sales Orders first.
+      </p>
+    </div>
+
+    <div class="empty-state" *ngIf="customers.length > 0 && settlements.length === 0">
+      <p>No settlements in this range. Click "New Settlement" to record one.</p>
+    </div>
+
+    <div class="table-card" *ngIf="settlements.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>Settlement #</th>
+            <th>Date</th>
+            <th>Settled By</th>
+            <th>Amount</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Reference</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of settlements">
+            <td class="voucher-no">{{ s.settlement_number || '—' }}</td>
+            <td>{{ s.date | dateOnly }}</td>
+            <td>{{ s.customer_name || 'Deleted Customer' }}</td>
+            <td class="amount">Rs. {{ s.amount | number:'1.0-0' }}</td>
+            <td>{{ fromLabel(s) }}</td>
+            <td>
+              {{ toLabel(s) }}
+              <span class="row-note" *ngIf="settledInPlace(s)"
+                    title="Both ends are the same account, so no money moved between accounts">
+                settled in place
+              </span>
+            </td>
+            <td>{{ s.reference || '—' }}</td>
+            <td class="actions">
+              <button class="btn-secondary" (click)="printSettlement(s)">🖨️ Print</button>
+              <button class="btn-delete" (click)="confirmDelete(s.settlement_id)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td></td>
+            <td></td>
+            <td class="amount">Rs. {{ total | number:'1.0-0' }}</td>
+            <td colspan="4"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </ng-container>
+</div>
+
+<!-- ── NEW SETTLEMENT ────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showForm">
+  <div class="modal-card wide">
+    <h4>New Internal Settlement</h4>
+    <div class="error-message" *ngIf="formError">{{ formError }}</div>
+
+    <label class="field-label">Settling farm</label>
+    <select class="inline-input" [(ngModel)]="form.customer_id" (ngModelChange)="onCustomerChange()">
+      <option [ngValue]="null">Select your farm</option>
+      <option *ngFor="let c of customers" [ngValue]="c.customer_id">
+        {{ c.customer_name }} (owes Rs. {{ c.outstanding_balance | number:'1.0-0' }})
+      </option>
+    </select>
+
+    <p class="field-hint" *ngIf="selectedCustomer">
+      Outstanding: <strong>Rs. {{ selectedOutstanding | number:'1.0-0' }}</strong>
+      across {{ selectedBills.length }} unpaid bill(s).
+    </p>
+
+    <label class="field-label">Date</label>
+    <input class="inline-input" type="date" [(ngModel)]="form.date"/>
+
+    <label class="field-label">Amount</label>
+    <input class="inline-input" type="number" [(ngModel)]="form.amount" placeholder="Amount settled"/>
+
+    <!-- Both ends are the owner's, so both get a picker, and only his own
+         (house) accounts appear on either: settling through a customer's
+         account would record the movement as that customer's. With exactly one
+         house account both sides preselect it; with several, neither has a
+         default and the save is refused until both are chosen. -->
+    <ng-container *ngIf="houseBanks.length > 0">
+      <label class="field-label">Paid from</label>
+      <select class="inline-input" [(ngModel)]="form.fromChoice" (ngModelChange)="formError = ''">
+        <option value="">Select account</option>
+        <option value="cash">Cash</option>
+        <option *ngFor="let b of houseBanks" [value]="b.bank_id">
+          {{ bankOptionLabel(b) }}
+          (Rs. {{ b.current_balance | number:'1.0-0' }})
+        </option>
+      </select>
+
+      <label class="field-label">Received into</label>
+      <select class="inline-input" [(ngModel)]="form.toChoice" (ngModelChange)="formError = ''">
+        <option value="">Select account</option>
+        <option value="cash">Cash</option>
+        <option *ngFor="let b of houseBanks" [value]="b.bank_id">
+          {{ bankOptionLabel(b) }}
+          (Rs. {{ b.current_balance | number:'1.0-0' }})
+        </option>
+      </select>
+
+      <p class="field-hint" *ngIf="sameAccount">
+        Both ends are the same account, so no money moves between accounts and no bank entry is
+        recorded. The farm's debt simply clears.
+      </p>
+      <p class="field-hint" *ngIf="!sameAccount && form.fromChoice && form.toChoice && form.amount > 0">
+        This records Rs. {{ form.amount | number:'1.0-0' }} leaving
+        <strong>{{ bankLabelFor(form.fromChoice) }}</strong> and arriving in
+        <strong>{{ bankLabelFor(form.toChoice) }}</strong>. The total across all your accounts does
+        not change.
+      </p>
+    </ng-container>
+
+    <p class="field-hint" *ngIf="houseBanks.length === 0">
+      You have no bank accounts of your own yet, so this settles as cash on both sides. Add one
+      under Overview &gt; Bank to record it through an account.
+    </p>
+
+    <label class="field-label">Reference (optional)</label>
+    <input class="inline-input" type="text" [(ngModel)]="form.reference"
+           placeholder="Cheque no., transfer ref, …"/>
+
+    <label class="field-label">Notes (optional)</label>
+    <textarea class="inline-input" [(ngModel)]="form.notes" rows="2"></textarea>
+
+    <!-- What this amount will clear, oldest bill first — the same walk the save
+         performs, shown so the owner can see where the money lands. -->
+    <div class="allocation" *ngIf="preview.length > 0">
+      <span class="allocation-title">This will settle</span>
+      <table class="allocation-table">
+        <thead>
+          <tr><th>Bill #</th><th>Date</th><th>Outstanding</th><th>Applied</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of preview">
+            <td>{{ p.bill_number }}</td>
+            <td>{{ p.bill_date | dateOnly }}</td>
+            <td class="amount">Rs. {{ p.outstanding | number:'1.0-0' }}</td>
+            <td class="amount">Rs. {{ p.applied | number:'1.0-0' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="field-warning" *ngIf="previewUnapplied > 0.005">
+      Rs. {{ previewUnapplied | number:'1.0-0' }} of this amount has no unpaid bill to land on.
+      Reduce the amount, or raise the bill for the rest first — the settlement will be refused
+      otherwise.
+    </p>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="closeForm()" [disabled]="isSaving">Cancel</button>
+      <button class="btn-primary" (click)="save()" [disabled]="isSaving">
+        {{ isSaving ? 'Saving…' : 'Save Settlement' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<app-delete-code-dialog
+  *ngIf="showDeleteCodeDialog"
+  (verified)="onDeleteCodeVerified()"
+  (cancelled)="onDeleteCodeCancelled()"/>
+
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Internal Settlement"
+  message="This puts the money back on the bills it cleared and removes both bank entries. Continue?"
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"/>

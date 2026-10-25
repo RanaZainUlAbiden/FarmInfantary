@@ -1,0 +1,119 @@
+<div class="module-container">
+  <!-- Reachable only from the sidebar, so there was no way back out of it
+       except clicking another sidebar item. It belongs to the Account Ledger
+       family — that dashboard links to the supplier screens beside it — so it
+       returns there, like the five ledger screens do. -->
+  <app-back-link to="account-ledger" label="Account Ledger"/>
+  <div class="module-header">
+    <div>
+      <h3>Supplier Management</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }}</p>
+    </div>
+    <button class="btn-primary" (click)="addNewRow()" *ngIf="!showNewRow" [disabled]="isLoading">+ Add Supplier</button>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading suppliers...</p>
+  </div>
+
+  <!-- Summary Bar -->
+  <div class="summary-bar" *ngIf="!isLoading && suppliers.length > 0">
+    <div class="summary-item">
+      <span class="summary-label">Total Suppliers</span>
+      <span class="summary-value">{{ suppliers.length }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Total Purchased</span>
+      <span class="summary-value">Rs. {{ getTotalPurchased() | number:'1.0-0' }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Total Paid</span>
+      <span class="summary-value paid">Rs. {{ getTotalPaid() | number:'1.0-0' }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Total Payable</span>
+      <span class="summary-value payable">Rs. {{ getTotalPayable() | number:'1.0-0' }}</span>
+    </div>
+  </div>
+
+  <div class="empty-state" *ngIf="!isLoading && suppliers.length === 0 && !showNewRow">
+    <p>No suppliers yet.</p>
+  </div>
+
+  <div class="table-card" *ngIf="(!isLoading && suppliers.length > 0) || showNewRow">
+    <table>
+      <thead>
+        <tr>
+          <th>Supplier Name</th>
+          <th>Phone</th>
+          <th>Products Supplied</th>
+          <th>Purchased</th>
+          <th>Paid</th>
+          <th>Total Payable</th>  <!-- 🔥 NEW COLUMN -->
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- New Row -->
+        <tr *ngIf="showNewRow" class="new-row">
+          <td><input class="inline-input" type="text" [(ngModel)]="newRow.supplier_name" placeholder="Supplier name"/></td>
+          <td><input class="inline-input" type="tel" inputmode="tel" [(ngModel)]="newRow.phone" placeholder="e.g. 03001234567"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="newRow.products_supplied" placeholder="e.g. Feed, Medicine"/></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td class="actions">
+            <button class="btn-save" (click)="saveNewRow()" [disabled]="isSaving">Save</button>
+            <button class="btn-cancel-edit" (click)="cancelNewRow()">Cancel</button>
+          </td>
+        </tr>
+
+        <!-- Existing Suppliers -->
+        <tr *ngFor="let s of suppliers" [class.editing]="editingId === s.supplier_id">
+          <ng-container *ngIf="editingId !== s.supplier_id">
+            <td class="supplier-name">{{ s.supplier_name }}</td>
+            <td>{{ s.phone || '—' }}</td>
+            <td>{{ s.products_supplied || '—' }}</td>
+            <td>Rs. {{ s.total_purchased | number:'1.0-0' }}</td>
+            <td class="paid">Rs. {{ s.total_paid | number:'1.0-0' }}</td>
+            <td [class.outstanding]="s.outstanding_balance > 0">
+              Rs. {{ s.outstanding_balance | number:'1.0-0' }}
+            </td>
+            <td class="actions">
+              <button class="btn-edit" (click)="startEdit(s)">Edit</button>
+              <button class="btn-delete" (click)="confirmDelete(s.supplier_id)">Delete</button>
+            </td>
+          </ng-container>
+
+          <!-- Edit Mode -->
+          <ng-container *ngIf="editingId === s.supplier_id">
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.supplier_name"/></td>
+            <td><input class="inline-input" type="tel" inputmode="tel" [(ngModel)]="editForm.phone"/></td>
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.products_supplied"/></td>
+            <td>Rs. {{ s.total_purchased | number:'1.0-0' }}</td>
+            <td class="paid">Rs. {{ s.total_paid | number:'1.0-0' }}</td>
+            <td>Rs. {{ s.outstanding_balance | number:'1.0-0' }}</td>
+            <td class="actions">
+              <button class="btn-save" (click)="saveEdit(s.supplier_id)">Save</button>
+              <button class="btn-cancel-edit" (click)="cancelEdit()">Cancel</button>
+            </td>
+          </ng-container>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Supplier"
+  message="Are you sure?"
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"/>

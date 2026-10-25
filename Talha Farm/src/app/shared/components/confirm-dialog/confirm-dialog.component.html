@@ -1,0 +1,19 @@
+<div class="dialog-overlay">
+  <div class="dialog-box">
+    <div class="dialog-icon" [ngClass]="type">
+      <span *ngIf="type === 'danger'">🗑️</span>
+      <span *ngIf="type === 'warning'">⚠️</span>
+      <span *ngIf="type === 'success'">✅</span>
+    </div>
+    <h3 class="dialog-title">{{ title }}</h3>
+    <p class="dialog-message">{{ message }}</p>
+    <div class="dialog-actions">
+      <button *ngIf="!hideCancel" class="btn-cancel" (click)="cancelled.emit()">
+        {{ cancelText }}
+      </button>
+      <button class="btn-confirm" [ngClass]="type" (click)="confirmed.emit()">
+        {{ confirmText }}
+      </button>
+    </div>
+  </div>
+</div>

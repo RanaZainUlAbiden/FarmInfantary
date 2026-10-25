@@ -1,0 +1,166 @@
+<div class="login-container">
+  <div class="login-card">
+
+    <div class="logo-section">
+      <img src="logo.png" alt="Logo" class="login-logo"/>
+      <h1 class="app-title">Talha Protein Farm</h1>
+      <p class="app-subtitle">Farm Management System</p>
+    </div>
+
+    <!-- LOGIN MODE -->
+    <div *ngIf="!showSetup && !showRegister">
+      <div class="form-group">
+        <label>Username</label>
+        <input
+          type="text"
+          [(ngModel)]="farmName"
+          placeholder="Enter your username"
+          (keyup.enter)="onLogin()"
+        />
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <input
+          type="password"
+          [(ngModel)]="password"
+          placeholder="Enter your password"
+          (keyup.enter)="onLogin()"
+        />
+      </div>
+
+      <div class="error-message" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+
+      <button class="login-btn" (click)="onLogin()"
+        [disabled]="isLoading">
+        {{ isLoading ? 'Logging in...' : 'Login' }}
+      </button>
+
+      <div class="action-links">
+        <button class="link-btn" (click)="openRegister()">
+          + Create Account
+        </button>
+      </div>
+    </div>
+
+    <!-- FIRST TIME SETUP MODE (when no farms exist) -->
+    <div *ngIf="showSetup">
+      <p class="setup-info">
+        🎉 Welcome! Create your account to get started.
+      </p>
+
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" [(ngModel)]="newFarmName"
+          placeholder="Choose a username"/>
+      </div>
+
+      <div class="form-group">
+        <label>Business Type</label>
+        <select [(ngModel)]="businessType" class="business-select">
+          <option value="all">🔄 All Modules (Broiler + Layer + Distribution)</option>
+          <option value="broiler">🐔 Broiler Only</option>
+          <option value="layer">🥚 Layer Only</option>
+          <option value="distribution">📦 Distribution Only</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Set Password</label>
+        <input type="password" [(ngModel)]="newPassword"
+          placeholder="Create a password"/>
+      </div>
+
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" [(ngModel)]="confirmPassword"
+          placeholder="Confirm your password"/>
+      </div>
+
+      <div class="error-message" *ngIf="setupError">
+        {{ setupError }}
+      </div>
+
+      <button class="login-btn" (click)="onSetup()"
+        [disabled]="isLoading">
+        {{ isLoading ? 'Creating...' : 'Create Account' }}
+      </button>
+
+      <div class="action-links" *ngIf="farmsExist">
+        <button class="link-btn" (click)="cancelSetup()">
+          ← Back to Login
+        </button>
+      </div>
+    </div>
+
+    <!-- REGISTER MODE (when farms already exist) -->
+    <div *ngIf="showRegister">
+      <div class="mode-header">
+        <button class="back-btn" (click)="cancelRegister()">
+          ← Back
+        </button>
+        <h3 class="mode-title">Create Account</h3>
+      </div>
+
+      <p class="setup-info">
+        One account, many farms. Inside your account you'll set up separate
+        farms for Broiler and Layer to track independently.
+      </p>
+
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" [(ngModel)]="newFarmName"
+          placeholder="Choose a username"/>
+      </div>
+
+      <div class="form-group">
+        <label>Business Type</label>
+        <select [(ngModel)]="businessType" class="business-select">
+          <option value="all">🔄 All Modules (Broiler + Layer + Distribution)</option>
+          <option value="broiler">🐔 Broiler Only</option>
+          <option value="layer">🥚 Layer Only</option>
+          <option value="distribution">📦 Distribution Only</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Set Password</label>
+        <input type="password" [(ngModel)]="newPassword"
+          placeholder="Create a password"/>
+      </div>
+
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" [(ngModel)]="confirmPassword"
+          placeholder="Confirm your password"/>
+      </div>
+
+      <div class="error-message" *ngIf="setupError">
+        {{ setupError }}
+      </div>
+
+      <button class="login-btn" (click)="onRegister()"
+        [disabled]="isLoading">
+        {{ isLoading ? 'Creating...' : 'Create Account' }}
+      </button>
+    </div>
+
+    <!-- Registered-farm chips intentionally hidden: farm names should not be
+         publicly listed on the login screen. Login is by typed name + password. -->
+
+  </div>
+
+  <app-confirm-dialog
+    *ngIf="showValidationDialog"
+    title="Registered Farms"
+    [message]="validationMessage"
+    confirmText="OK"
+    type="success"
+    [hideCancel]="true"
+    (confirmed)="showValidationDialog = false"
+    (cancelled)="showValidationDialog = false">
+  </app-confirm-dialog>
+
+</div>

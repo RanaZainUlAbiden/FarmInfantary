@@ -1,0 +1,104 @@
+<div class="module-container">
+  <div class="module-header">
+    <div>
+      <h3>Batch Management</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }}</p>
+    </div>
+    <button class="btn-primary" [disabled]="isSaving" (click)="addNewRow()" *ngIf="!showNewRow">
+      + Add Batch
+    </button>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="empty-state" *ngIf="batches.length === 0 && !showNewRow">
+    <p *ngIf="units.length > 0">No batches yet. Click "Add Batch" to create your first layer batch.</p>
+    <p *ngIf="units.length === 0">No farms set up for Layer yet. Go to the Farms page to create one before adding a batch.</p>
+  </div>
+
+  <div class="table-card" *ngIf="batches.length > 0 || showNewRow">
+    <table>
+      <thead>
+        <tr>
+          <th>Batch Name</th>
+          <th>Farm</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Initial Birds</th>
+          <th>Breed</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="showNewRow" class="new-row">
+          <td><input class="inline-input" type="text" [(ngModel)]="newRow.batch_name" placeholder="e.g. Layer Batch 1"/></td>
+          <td>
+            <select class="inline-input" [(ngModel)]="newRow.unit_id">
+              <option *ngFor="let u of units" [ngValue]="u.unit_id">{{ u.unit_name }}</option>
+            </select>
+          </td>
+          <td><input class="inline-input" type="date" [(ngModel)]="newRow.start_date"/></td>
+          <td><input class="inline-input" type="date" [(ngModel)]="newRow.end_date"/></td>
+          <td><input class="inline-input" type="number" min="0" [(ngModel)]="newRow.initial_birds" placeholder="e.g. 5000"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="newRow.breed" placeholder="e.g. Hy-Line Brown"/></td>
+          <td>
+            <select class="inline-input" [(ngModel)]="newRow.status" (change)="onStatusChangeForNew()">
+              <option value="active">Active</option>
+              <option value="closed">Closed</option>
+            </select>
+          </td>
+          <td class="actions">
+            <button class="btn-save" [disabled]="isSaving" (click)="saveNewRow()">{{ isSaving ? 'Saving...' : 'Save' }}</button>
+            <button class="btn-cancel-edit" [disabled]="isSaving" (click)="cancelNewRow()">Cancel</button>
+          </td>
+        </tr>
+
+        <tr *ngFor="let batch of paginatedBatches" [class.editing]="editingId === batch.batch_id" [class.closed-row]="batch.status === 'closed'">
+          <ng-container *ngIf="editingId !== batch.batch_id">
+            <td class="batch-name">{{ batch.batch_name }}</td>
+            <td>{{ unitName(batch.unit_id) }}</td>
+            <td>{{ batch.start_date | dateOnly }}</td>
+            <td>{{ batch.end_date ? (batch.end_date | dateOnly) : '—' }}</td>
+            <td>{{ batch.initial_birds | number }}</td>
+            <td>{{ batch.breed || '—' }}</td>
+            <td>
+              <span class="status-badge" [class.active]="batch.status === 'active'" [class.closed]="batch.status === 'closed'">
+                {{ batch.status }}
+              </span>
+            </td>
+            <td class="actions">
+              <button class="btn-edit" [disabled]="isSaving" (click)="startEdit(batch)">Edit</button>
+              <button class="btn-delete" [disabled]="isSaving" (click)="confirmDelete(batch.batch_id)">Delete</button>
+            </td>
+          </ng-container>
+
+          <ng-container *ngIf="editingId === batch.batch_id">
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.batch_name"/></td>
+            <td class="readonly-farm">{{ unitName(editForm.unit_id) }}</td>
+            <td><input class="inline-input" type="date" [(ngModel)]="editForm.start_date"/></td>
+            <td><input class="inline-input" type="date" [(ngModel)]="editForm.end_date"/></td>
+            <td><input class="inline-input" type="number" min="0" [(ngModel)]="editForm.initial_birds"/></td>
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.breed"/></td>
+            <td>
+              <select class="inline-input" [(ngModel)]="editForm.status" (change)="onStatusChangeForEdit()">
+                <option value="active">Active</option>
+                <option value="closed">Closed</option>
+              </select>
+            </td>
+            <td class="actions">
+              <button class="btn-save" [disabled]="isSaving" (click)="saveEdit(batch.batch_id)">{{ isSaving ? 'Saving...' : 'Save' }}</button>
+              <button class="btn-cancel-edit" [disabled]="isSaving" (click)="cancelEdit()">Cancel</button>
+            </td>
+          </ng-container>
+        </tr>
+      </tbody>
+    </table>
+    <app-pagination [currentPage]="currentPage" [totalItems]="batches.length" [pageSize]="pageSize" (pageChange)="currentPage = $event"></app-pagination>
+  </div>
+</div>
+
+<app-confirm-dialog *ngIf="showDeleteDialog" title="Delete Batch"
+  message="This will permanently delete the batch and ALL its data including egg collection, sales, vaccinations and mortality records."
+  confirmText="Delete" cancelText="Cancel" type="danger"
+  (confirmed)="onDeleteConfirmed()" (cancelled)="onDeleteCancelled()"/>

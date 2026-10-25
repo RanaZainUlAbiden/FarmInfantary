@@ -1,0 +1,274 @@
+// Shared look for the daily health screens — the broiler Flock Health screen
+// originated it, the layer Flock Health screen reuses it verbatim. `@use` this from
+// a component's own SCSS and add only what is genuinely specific to that screen,
+// rather than keeping two copies of the table in step by hand.
+
+.module-container {
+  max-width: 1200px;
+}
+
+.module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 4px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: #888;
+    margin: 0;
+  }
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.card-icon  { font-size: 24px; margin-bottom: 8px; }
+.card-label { font-size: 12px; color: #888; font-weight: 500; margin-bottom: 6px; }
+.card-value { font-size: 18px; font-weight: 700; color: #1a1a1a; }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-add {
+  width: 38px;
+  height: 38px;
+  background: #1a5c38;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 22px;
+  font-weight: 300;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  line-height: 1;
+  &:hover { background: #144d2e; }
+}
+
+.shortcuts-hint {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #aaa;
+
+  span {
+    background: #f5f5f5;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+}
+
+.table-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th {
+      background: #f8f9fa;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    td {
+      padding: 12px 12px;
+      font-size: 13px;
+      color: #333;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: #fafafa;
+    }
+  }
+}
+
+.row-plus-cell {
+  width: 32px;
+  padding: 4px !important;
+  text-align: center;
+}
+
+.row-plus-btn {
+  width: 22px;
+  height: 22px;
+  background: #e8f5e9;
+  color: #1a5c38;
+  border: 1px solid #1a5c38;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition: all 0.15s;
+  &:hover { background: #1a5c38; color: white; }
+}
+
+.pending-row td { background: #fffde7 !important; }
+
+.mortality {
+  color: #e53935;
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #aaa;
+  font-size: 15px;
+  background: white;
+  border-radius: 12px;
+  border: 1px dashed #e0e0e0;
+}
+
+.btn-primary {
+  background: #1a5c38;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover { background: #144d2e; }
+  &:disabled { background: #aaa; cursor: not-allowed; }
+}
+
+.btn-secondary {
+  background: white;
+  color: #666;
+  border: 1.5px solid #e0e0e0;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  &:hover { background: #f5f5f5; }
+}
+
+.btn-edit {
+  background: #e8f5e9;
+  color: #1a5c38;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover { background: #c8e6c9; }
+}
+
+.btn-delete {
+  background: #fce4ec;
+  color: #c62828;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover { background: #f8bbd0; }
+}
+
+.btn-save {
+  background: #1a5c38;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover { background: #144d2e; }
+}
+
+.btn-cancel-edit {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #e0e0e0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  &:hover { background: #ebebeb; }
+}
+
+.btn-remove-row {
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  &:hover { background: #fce4ec; color: #e53935; }
+}
+
+.inline-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1.5px solid #1a5c38;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  background: #f0faf4;
+  &:focus { border-color: #144d2e; background: white; }
+}
+
+tr.editing td {
+  background: #f0faf4 !important;
+}
+
+.computed {
+  font-weight: 600;
+  color: #1a5c38;
+}

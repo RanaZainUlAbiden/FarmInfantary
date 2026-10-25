@@ -1,0 +1,4 @@
+// Everything on this screen — card grid, summary cards, entries table, inline
+// inputs, buttons — now lives in the shared partial, which the layer Ledger screen
+// also uses. Nothing here is broiler-specific, so nothing is left behind.
+@use '../shared/styles/ledger-screen';

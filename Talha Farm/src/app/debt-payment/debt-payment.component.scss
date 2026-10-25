@@ -1,0 +1,209 @@
+// The same vocabulary as the other Overview screens (Assets, Personal
+// Expenses, Loans): .module-container / .module-header / .summary-row /
+// .table-card / .modal-overlay. A new screen that invents its own looks like a
+// different app two clicks from the dashboard.
+
+.module-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+.module-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+
+  h3 { font-size: 20px; font-weight: 600; margin: 0; }
+  .subtitle { font-size: 13px; color: #888; margin: 4px 0 0; max-width: 60ch; line-height: 1.5; }
+}
+
+.header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  color: #aaa;
+  background: white;
+  border-radius: 12px;
+  border: 1px dashed #e0e0e0;
+
+  .hint { font-size: 13px; margin-top: 10px; color: #999; max-width: 56ch; margin-inline: auto; line-height: 1.6; }
+}
+
+.loading-state { text-align: center; padding: 40px; color: #aaa; }
+
+.error-message {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+// ── Buttons ────────────────────────────────────────────────
+.btn-primary { background: #1a5c38; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 500; }
+.btn-primary:disabled, .btn-secondary:disabled { opacity: 0.55; cursor: default; }
+.btn-secondary { background: white; border: 1.5px solid #e0e0e0; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+.btn-edit { background: #e8f5e9; color: #1a5c38; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.btn-delete { background: #fce4ec; color: #c62828; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+
+// ── Cards ──────────────────────────────────────────────────
+.summary-row { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+
+.summary-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+
+  .summary-label { font-size: 12px; color: #888; }
+  .summary-value { font-size: 20px; font-weight: 600; color: #222; }
+
+  // Still gone is the figure that matters, so it is the one that is coloured.
+  &.outstanding  { border-left: 4px solid #c62828; .summary-value { color: #c62828; } }
+  &.recovered    { border-left: 4px solid #1a5c38; .summary-value { color: #1a5c38; } }
+  &.written-off  { border-left: 4px solid #9e9e9e; .summary-value { color: #757575; } }
+}
+
+// ── Filter row ─────────────────────────────────────────────
+.filter-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-input {
+  padding: 7px 12px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 13px;
+  min-width: 240px;
+}
+
+.chip {
+  background: white;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #666;
+
+  &.active { background: #1a5c38; border-color: #1a5c38; color: white; font-weight: 500; }
+}
+
+// ── Table ──────────────────────────────────────────────────
+.table-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #888;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-bottom: 1.5px solid #eee;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 10px;
+    border-bottom: 1px solid #f3f3f3;
+    vertical-align: middle;
+  }
+
+  .right { text-align: right; }
+  .strong { font-weight: 600; }
+  .muted { color: #888; }
+  .notes-cell { max-width: 28ch; }
+  .actions { white-space: nowrap; display: flex; gap: 6px; }
+  .empty-row { text-align: center; color: #aaa; padding: 28px 0; }
+
+  // A settled row stays readable but stops competing with the open ones.
+  tr.settled td { background: #fcfcfc; color: #999; }
+  tr.settled td.strong { color: #777; }
+}
+
+.status-select {
+  padding: 4px 8px;
+  border-radius: 20px;
+  border: 1.5px solid #e0e0e0;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  background: white;
+
+  &.outstanding  { background: #fdecea; border-color: #f5c6c2; color: #c62828; }
+  &.recovered    { background: #e8f5e9; border-color: #c3e6cb; color: #1a5c38; }
+  &.written-off  { background: #f5f5f5; border-color: #e0e0e0; color: #757575; }
+}
+
+// ── Modal ──────────────────────────────────────────────────
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.modal-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+
+  h4 { margin: 0 0 4px; font-size: 17px; font-weight: 600; }
+  .subtitle { font-size: 12px; color: #999; margin: 0 0 14px; line-height: 1.5; }
+}
+
+.field-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #888;
+  margin: 12px 0 4px;
+}
+
+.inline-input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 13px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}

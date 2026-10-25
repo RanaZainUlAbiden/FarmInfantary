@@ -1,0 +1,189 @@
+<div class="module-container">
+  <div class="module-header">
+    <div>
+      <h3>Payment Voucher</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }} · Money out to a supplier</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary" (click)="openForm()" [disabled]="isLoading || suppliers.length === 0">
+        + New Payment Voucher
+      </button>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <label>
+      From
+      <input type="date" [(ngModel)]="fromDate" (change)="onRangeChange()"/>
+    </label>
+    <label>
+      To
+      <input type="date" [(ngModel)]="toDate" (change)="onRangeChange()"/>
+    </label>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="loading-state" *ngIf="isLoading"><p>Loading...</p></div>
+
+  <ng-container *ngIf="!isLoading">
+    <div class="summary-row">
+      <div class="summary-card">
+        <span class="summary-label">Vouchers (Selected Range)</span>
+        <span class="summary-value">{{ vouchers.length }}</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Paid (Selected Range)</span>
+        <span class="summary-value">Rs. {{ total | number:'1.0-0' }}</span>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="suppliers.length === 0">
+      <p>No suppliers yet. Add one under Distribution &gt; Suppliers first.</p>
+    </div>
+
+    <div class="empty-state" *ngIf="suppliers.length > 0 && vouchers.length === 0">
+      <p>No payment vouchers in this range. Click "New Payment Voucher" to record one.</p>
+    </div>
+
+    <div class="table-card" *ngIf="vouchers.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>Voucher #</th>
+            <th>Date</th>
+            <th>Paid To</th>
+            <th>Amount</th>
+            <th>Paid From</th>
+            <th>Reference</th>
+            <th>Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let v of vouchers">
+            <td class="voucher-no">{{ v.voucher_number || '—' }}</td>
+            <td>{{ v.date | dateOnly }}</td>
+            <td>{{ v.supplier_name || 'Deleted Supplier' }}</td>
+            <td class="amount">Rs. {{ v.amount | number:'1.0-0' }}</td>
+            <td>{{ sourceLabel(v) }}</td>
+            <td>{{ v.reference || '—' }}</td>
+            <td>{{ v.notes || '—' }}</td>
+            <td class="actions">
+              <button class="btn-secondary" (click)="printVoucher(v)">🖨️ Print</button>
+              <button class="btn-delete" (click)="confirmDelete(v.voucher_id)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td></td>
+            <td></td>
+            <td class="amount">Rs. {{ total | number:'1.0-0' }}</td>
+            <td colspan="4"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </ng-container>
+</div>
+
+<!-- ── NEW VOUCHER ───────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showForm">
+  <div class="modal-card wide">
+    <h4>New Payment Voucher</h4>
+    <div class="error-message" *ngIf="formError">{{ formError }}</div>
+
+    <label class="field-label">Paid to</label>
+    <select class="inline-input" [(ngModel)]="form.supplier_id" (ngModelChange)="onSupplierChange()">
+      <option [ngValue]="null">Select supplier</option>
+      <option *ngFor="let s of suppliers" [ngValue]="s.supplier_id">
+        {{ s.supplier_name }} (owed Rs. {{ s.outstanding_balance | number:'1.0-0' }})
+      </option>
+    </select>
+
+    <p class="field-hint" *ngIf="selectedSupplier">
+      Payable: <strong>Rs. {{ selectedPayable | number:'1.0-0' }}</strong>
+    </p>
+
+    <label class="field-label">Date</label>
+    <input class="inline-input" type="date" [(ngModel)]="form.date"/>
+
+    <label class="field-label">Amount</label>
+    <input class="inline-input" type="number" [(ngModel)]="form.amount" placeholder="Amount paid"/>
+
+    <!-- Choosing Bank posts a real withdrawal against that account. Only the
+         owner's own (house) accounts appear. -->
+    <label class="field-label">Paid from</label>
+    <select class="inline-input" [(ngModel)]="form.payment_source"
+            (ngModelChange)="onSourceChange(); formError = ''">
+      <option value="cash">Cash</option>
+      <option value="bank" [disabled]="houseBanks.length === 0">Bank</option>
+    </select>
+    <select class="inline-input" *ngIf="form.payment_source === 'bank'" [(ngModel)]="form.bank_id">
+      <option [ngValue]="null">Select bank account</option>
+      <option *ngFor="let b of houseBanks" [ngValue]="b.bank_id">
+        {{ bankOptionLabel(b) }}
+        (Rs. {{ b.current_balance | number:'1.0-0' }})
+      </option>
+    </select>
+    <p class="field-hint" *ngIf="form.payment_source === 'bank' && form.amount > 0">
+      This records a withdrawal of Rs. {{ form.amount | number:'1.0-0' }} against that account.
+    </p>
+    <p class="field-hint" *ngIf="houseBanks.length === 0">
+      To pay from a bank, add one of your own accounts under Overview &gt; Bank first.
+    </p>
+
+    <label class="field-label">Reference (optional)</label>
+    <input class="inline-input" type="text" [(ngModel)]="form.reference"
+           placeholder="Cheque no., transfer ref, …"/>
+
+    <label class="field-label">Notes (optional)</label>
+    <textarea class="inline-input" [(ngModel)]="form.notes" rows="2"></textarea>
+
+    <div class="allocation" *ngIf="selectedSupplier && form.amount > 0">
+      <span class="allocation-title">Effect on the payable</span>
+      <table class="allocation-table">
+        <thead>
+          <tr><th>Payable Before</th><th>Paying</th><th>Payable After</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="amount">Rs. {{ selectedPayable | number:'1.0-0' }}</td>
+            <td class="amount">Rs. {{ form.amount | number:'1.0-0' }}</td>
+            <td class="amount">Rs. {{ payableAfter | number:'1.0-0' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="field-warning" *ngIf="selectedSupplier && payableAfter < -0.005">
+      That is Rs. {{ -payableAfter | number:'1.0-0' }} more than this supplier is owed.
+      Reduce the amount, or record the purchase it pays for first — the voucher will be
+      refused otherwise.
+    </p>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="closeForm()" [disabled]="isSaving">Cancel</button>
+      <button class="btn-primary" (click)="save()" [disabled]="isSaving">
+        {{ isSaving ? 'Saving…' : 'Save Voucher' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<app-delete-code-dialog
+  *ngIf="showDeleteCodeDialog"
+  (verified)="onDeleteCodeVerified()"
+  (cancelled)="onDeleteCodeCancelled()"/>
+
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Payment Voucher"
+  message="This puts the amount back on the supplier's payable and removes its bank withdrawal. Continue?"
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"/>

@@ -1,0 +1,15 @@
+// Everything structural — header, summary cards, table, inline inputs, buttons —
+// now lives in the shared partial, which the layer Flock Health screen also uses.
+// Only the FCR column, which is broiler-specific, is left here.
+@use '../shared/styles/health-table';
+
+.fcr {
+  font-weight: 600;
+  color: #1a5c38;
+}
+
+.fcr-input {
+  border-color: #1565c0;
+  background: #e3f2fd;
+  &:focus { border-color: #0d47a1; background: white; }
+}

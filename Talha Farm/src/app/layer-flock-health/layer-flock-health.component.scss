@@ -1,0 +1,30 @@
+// Header, summary cards, table, inline inputs and buttons all come from the shared
+// partial — the same one the broiler Flock Health screen uses, so the two screens
+// cannot drift apart. Only what is specific to the layer screen lives here.
+@use '../shared/styles/health-table';
+
+// Five cards here against broiler's four, and one of them carries a unit suffix, so
+// this screen sizes them to fit rather than forcing them into three columns.
+.summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+// Feed per dozen eggs — the layer efficiency figure. Deliberately NOT styled as the
+// broiler `.fcr` column: it is a different measure and should not read as one.
+.feed-dozen {
+  font-weight: 600;
+  color: #1565c0;
+}
+
+.batch-select {
+  padding: 9px 12px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  background: white;
+  outline: none;
+  cursor: pointer;
+  min-width: 160px;
+  &:focus { border-color: #1a5c38; }
+}

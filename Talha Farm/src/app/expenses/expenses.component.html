@@ -1,0 +1,277 @@
+<div class="module-container">
+
+  <div class="module-header">
+    <div>
+      <h3>Expenses</h3>
+      <p class="subtitle" *ngIf="currentFlock">
+        {{ currentFlock.flock_name }}
+      </p>
+    </div>
+    <div class="header-actions">
+      <ng-container *ngIf="hasPendingRows">
+        <button class="btn-secondary" (click)="cancelAllRows()">
+          Cancel
+        </button>
+        <button class="btn-primary" (click)="saveAllRows()"
+          [disabled]="isSavingAll">
+          {{ isSavingAll ? 'Saving...' : 'Save All' }}
+        </button>
+      </ng-container>
+      <button class="btn-add" (click)="addPendingRow()"
+        *ngIf="currentFlock" title="Add row (Ctrl+A)">
+        +
+      </button>
+    </div>
+  </div>
+
+  <div class="shortcuts-hint" *ngIf="hasPendingRows">
+    <span>Ctrl+A — new row</span>
+    <span>Ctrl+S — save all</span>
+  </div>
+
+  <div class="filter-bar" *ngIf="currentFlock" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+    <label style="font-size:13px;font-weight:500;">Filter by Date:</label>
+    <input type="date" class="inline-input" style="width:160px;" [(ngModel)]="selectedDateFilter"/>
+    <button class="btn-apply" (click)="applyDateFilter()" style="padding:4px 12px;">Apply</button>
+    <button class="btn-clear" *ngIf="filteredByDate" (click)="clearDateFilter()" style="padding:4px 12px;">Clear</button>
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty-state" *ngIf="!currentFlock">
+    <p>Please select a flock first.</p>
+  </div>
+
+  <div class="empty-state"
+    *ngIf="currentFlock && expenses.length === 0 && pendingRows.length === 0">
+    <p>No expenses yet. Click + or press Ctrl+A to add expenses.</p>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-card" *ngIf="expenses.length > 0">
+    <div class="summary-item">
+      <span class="summary-label">Total Expenses</span>
+      <span class="summary-value">Rs. {{ totalExpenses | number:'1.0-0' }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Total Entries</span>
+      <span class="summary-value">{{ expenses.length }}</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card" *ngIf="expenses.length > 0 || pendingRows.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:32px"></th>
+          <th>Date</th>
+          <th>Category</th>
+          <th>Description</th>
+          <th>Amount (Rs.)</th>
+          <th>Payment</th>
+          <th>Bill</th>
+          <th>Photo</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- PENDING NEW ROWS -->
+        <tr *ngFor="let row of pendingRows; let i = index" class="pending-row">
+          <td class="row-plus-cell">
+            <button class="row-plus-btn"
+              (click)="addRowAfter(i)"
+              title="Add row below">+</button>
+          </td>
+          <td>
+            <input class="inline-input" type="date"
+              [(ngModel)]="row.date" />
+          </td>
+          <td>
+            <input class="inline-input" type="text"
+              [(ngModel)]="row.category"
+              [placeholder]="defaultCategory" />
+          </td>
+          <td>
+            <input class="inline-input" type="text"
+              [(ngModel)]="row.description"
+              placeholder="Details..." />
+          </td>
+          <td>
+            <input class="inline-input" type="number"
+              [(ngModel)]="row.amount"
+              placeholder="0" />
+          </td>
+          <td>
+            <select class="inline-input" [(ngModel)]="row.payment_type">
+              <option value="cash">Cash</option>
+              <option value="bank">Bank</option>
+              <option value="cheque">Cheque</option>
+            </select>
+            <app-bank-picker [row]="row" [banks]="houseBanks"></app-bank-picker>
+          </td>
+          <td>
+            <select class="inline-input" [(ngModel)]="row.bill_available">
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </td>
+          <td>
+            <button class="btn-upload-photo" type="button" (click)="fileInput.click()" title="Upload photo">📷</button>
+            <input type="file" #fileInput hidden accept="image/*" (change)="onFileSelected($event, row)"/>
+            <div class="photo-thumb" *ngIf="row.receipt_image" (click)="openImage(row.receipt_image)"><img [src]="row.receipt_image"/></div>
+          </td>
+          <td class="actions">
+            <button class="btn-remove-row"
+              (click)="removePendingRow(i)"
+              title="Remove row">✕</button>
+          </td>
+        </tr>
+
+        <!-- EXISTING ENTRIES -->
+        <tr *ngFor="let expense of paginatedExpenses"
+          [class.editing]="editingId === expense.expense_id">
+
+          <!-- VIEW MODE -->
+          <ng-container *ngIf="editingId !== expense.expense_id">
+            <td></td>
+            <td>{{ expense.date | dateOnly }}</td>
+            <td>
+              <span class="category-badge"
+                [class.other]="(expense.category || defaultCategory) === defaultCategory">
+                {{ expense.category || defaultCategory }}
+              </span>
+            </td>
+            <td>{{ expense.description || '—' }}</td>
+            <td class="amount">Rs. {{ expense.amount | number:'1.0-0' }}</td>
+            <td>
+              <span class="payment-badge"
+                [class.cash]="expense.payment_type === 'cash'"
+                [class.bank]="expense.payment_type === 'bank'"
+                [class.cheque]="expense.payment_type === 'cheque'">
+                {{ expense.payment_type || 'cash' }}
+              </span>
+              <app-bank-picker [row]="expense" [banks]="houseBanks" readonly></app-bank-picker>
+            </td>
+            <td>
+              <span class="bill-badge" [class.yes]="expense.bill_available === 'Yes'">
+                {{ expense.bill_available }}
+              </span>
+            </td>
+            <td><div class="photo-thumb" *ngIf="expense.receipt_image" (click)="openImage(expense.receipt_image)"><img [src]="expense.receipt_image" title="Click to view full"/></div></td>
+            <td class="actions">
+              <button
+                class="btn-edit"
+                [disabled]="isSaving"
+                (click)="startEdit(expense)">
+                Edit
+              </button>
+              <button
+                class="btn-delete"
+                [disabled]="isSaving"
+                (click)="confirmDelete(expense.expense_id)">
+                Delete
+              </button>
+            </td>
+          </ng-container>
+
+          <!-- EDIT MODE -->
+          <ng-container *ngIf="editingId === expense.expense_id">
+            <td></td>
+            <td>
+              <input class="inline-input" type="date"
+                [(ngModel)]="editForm.date" />
+            </td>
+            <td>
+              <input class="inline-input" type="text"
+                [(ngModel)]="editForm.category"
+                [placeholder]="defaultCategory" />
+            </td>
+            <td>
+              <input class="inline-input" type="text"
+                [(ngModel)]="editForm.description" />
+            </td>
+            <td>
+              <input class="inline-input" type="number"
+                [(ngModel)]="editForm.amount" />
+            </td>
+            <td>
+              <select class="inline-input" [(ngModel)]="editForm.payment_type">
+                <option value="cash">Cash</option>
+                <option value="bank">Bank</option>
+                <option value="cheque">Cheque</option>
+              </select>
+              <app-bank-picker [row]="editForm" [banks]="houseBanks"></app-bank-picker>
+            </td>
+            <td>
+              <select class="inline-input" [(ngModel)]="editForm.bill_available">
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </td>
+            <td>
+              <button class="btn-upload-photo" type="button" (click)="editFileInput.click()" title="Change photo">📷</button>
+              <input type="file" #editFileInput hidden accept="image/*" (change)="onFileSelected($event, editForm)"/>
+              <div class="photo-thumb" *ngIf="editForm.receipt_image" (click)="openImage(editForm.receipt_image)"><img [src]="editForm.receipt_image"/></div>
+              <button class="btn-remove-photo" *ngIf="editForm.receipt_image" (click)="editForm.receipt_image = null">✕</button>
+            </td>
+            <td class="actions">
+              <button
+                class="btn-save"
+                [disabled]="isSaving"
+                (click)="saveEdit(expense.expense_id)">
+                {{ isSaving ? 'Saving…' : 'Save' }}
+              </button>
+              <button
+                class="btn-cancel-edit"
+                [disabled]="isSaving"
+                (click)="cancelEdit()">
+                Cancel
+              </button>
+            </td>
+          </ng-container>
+
+        </tr>
+
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" class="total-label">Total</td>
+          <td class="total-amount">Rs. {{ totalExpenses | number:'1.0-0' }}</td>
+          <td colspan="4"></td>
+        </tr>
+      </tfoot>
+    </table>
+    <app-pagination [currentPage]="currentPage" [totalItems]="filteredExpenses.length" [pageSize]="pageSize" (pageChange)="currentPage = $event"></app-pagination>
+  </div>
+
+</div>
+
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Expense"
+  message="Are you sure you want to delete this expense entry?"
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"
+/>
+
+<app-confirm-dialog
+  *ngIf="showValidationDialog"
+  title="Validation Notice"
+  [message]="validationMessage"
+  confirmText="OK"
+  type="warning"
+  [hideCancel]="true"
+  (confirmed)="showValidationDialog = false"
+  (cancelled)="showValidationDialog = false">
+</app-confirm-dialog>
+
+<div class="modal-overlay" *ngIf="viewingImage" (click)="closeImage()">
+  <div class="modal-card image-modal" (click)="$event.stopPropagation()">
+    <button class="btn-close-image" (click)="closeImage()">&times;</button>
+    <img [src]="viewingImage" alt="Receipt"/>
+  </div>
+</div>

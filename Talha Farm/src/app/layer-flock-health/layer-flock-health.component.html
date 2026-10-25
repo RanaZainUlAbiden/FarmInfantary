@@ -1,0 +1,239 @@
+<div class="module-container">
+
+  <div class="module-header">
+    <div>
+      <h3>Flock Health</h3>
+      <p class="subtitle" *ngIf="selectedBatch">
+        {{ selectedBatch.batch_name }}
+        <span *ngIf="recordedDays > 0"> · {{ recordedDays | number }} day(s) recorded</span>
+      </p>
+    </div>
+    <div class="header-actions">
+      <select class="batch-select" *ngIf="batches.length > 0"
+        [ngModel]="currentBatchId" (ngModelChange)="onBatchChange($event)">
+        <option *ngFor="let b of batches" [ngValue]="b.batch_id">{{ b.batch_name }}</option>
+      </select>
+      <ng-container *ngIf="hasPendingRows">
+        <button class="btn-secondary" (click)="cancelAllRows()">Cancel</button>
+        <button class="btn-primary" (click)="saveAllRows()" [disabled]="isSavingAll">
+          {{ isSavingAll ? 'Saving...' : 'Save All' }}
+        </button>
+      </ng-container>
+      <button class="btn-add" (click)="addPendingRow()"
+        *ngIf="selectedBatch" title="Add row (Ctrl+A)">
+        +
+      </button>
+    </div>
+  </div>
+
+  <div class="summary-grid" *ngIf="selectedBatch && healthRecords.length > 0">
+    <div class="summary-card">
+      <div class="card-icon">🐔</div>
+      <div class="card-label">Current Birds</div>
+      <div class="card-value">{{ currentBirdCount | number }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-icon">⚠️</div>
+      <div class="card-label">Total Mortality</div>
+      <div class="card-value mortality">{{ totalMortality | number }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-icon">📉</div>
+      <div class="card-label">Mortality Rate</div>
+      <div class="card-value mortality">{{ mortalityRate | number:'1.0-2' }}%</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-icon">🌾</div>
+      <div class="card-label">Total Feed Used</div>
+      <div class="card-value">{{ totalFeedUsed | number }} bags</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-icon">🥚</div>
+      <div class="card-label">Feed / Dozen Eggs</div>
+      <div class="card-value">
+        {{ latestFeedPerDozen !== null ? (latestFeedPerDozen | number:'1.2-3') + ' kg' : '—' }}
+      </div>
+    </div>
+  </div>
+
+  <div class="shortcuts-hint" *ngIf="hasPendingRows">
+    <span>Ctrl+A — new row</span>
+    <span>Ctrl+S — save all</span>
+  </div>
+
+  <!-- No batch to work against -->
+  <div class="empty-state" *ngIf="batches.length === 0">
+    <p>No active batches found. Create a batch first.</p>
+  </div>
+
+  <!-- Batch selected, nothing recorded yet -->
+  <div class="empty-state"
+    *ngIf="selectedBatch && healthRecords.length === 0 && pendingRows.length === 0">
+    <p>No health records yet. Click + or press Ctrl+A to get started.</p>
+  </div>
+
+  <div class="table-card"
+    *ngIf="selectedBatch && (healthRecords.length > 0 || pendingRows.length > 0)">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:32px"></th>
+          <th>Day</th>
+          <th>Date</th>
+          <th>Total Birds</th>
+          <th>Mortality</th>
+          <th>Remaining</th>
+          <th>Feed Used (in Bags)</th>
+          <th>Avg Weight (g)</th>
+          <th title="Kilograms of feed per dozen eggs, cumulative to that day. Not an FCR.">
+            Feed / Dozen (kg)
+          </th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- PENDING NEW ROWS -->
+        <tr *ngFor="let row of pendingRows; let i = index" class="pending-row">
+          <td class="row-plus-cell">
+            <button class="row-plus-btn" (click)="addRowAfter(i)" title="Add row below">+</button>
+          </td>
+          <td class="computed">Day {{ row.day_number }}</td>
+          <td>
+            <input class="inline-input" type="date"
+              [(ngModel)]="row.date"
+              (ngModelChange)="onRowDateChange(row)" />
+          </td>
+          <td>
+            <input class="inline-input" type="number" min="0"
+              [(ngModel)]="row.total_birds"
+              (ngModelChange)="onRowChanged()"
+              placeholder="Total birds" />
+          </td>
+          <td>
+            <input class="inline-input" type="number" min="0"
+              [(ngModel)]="row.mortality"
+              (ngModelChange)="onRowChanged()"
+              placeholder="Mortality" />
+          </td>
+          <td class="computed">{{ getRowRemaining(row) | number }}</td>
+          <td>
+            <input class="inline-input" type="number" min="0" step="0.01"
+              [(ngModel)]="row.feed_used"
+              (ngModelChange)="onRowChanged()"
+              placeholder="Bags" />
+          </td>
+          <td>
+            <input class="inline-input" type="number" min="0" step="0.001"
+              [(ngModel)]="row.avg_weight"
+              (ngModelChange)="onRowChanged()"
+              placeholder="Avg wt (g)" />
+          </td>
+          <td class="feed-dozen">
+            {{ getRowFeedPerDozen(row) !== null ? (getRowFeedPerDozen(row) | number:'1.2-3') : '—' }}
+          </td>
+          <td class="actions">
+            <button class="btn-remove-row" (click)="removePendingRow(i)" title="Remove row">✕</button>
+          </td>
+        </tr>
+
+        <!-- Existing records, newest day first -->
+        <tr *ngFor="let record of paginatedRecords"
+          [class.editing]="editingId === record.health_id">
+
+          <!-- VIEW MODE -->
+          <ng-container *ngIf="editingId !== record.health_id">
+            <td></td>
+            <td>Day {{ record.day_number }}</td>
+            <td>{{ record.date | dateOnly }}</td>
+            <td>{{ record.total_birds | number }}</td>
+            <td class="mortality">{{ record.mortality | number }}</td>
+            <td>{{ getRowRemaining(record) | number }}</td>
+            <td>{{ record.feed_used !== null ? (record.feed_used | number) : '—' }}</td>
+            <td>{{ record.avg_weight !== null ? record.avg_weight : '—' }}</td>
+            <td class="feed-dozen">
+              {{ getRowFeedPerDozen(record) !== null ? (getRowFeedPerDozen(record) | number:'1.2-3') : '—' }}
+            </td>
+            <td class="actions">
+              <button class="btn-edit" [disabled]="isSaving" (click)="startEdit(record)">Edit</button>
+              <button class="btn-delete" [disabled]="isSaving" (click)="confirmDelete(record.health_id)">Delete</button>
+            </td>
+          </ng-container>
+
+          <!-- EDIT MODE -->
+          <ng-container *ngIf="editingId === record.health_id">
+            <td></td>
+            <td class="computed">Day {{ editForm.day_number }}</td>
+            <td>
+              <input class="inline-input" type="date"
+                [(ngModel)]="editForm.date"
+                (ngModelChange)="onRowDateChange(editForm)" />
+            </td>
+            <td>
+              <input class="inline-input" type="number" min="0"
+                [(ngModel)]="editForm.total_birds"
+                (ngModelChange)="onRowChanged()" />
+            </td>
+            <td>
+              <input class="inline-input" type="number" min="0"
+                [(ngModel)]="editForm.mortality"
+                (ngModelChange)="onRowChanged()" />
+            </td>
+            <td class="computed">{{ editRemaining | number }}</td>
+            <td>
+              <input class="inline-input" type="number" min="0" step="0.01"
+                [(ngModel)]="editForm.feed_used"
+                (ngModelChange)="onRowChanged()" />
+            </td>
+            <td>
+              <input class="inline-input" type="number" min="0" step="0.001"
+                [(ngModel)]="editForm.avg_weight"
+                (ngModelChange)="onRowChanged()" />
+            </td>
+            <td class="feed-dozen">
+              {{ getRowFeedPerDozen(editForm) !== null ? (getRowFeedPerDozen(editForm) | number:'1.2-3') : '—' }}
+            </td>
+            <td class="actions">
+              <button class="btn-save" [disabled]="isSaving" (click)="saveEdit(record.health_id)">
+                {{ isSaving ? 'Saving…' : 'Save' }}
+              </button>
+              <button class="btn-cancel-edit" [disabled]="isSaving" (click)="cancelEdit()">Cancel</button>
+            </td>
+          </ng-container>
+
+        </tr>
+
+      </tbody>
+    </table>
+
+    <app-pagination
+      [currentPage]="currentPage"
+      [totalItems]="healthRecords.length"
+      [pageSize]="pageSize"
+      (pageChange)="currentPage = $event">
+    </app-pagination>
+  </div>
+
+</div>
+
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Record"
+  message="Are you sure you want to delete this health record?"
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"
+/>
+
+<app-confirm-dialog
+  *ngIf="showValidationDialog"
+  title="Validation Notice"
+  [message]="validationMessage"
+  confirmText="OK"
+  type="warning"
+  [hideCancel]="true"
+  (confirmed)="showValidationDialog = false"
+  (cancelled)="showValidationDialog = false">
+</app-confirm-dialog>

@@ -1,0 +1,552 @@
+// =============================================
+// BILL LIST MODE
+// =============================================
+.module-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.module-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; h3 { font-size: 20px; font-weight: 600; } .subtitle { font-size: 13px; color: #888; } }
+
+.error-message { margin-bottom: 16px; padding: 10px 12px; border-radius: 8px; background: #fef2f2; color: #b91c1c; font-size: 13px; }
+
+// =============================================
+// CREATE / EDIT MODE - POS LAYOUT
+// =============================================
+.pos-layout { display: flex; gap: 0; height: calc(100vh - 60px); }
+.pos-left { flex: 1; display: flex; flex-direction: column; background: #f8f9fa; overflow: hidden; }
+.pos-right { width: 340px; background: white; border-left: 1px solid #e0e0e0; display: flex; flex-direction: column; overflow-y: auto; padding: 20px; }
+
+.pos-left-header { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: white; border-bottom: 1px solid #e0e0e0;
+  h3 { font-size: 18px; font-weight: 600; margin: 0; }
+}
+.back-btn { background: none; border: none; color: #1a5c38; font-size: 14px; cursor: pointer; &:hover { text-decoration: underline; } }
+
+// Product Search
+.psearch-wrap { padding: 12px 20px; background: white; border-bottom: 1px solid #e0e0e0; position: relative; }
+.psf { display: flex; align-items: center; gap: 8px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px 12px; background: #f8f9fa;
+  span { font-size: 14px; }
+}
+.psf-input { flex: 1; border: none; outline: none; background: transparent; font-size: 14px; }
+
+// Cart
+.cart-scroll { flex: 1; overflow-y: auto; padding: 12px 20px; }
+.cart-tbl { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;
+  th { background: #f0f4f8; padding: 10px 12px; font-size: 11px; font-weight: 600; color: #666; text-transform: uppercase; text-align: left; }
+  td { padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
+}
+.stepper { display: flex; align-items: center; gap: 0; }
+.st-btn { width: 28px; height: 28px; border: 1px solid #d0d0d0; background: white; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; &:hover { background: #f0f0f0; } }
+.st-input { width: 45px; height: 28px; border: 1px solid #d0d0d0; border-left: none; border-right: none; text-align: center; font-size: 13px; outline: none; }
+.price-input { width: 80px; padding: 4px 8px; border: 1px solid #d0d0d0; border-radius: 4px; font-size: 13px; text-align: right; }
+.mono { font-family: monospace; font-weight: 600; color: #1a5c38; }
+.rm-btn { background: none; border: none; color: #ccc; font-size: 16px; cursor: pointer; &:hover { color: #e53935; } }
+.empty-cart { text-align: center; padding: 60px 20px; color: #aaa;
+  p { font-size: 16px; margin-bottom: 8px; }
+  span { font-size: 13px; }
+}
+
+// Right Panel
+.rblock { margin-bottom: 24px; }
+.rblock-title { font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+.ctype-row { display: flex; gap: 8px; }
+.ct-opt { flex: 1; padding: 8px; border: 1px solid #d0d0d0; border-radius: 6px; background: white; cursor: pointer; font-size: 13px; text-align: center; transition: all 0.15s;
+  &.ct-on { background: #1a5c38; color: white; border-color: #1a5c38; }
+}
+.walkin-badge { padding: 8px 12px; background: #f0f4f8; border-radius: 6px; font-size: 13px; color: #666; text-align: center; margin-top: 8px; }
+.inline-input { width: 100%; padding: 8px 10px; border: 1px solid #d0d0d0; border-radius: 6px; font-size: 13px; }
+.sum-rows { display: flex; flex-direction: column; gap: 8px; }
+.sum-row { display: flex; justify-content: space-between; font-size: 14px; color: #444; }
+.sum-total { font-weight: 700; font-size: 16px; color: #1a1a1a; border-top: 1px solid #e0e0e0; padding-top: 10px; margin-top: 4px; }
+.paid-lbl { font-size: 12px; color: #888; margin-bottom: 4px; display: block; }
+.paid-field { display: flex; align-items: center; gap: 4px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px;
+  span { font-size: 14px; color: #888; }
+}
+.paid-input { flex: 1; border: none; outline: none; background: transparent; font-size: 16px; font-weight: 600; }
+.payment-shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.pay-shortcut { border: 1px solid #d0d0d0; background: #fff; border-radius: 6px; padding: 8px 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.pay-shortcut.paid { color: #1a5c38; border-color: #b8dbc5; background: #f0faf4; }
+.pay-shortcut.unpaid { color: #c62828; border-color: #f3c4c4; background: #fff7f7; }
+.pay-shortcut:hover { filter: brightness(0.98); transform: translateY(-1px); }
+.change-row { font-size: 13px; padding: 8px 0; color: #1a5c38; font-weight: 500; }
+.change-row.remaining { color: #e53935; }
+.change-row.exact-ok { color: #1a5c38; }
+.r-actions { display: flex; flex-direction: column; gap: 0; }
+
+.btn-primary { background: #1a5c38; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; &:hover { background: #144d2e; } }
+.btn-create { width: 100%; background: #1a5c38; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; &:hover { background: #144d2e; } &:disabled { background: #aaa; } }
+.btn-print { width: 100%; background: #333; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 14px; cursor: pointer; &:hover { background: #222; } &:disabled { background: #aaa; } }
+.btn-cancel-edit { background: #f5f5f5; color: #666; border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+// ── PAYMENT METHOD BADGE ──────────────────────────────────
+
+.payment-badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &.cash {
+    background: #e8f5e9;
+    color: #1a5c38;
+  }
+
+  &.bank {
+    background: #e3f2fd;
+    color: #0d47a1;
+  }
+}
+
+// ── PAYMENT METHODS (New Bill Screen) ────────────────────
+
+.payment-methods {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.pm-opt {
+  padding: 8px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+  flex: 1;
+  min-width: 80px;
+  font-weight: 500;
+
+  &:hover {
+    border-color: #999;
+    background: #f5f5f5;
+  }
+
+  &.active {
+    border-color: #1a5c38;
+    background: #e8f5e9;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(26, 92, 56, 0.15);
+  }
+
+  &.bank {
+    background: #f5f9ff;
+    border-color: #90caf9;
+
+    &.active {
+      background: #bbdefb;
+      border-color: #0d47a1;
+      box-shadow: 0 2px 8px rgba(13, 71, 161, 0.15);
+    }
+
+    &:hover {
+      background: #e3f2fd;
+    }
+  }
+
+  &.create-bank {
+    background: #fff3e0;
+    border-color: #ffcc80;
+    color: #e65100;
+
+    &:hover {
+      background: #ffe0b2;
+      border-color: #ffa726;
+    }
+
+    &.active {
+      background: #ffe0b2;
+      border-color: #e65100;
+    }
+  }
+}
+
+.bank-info {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  font-size: 13px;
+
+  strong {
+    color: #1a5c38;
+  }
+
+  &.warning {
+    background: #fff3e0;
+    border-left: 3px solid #ff9800;
+    color: #e65100;
+  }
+}
+
+// ── BILL LIST ITEMS ────────────────────────────────────────
+
+.bill-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bill-num {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a5c38;
+}
+
+.bill-cust {
+  font-size: 13px;
+  color: #666;
+}
+
+// ── PRODUCT DROPDOWN ───────────────────────────────────────
+
+.pdrop {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: 52px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  max-height: 280px;
+  overflow-y: auto;
+
+  .pd-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f5f5f5;
+    transition: background 0.1s;
+
+    &:hover {
+      background: #f0faf4;
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .pd-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1a1a1a;
+    flex: 1;
+  }
+
+  .pd-price {
+    font-size: 13px;
+    color: #1a5c38;
+    font-weight: 600;
+    margin: 0 12px;
+  }
+
+  .pd-stock {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    background: #f5f5f5;
+    padding: 2px 8px;
+    border-radius: 12px;
+  }
+
+  .pdrop-empty {
+    padding: 20px;
+    text-align: center;
+    color: #aaa;
+    font-size: 13px;
+  }
+}
+
+// ── SEARCH BAR (UPDATED) ──────────────────────────────────────
+
+.qbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 20px 0;
+  flex-wrap: wrap;
+  
+  .qbar-field {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 200px;
+    background: white;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 0 14px;
+    transition: all 0.3s ease;
+    position: relative;
+    
+    &:focus-within {
+      border-color: #1a5c38;
+      box-shadow: 0 0 0 4px rgba(26, 92, 56, 0.1);
+    }
+    
+    span {
+      color: #999;
+      font-size: 15px;
+      margin-right: 10px;
+    }
+    
+    .qbar-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      padding: 11px 8px;
+      font-size: 14px;
+      background: transparent;
+      min-width: 100px;
+      
+      &::placeholder {
+        color: #aaa;
+      }
+    }
+    
+    // ── SEARCH CLEAR BUTTON ──────────────────────────────────────
+    
+    .search-clear-btn {
+      background: none;
+      border: none;
+      color: #999;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      
+      &:hover {
+        background: #f5f5f5;
+        color: #333;
+        transform: scale(1.1);
+      }
+      
+      &:active {
+        transform: scale(0.9);
+      }
+    }
+  }
+  
+  // ── SEARCH RESULTS COUNT ──────────────────────────────────────
+  
+  .search-results {
+    font-size: 13px;
+    color: #666;
+    white-space: nowrap;
+    padding: 4px 16px;
+    background: #f0faf4;
+    border-radius: 20px;
+    font-weight: 500;
+    color: #1a5c38;
+    border: 1px solid #c8e6c9;
+  }
+}
+
+// ── EMPTY STATE WITH SEARCH ────────────────────────────────────
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #aaa;
+  background: white;
+  border-radius: 12px;
+  border: 1px dashed #e0e0e0;
+  
+  p {
+    margin-bottom: 16px;
+    font-size: 15px;
+    color: #888;
+  }
+  
+  .btn-secondary {
+    padding: 8px 24px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 13px;
+    
+    &:hover {
+      background: #f5f5f5;
+      border-color: #bbb;
+      transform: translateY(-2px);
+    }
+  }
+}
+
+// ── BILL LIST ───────────────────────────────────────────────────
+
+.bill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bill-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e8e8e8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #f8faf8;
+    border-color: #c8e6c9;
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+  
+  .bill-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    
+    .bill-date {
+      font-size: 12px;
+      color: #888;
+    }
+    
+    .bill-amt {
+      font-weight: 600;
+      color: #1a5c38;
+      font-size: 14px;
+    }
+    
+    .bill-status {
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+      
+      &.paid {
+        background: #e8f5e9;
+        color: #1a5c38;
+      }
+      
+      &.unpaid {
+        background: #fff3e0;
+        color: #e65100;
+      }
+    }
+    
+    .bill-delete {
+      background: none;
+      border: none;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        color: #e53935;
+        background: #ffebee;
+      }
+    }
+  }
+}
+
+// ── RESPONSIVE ADJUSTMENTS ─────────────────────────────────
+
+@media (max-width: 768px) {
+  .payment-methods {
+    flex-direction: column;
+  }
+
+  .pm-opt {
+    flex: none;
+    width: 100%;
+  }
+
+  .qbar {
+    flex-direction: column;
+    align-items: stretch;
+    
+    .qbar-field {
+      min-width: unset;
+    }
+    
+    .search-results {
+      text-align: center;
+      padding: 4px 12px;
+      font-size: 12px;
+    }
+  }
+  
+  .bill-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    
+    .bill-right {
+      width: 100%;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .qbar {
+    .qbar-field {
+      padding: 0 10px;
+      
+      .qbar-input {
+        padding: 9px 6px;
+        font-size: 13px;
+      }
+      
+      .search-clear-btn {
+        width: 24px;
+        height: 24px;
+        font-size: 14px;
+      }
+    }
+    
+    .search-results {
+      font-size: 11px;
+      padding: 3px 10px;
+    }
+  }
+  
+  .bill-item {
+    padding: 10px 14px;
+    
+    .bill-left {
+      gap: 10px;
+      
+      .bill-num {
+        font-size: 12px;
+        padding: 2px 8px;
+      }
+      
+      .bill-cust {
+        font-size: 13px;
+      }
+    }
+    
+    .bill-right {
+      gap: 8px;
+      
+      .bill-amt {
+        font-size: 13px;
+      }
+    }
+  }
+}

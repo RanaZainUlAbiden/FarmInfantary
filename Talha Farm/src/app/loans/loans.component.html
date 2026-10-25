@@ -1,0 +1,304 @@
+<!--
+  LOANS AND ADVANCES.
+
+  TWO VIEWS, ONE SCREEN: the list of loans, and one loan's settlements. The
+  drill-down replaces the list rather than sitting beside it, the same shape
+  Personal Expenses and Supplier Accounts use.
+
+  CELL COUNTS, checked by hand against each <thead> — an off-by-one here is
+  invisible to every script in this repo:
+    loans table      8 columns; the body row has 8 tds and the empty row
+                     colspan="8".
+    payments table   5 columns; the body row has 5 tds and the empty row
+                     colspan="5".
+-->
+
+<!-- ══ THE LIST ══════════════════════════════════════════════ -->
+<div class="module-container" *ngIf="!selectedLoan">
+  <div class="module-header">
+    <div>
+      <h3>Loans &amp; Advances</h3>
+      <p class="subtitle">
+        {{ currentFarm?.farm_name }} · Account-wide — not income or expenses, so no report's
+        profit figure moves
+      </p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="openForm('received')" [disabled]="isLoading">
+        + Money Received
+      </button>
+      <button class="btn-primary" (click)="openForm('given')" [disabled]="isLoading">
+        + Loan Given
+      </button>
+    </div>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="loading-state" *ngIf="isLoading"><p>Loading loans...</p></div>
+
+  <ng-container *ngIf="!isLoading">
+    <!-- The two headline figures. Both read the same derivation the list
+         below does, so a card and its rows cannot print different numbers. -->
+    <div class="summary-row">
+      <div class="summary-card receivable">
+        <span class="summary-label">💰 Loan Receivable</span>
+        <span class="summary-value">Rs. {{ totals.receivable | number:'1.0-0' }}</span>
+        <span class="summary-note">still owed to you</span>
+      </div>
+      <div class="summary-card payable">
+        <span class="summary-label">🤝 Loan Payable</span>
+        <span class="summary-value">Rs. {{ totals.payable | number:'1.0-0' }}</span>
+        <span class="summary-note">you are holding or owe</span>
+      </div>
+    </div>
+
+    <div class="filter-row">
+      <button class="chip" [class.active]="filter === 'all'" (click)="filter = 'all'">All</button>
+      <button class="chip" [class.active]="filter === 'given'" (click)="filter = 'given'">Lent out</button>
+      <button class="chip" [class.active]="filter === 'received'" (click)="filter = 'received'">Holding</button>
+    </div>
+
+    <div class="empty-state" *ngIf="loans.length === 0">
+      <p>No loans recorded yet.</p>
+      <p class="hint">
+        Use <strong>Loan Given</strong> for money you lent someone, and
+        <strong>Money Received</strong> for money someone left with you or lent you.
+      </p>
+    </div>
+
+    <div class="table-card" *ngIf="loans.length > 0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Party</th>
+            <th>Direction</th>
+            <th>Through</th>
+            <th class="right">Amount</th>
+            <th class="right">Settled</th>
+            <th class="right">Outstanding</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let l of filteredLoans" [class.settled]="isSettled(l)">
+            <td>{{ l.date | dateOnly }}</td>
+            <td>
+              <button class="link" (click)="openLoan(l)">{{ l.party_name }}</button>
+              <span class="muted" *ngIf="l.phone"> · {{ l.phone }}</span>
+            </td>
+            <td>
+              <span class="pill" [class.given]="isGiven(l)" [class.received]="!isGiven(l)">
+                {{ directionLabel(l) }}
+              </span>
+            </td>
+            <td class="muted">{{ accountOf(l) }}</td>
+            <td class="right">Rs. {{ l.principal | number:'1.0-0' }}</td>
+            <td class="right">Rs. {{ l.settled | number:'1.0-0' }}</td>
+            <td class="right strong" [class.zero]="isSettled(l)">
+              Rs. {{ outstanding(l) | number:'1.0-0' }}
+            </td>
+            <td class="actions">
+              <button class="btn-edit" (click)="openLoan(l)">Open</button>
+              <button class="btn-edit" *ngIf="!isSettled(l)" (click)="openPaymentForm(l)">Settle</button>
+              <button class="btn-edit" (click)="editLoan(l)">Edit</button>
+              <button class="btn-delete" (click)="confirmDeleteLoan(l.loan_id)">Delete</button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredLoans.length === 0">
+            <td colspan="8" class="empty-row">Nothing in this view.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+</div>
+
+<!-- ══ ONE LOAN ══════════════════════════════════════════════ -->
+<div class="module-container" *ngIf="selectedLoan as l">
+  <div class="module-header">
+    <div>
+      <button class="btn-secondary back" (click)="closeLoan()">← All loans</button>
+      <h3>{{ l.party_name }}</h3>
+      <p class="subtitle">
+        <span class="pill" [class.given]="isGiven(l)" [class.received]="!isGiven(l)">
+          {{ directionLabel(l) }}
+        </span>
+        · {{ l.date | dateOnly }} · {{ accountOf(l) }}
+        <span *ngIf="l.phone"> · {{ l.phone }}</span>
+      </p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary" *ngIf="!isSettled(l)" (click)="openPaymentForm(l)">
+        {{ settleLabel(l) }}
+      </button>
+      <button class="btn-secondary" (click)="editLoan(l)">Edit</button>
+    </div>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="summary-row">
+    <div class="summary-card">
+      <span class="summary-label">Amount</span>
+      <span class="summary-value">Rs. {{ l.principal | number:'1.0-0' }}</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-label">Settled</span>
+      <span class="summary-value">Rs. {{ l.settled | number:'1.0-0' }}</span>
+    </div>
+    <div class="summary-card" [class.receivable]="isGiven(l)" [class.payable]="!isGiven(l)">
+      <span class="summary-label">Outstanding</span>
+      <span class="summary-value">Rs. {{ outstanding(l) | number:'1.0-0' }}</span>
+      <span class="summary-note">{{ isGiven(l) ? 'owed to you' : 'you owe' }}</span>
+    </div>
+  </div>
+
+  <p class="notes-line" *ngIf="l.notes">📝 {{ l.notes }}</p>
+
+  <div class="table-card">
+    <h4 class="card-title">Settlements</h4>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th class="right">Amount</th>
+          <th>Through</th>
+          <th>Notes</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of payments">
+          <td>{{ p.date | dateOnly }}</td>
+          <td class="right">Rs. {{ p.amount | number:'1.0-0' }}</td>
+          <td class="muted">{{ accountOf(p) }}</td>
+          <td class="muted">{{ p.notes || '—' }}</td>
+          <td class="actions">
+            <button class="btn-delete" (click)="confirmDeletePayment(p.payment_id)">Delete</button>
+          </td>
+        </tr>
+        <tr *ngIf="payments.length === 0">
+          <td colspan="5" class="empty-row">
+            Nothing settled against this loan yet.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ THE LOAN FORM ═════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showForm">
+  <div class="modal-card">
+    <h4>{{ editingId ? 'Edit' : (form.direction === 'received' ? 'Money Received' : 'Loan Given') }}</h4>
+    <div class="error-message" *ngIf="formError">{{ formError }}</div>
+
+    <label class="field-label">This is</label>
+    <select class="inline-input" [(ngModel)]="form.direction">
+      <option value="given">Money I lent out (owed back to me)</option>
+      <option value="received">Money left with me or lent to me (I owe it)</option>
+    </select>
+
+    <label class="field-label">Party</label>
+    <input class="inline-input" type="text" [(ngModel)]="form.party_name" placeholder="Name"/>
+
+    <label class="field-label">Phone (optional)</label>
+    <input class="inline-input" type="text" [(ngModel)]="form.phone" placeholder="Optional"/>
+
+    <label class="field-label">Date</label>
+    <input class="inline-input" type="date" [(ngModel)]="form.date"/>
+
+    <label class="field-label">Amount</label>
+    <input class="inline-input" type="number" min="0" [(ngModel)]="form.principal" placeholder="0"/>
+
+    <!-- WHICH ACCOUNT THE MONEY MOVED THROUGH. Cash posts no bank entry, which
+         is how it reaches Cash in Hand instead. House accounts only. -->
+    <label class="field-label">
+      {{ form.direction === 'received' ? 'Received in' : 'Paid from' }}
+    </label>
+    <select class="inline-input" [(ngModel)]="form.payment_source"
+            (ngModelChange)="form.bank_id = null; formError = ''">
+      <option value="cash">Cash</option>
+      <option value="bank" [disabled]="!hasHouseBanks">Bank</option>
+    </select>
+    <select class="inline-input" *ngIf="form.payment_source === 'bank'" [(ngModel)]="form.bank_id">
+      <option [ngValue]="null">Select bank account</option>
+      <option *ngFor="let b of houseBanks" [ngValue]="b.bank_id">
+        {{ bankOptionLabel(b) }} (Rs. {{ b.current_balance | number:'1.0-0' }})
+      </option>
+    </select>
+    <p class="field-hint">
+      {{ form.direction === 'received'
+          ? 'This raises your cash or bank balance, and records what you owe. It is not income.'
+          : 'This lowers your cash or bank balance, and records what is owed back to you. It is not an expense.' }}
+    </p>
+
+    <label class="field-label">Notes (optional)</label>
+    <input class="inline-input" type="text" [(ngModel)]="form.notes" placeholder="What it was for"/>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="closeForm()" [disabled]="isSaving">Cancel</button>
+      <button class="btn-primary" (click)="saveLoan()" [disabled]="isSaving">
+        {{ isSaving ? 'Saving...' : 'Save' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ THE SETTLEMENT FORM ═══════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showPaymentForm">
+  <div class="modal-card">
+    <h4>{{ settleLabel(paymentLoan) }}</h4>
+    <p class="subtitle">
+      {{ paymentLoan?.party_name }} · Rs. {{ outstanding(paymentLoan) | number:'1.0-0' }} outstanding
+    </p>
+    <div class="error-message" *ngIf="paymentError">{{ paymentError }}</div>
+
+    <label class="field-label">Date</label>
+    <input class="inline-input" type="date" [(ngModel)]="paymentForm.date"/>
+
+    <label class="field-label">Amount</label>
+    <input class="inline-input" type="number" min="0" [(ngModel)]="paymentForm.amount"/>
+
+    <label class="field-label">
+      {{ isGiven(paymentLoan) ? 'Received in' : 'Paid from' }}
+    </label>
+    <select class="inline-input" [(ngModel)]="paymentForm.payment_source"
+            (ngModelChange)="paymentForm.bank_id = null; paymentError = ''">
+      <option value="cash">Cash</option>
+      <option value="bank" [disabled]="!hasHouseBanks">Bank</option>
+    </select>
+    <select class="inline-input" *ngIf="paymentForm.payment_source === 'bank'" [(ngModel)]="paymentForm.bank_id">
+      <option [ngValue]="null">Select bank account</option>
+      <option *ngFor="let b of houseBanks" [ngValue]="b.bank_id">
+        {{ bankOptionLabel(b) }} (Rs. {{ b.current_balance | number:'1.0-0' }})
+      </option>
+    </select>
+
+    <label class="field-label">Notes (optional)</label>
+    <input class="inline-input" type="text" [(ngModel)]="paymentForm.notes"/>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="closePaymentForm()" [disabled]="isSaving">Cancel</button>
+      <button class="btn-primary" (click)="savePayment()" [disabled]="isSaving">
+        {{ isSaving ? 'Saving...' : 'Record' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<app-delete-code-dialog
+  *ngIf="showDeleteCodeDialog"
+  (verified)="onDeleteCodeVerified()"
+  (cancelled)="onDeleteCodeCancelled()">
+</app-delete-code-dialog>
+
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete?"
+  [message]="deleteMessage"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()">
+</app-confirm-dialog>

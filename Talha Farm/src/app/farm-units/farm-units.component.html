@@ -1,0 +1,112 @@
+<div class="module-container">
+  <div class="module-header">
+    <div>
+      <h3>Farms</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }} · {{ moduleType === 'layer' ? 'Layer' : 'Broiler' }}</p>
+    </div>
+    <button class="btn-primary" (click)="addNewRow()" *ngIf="!showNewRow" [disabled]="isLoading">+ Add Farm</button>
+  </div>
+
+  <div class="business-type-card">
+    <div>
+      <h4>Account Modules</h4>
+      <p class="subtitle">Choose which modules this account can access. Switching this does not require logging in again.</p>
+    </div>
+    <div class="business-type-controls">
+      <select [(ngModel)]="businessType" class="business-select" [disabled]="isSavingBusinessType">
+        <option value="all">🔄 All Modules (Broiler + Layer + Distribution)</option>
+        <option value="broiler">🐔 Broiler Only</option>
+        <option value="layer">🥚 Layer Only</option>
+        <option value="distribution">📦 Distribution Only</option>
+      </select>
+      <button class="btn-primary" (click)="saveBusinessType()" [disabled]="!businessTypeDirty || isSavingBusinessType">
+        {{ isSavingBusinessType ? 'Saving...' : 'Save' }}
+      </button>
+    </div>
+    <p class="business-type-message" *ngIf="businessTypeMessage">{{ businessTypeMessage }}</p>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading farms...</p>
+  </div>
+
+  <div class="empty-state" *ngIf="!isLoading && units.length === 0 && !showNewRow">
+    <p>No farms yet.</p>
+  </div>
+
+  <div class="table-card" *ngIf="(!isLoading && units.length > 0) || showNewRow">
+    <table>
+      <thead>
+        <tr>
+          <th>Farm Name</th>
+          <th>Location</th>
+          <th>Notes</th>
+          <th>
+            Opening Balance
+            <span class="th-hint">(carried forward from previous system)</span>
+          </th>
+          <th>{{ itemLabel }}</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="showNewRow" class="new-row">
+          <td><input class="inline-input" type="text" [(ngModel)]="newRow.unit_name" placeholder="Farm name"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="newRow.location" placeholder="Location"/></td>
+          <td><input class="inline-input" type="text" [(ngModel)]="newRow.notes" placeholder="Notes"/></td>
+          <td>
+            <input class="inline-input" type="number" step="any" [(ngModel)]="newRow.opening_balance" placeholder="0"/>
+          </td>
+          <td>—</td>
+          <td class="actions">
+            <button class="btn-save" (click)="saveNewRow()" [disabled]="isSaving">Save</button>
+            <button class="btn-cancel-edit" (click)="cancelNewRow()">Cancel</button>
+          </td>
+        </tr>
+
+        <tr *ngFor="let u of units" [class.editing]="editingId === u.unit_id">
+          <ng-container *ngIf="editingId !== u.unit_id">
+            <td class="unit-name">{{ u.unit_name }}</td>
+            <td>{{ u.location || '—' }}</td>
+            <td>{{ u.notes || '—' }}</td>
+            <td [class.negative]="(u.opening_balance || 0) < 0">
+              Rs. {{ (u.opening_balance || 0) | number:'1.0-0' }}
+            </td>
+            <td>{{ u.itemCount }}</td>
+            <td class="actions">
+              <button class="btn-edit" (click)="startEdit(u)">Edit</button>
+              <button class="btn-delete" (click)="confirmDelete(u.unit_id)">Delete</button>
+            </td>
+          </ng-container>
+
+          <ng-container *ngIf="editingId === u.unit_id">
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.unit_name"/></td>
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.location"/></td>
+            <td><input class="inline-input" type="text" [(ngModel)]="editForm.notes"/></td>
+            <td>
+              <input class="inline-input" type="number" step="any" [(ngModel)]="editForm.opening_balance"/>
+            </td>
+            <td>{{ u.itemCount }}</td>
+            <td class="actions">
+              <button class="btn-save" (click)="saveEdit(u.unit_id)">Save</button>
+              <button class="btn-cancel-edit" (click)="cancelEdit()">Cancel</button>
+            </td>
+          </ng-container>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Farm"
+  message="Are you sure? This cannot be undone."
+  confirmText="Delete"
+  cancelText="Cancel"
+  type="danger"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"/>

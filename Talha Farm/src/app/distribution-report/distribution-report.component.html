@@ -1,0 +1,633 @@
+<div class="module-container">
+
+  <div class="module-header">
+    <div>
+      <h3>🗂️ Distribution Report</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }}</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-generate" (click)="generatePDF()" [disabled]="isGenerating">
+        {{ isGenerating ? 'Printing...' : '🖨️ Print Report' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Date Filter -->
+  <div class="filter-bar" *ngIf="!isLoading">
+    <div class="filter-group">
+      <label>From:</label>
+      <input type="date" [(ngModel)]="dateFrom">
+      <label>To:</label>
+      <input type="date" [(ngModel)]="dateTo">
+      <button class="btn-primary" (click)="applyDateFilter()">Apply</button>
+      <button class="btn-secondary" (click)="clearDateFilter()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="empty-state" *ngIf="isLoading">
+    <p>Loading report data...</p>
+  </div>
+
+  <!--
+    Opening Balance — Distribution's own carried-forward starting figure.
+    Distribution is one business per account, not a farm_units row, so this is
+    entered here rather than on the Farms screen. Shown whenever the report has
+    loaded, regardless of the date filter — it is a fixed, hand-entered figure
+    with no date of its own, same rule as the Farm Report's panel.
+  -->
+  <div class="panel opening-balance-panel" *ngIf="!isLoading">
+    <div class="panel-header">
+      <span class="panel-title">🏦 Opening Balance (carried forward)</span>
+      <button class="btn-edit-small" (click)="startEditOpeningBalance()" *ngIf="!isEditingOpeningBalance">Edit</button>
+    </div>
+    <div class="panel-body">
+      <ng-container *ngIf="!isEditingOpeningBalance">
+        <div class="opening-balance-row">
+          <span>Opening balance (carried forward from previous system)</span>
+          <span [class.negative]="distributionOpeningBalance < 0">Rs. {{ distributionOpeningBalance | number:'1.0-0' }}</span>
+        </div>
+        <div class="opening-balance-row">
+          <span>{{ totalProfitLoss >= 0 ? 'Net Profit (this period, app-calculated)' : 'Net Loss (this period, app-calculated)' }}</span>
+          <span [class.negative]="totalProfitLoss < 0">Rs. {{ totalProfitLoss | number:'1.0-0' }}</span>
+        </div>
+        <div class="opening-balance-row total">
+          <span>{{ totalWithOpeningBalance >= 0 ? 'Total (Opening Balance + Net Profit)' : 'Total (Opening Balance + Net Loss)' }}</span>
+          <span [class.negative]="totalWithOpeningBalance < 0">Rs. {{ totalWithOpeningBalance | number:'1.0-0' }}</span>
+        </div>
+        <p class="note">{{ openingBalanceLabel }}</p>
+      </ng-container>
+
+      <div class="opening-balance-edit" *ngIf="isEditingOpeningBalance">
+        <label>
+          Opening balance
+          <input class="inline-input" type="number" step="any" [(ngModel)]="openingBalanceInput" placeholder="0" />
+        </label>
+        <div class="edit-actions">
+          <button class="btn-save" (click)="saveOpeningBalance()" [disabled]="isSavingOpeningBalance">
+            {{ isSavingOpeningBalance ? 'Saving...' : 'Save' }}
+          </button>
+          <button class="btn-cancel-edit" (click)="cancelEditOpeningBalance()" [disabled]="isSavingOpeningBalance">Cancel</button>
+        </div>
+        <p class="note">{{ openingBalanceLabel }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="summary-grid" *ngIf="!isLoading">
+    <div class="summary-card cust-outstanding">
+      <div class="card-icon">🧍</div>
+      <div class="card-label">Total Customer Outstanding</div>
+      <div class="card-value">Rs. {{ totalCustomerOutstanding | number:'1.0-0' }}</div>
+    </div>
+    <div class="summary-card supp-outstanding">
+      <div class="card-icon">🚚</div>
+      <div class="card-label">Total Supplier Outstanding</div>
+      <div class="card-value">Rs. {{ totalSupplierOutstanding | number:'1.0-0' }}</div>
+    </div>
+    <div class="summary-card cash-in-hand">
+      <div class="card-icon">💵</div>
+      <div class="card-label">Cash in Hand</div>
+      <div class="card-value" [class.negative]="cashInHand < 0">Rs. {{ cashInHand | number:'1.0-0' }}</div>
+    </div>
+    <div class="summary-card bank-balance">
+      <div class="card-icon">🏦</div>
+      <div class="card-label">Total Bank Balance</div>
+      <div class="card-value" [class.negative]="totalBankBalance < 0">Rs. {{ totalBankBalance | number:'1.0-0' }}</div>
+    </div>
+    <div class="summary-card products">
+      <div class="card-icon">📦</div>
+      <div class="card-label">Total Products</div>
+      <div class="card-value">{{ totalProducts }}</div>
+    </div>
+    <div class="summary-card inventory">
+      <div class="card-icon">💰</div>
+      <div class="card-label">Inventory Value</div>
+      <div class="card-value">Rs. {{ totalInventoryValue | number:'1.0-0' }}</div>
+    </div>
+    <div class="summary-card purchases">
+      <div class="card-icon">📥</div>
+      <div class="card-label">Total Purchases</div>
+      <div class="card-value">Rs. {{ totalPurchases | number:'1.0-0' }}</div>
+    </div>
+    <div class="summary-card sales">
+      <div class="card-icon">📤</div>
+      <div class="card-label">Total Sales</div>
+      <div class="card-value">Rs. {{ totalSales | number:'1.0-0' }}</div>
+    </div>
+    <div class="summary-card cogs">
+      <div class="card-icon">🧾</div>
+      <div class="card-label">Cost of Goods Sold</div>
+      <div class="card-value">Rs. {{ totalCOGS | number:'1.0-0' }}</div>
+    </div>
+    <div class="summary-card expenses" style="border-left: 4px solid #f44336; background: #fff;">
+      <div class="card-icon" style="background: #ffebee; color: #d32f2f;">💸</div>
+      <div class="card-label">Total Expenses</div>
+      <div class="card-value" style="color: #d32f2f;">Rs. {{ totalExpenses | number:'1.0-0' }}</div>
+    </div>
+    <div class="summary-card profit" style="border-left: 4px solid #4caf50; background: #fff;">
+      <div class="card-icon" style="background: #e8f5e9; color: #2e7d32;">🏆</div>
+      <div class="card-label">Profit / Loss</div>
+      <div class="card-value" [style.color]="totalProfitLoss >= 0 ? '#2e7d32' : '#d32f2f'">Rs. {{ totalProfitLoss | number:'1.0-0' }}</div>
+    </div>
+  </div>
+
+  <!-- Where the money went: purchases are not a loss until the stock sells -->
+  <div class="reconciliation-card" *ngIf="!isLoading">
+    <div class="recon-head">
+      <span class="recon-title">🧮 Where the money went</span>
+      <span class="recon-sub">Buying stock turns cash into an asset. It becomes a cost only when it sells.</span>
+    </div>
+
+    <div class="recon-grid">
+      <div class="recon-col">
+        <div class="recon-row">
+          <span>Total purchases (all stock bought)</span>
+          <span class="num">Rs. {{ totalPurchases | number:'1.0-0' }}</span>
+        </div>
+        <div class="recon-row">
+          <span>Less: returned to supplier</span>
+          <span class="num">- Rs. {{ totalPurchaseReturns | number:'1.0-0' }}</span>
+        </div>
+        <div class="recon-row">
+          <span>Less: cost of the stock that sold</span>
+          <span class="num">- Rs. {{ totalCOGS | number:'1.0-0' }}</span>
+        </div>
+        <div class="recon-row strong">
+          <span>= Stock bought but not yet sold</span>
+          <span class="num">Rs. {{ purchasesNotYetSold | number:'1.0-0' }}</span>
+        </div>
+        <div class="recon-row muted">
+          <span>Total inventory on hand (at cost)</span>
+          <span class="num">Rs. {{ totalInventoryValue | number:'1.0-0' }}</span>
+        </div>
+      </div>
+
+      <div class="recon-col">
+        <div class="recon-row">
+          <span>Sales billed to customers</span>
+          <span class="num">Rs. {{ totalSales | number:'1.0-0' }}</span>
+        </div>
+        <div class="recon-row">
+          <span>Less: billed but not yet collected</span>
+          <span class="num">- Rs. {{ totalUnpaidSales | number:'1.0-0' }}</span>
+        </div>
+        <div class="recon-row strong">
+          <span>= Revenue counted (money collected)</span>
+          <span class="num">Rs. {{ totalPaidSales | number:'1.0-0' }}</span>
+        </div>
+        <div class="recon-row">
+          <span>Less: cost of goods sold</span>
+          <span class="num">- Rs. {{ totalCOGS | number:'1.0-0' }}</span>
+        </div>
+        <div class="recon-row strong">
+          <span>= Gross profit</span>
+          <span class="num" [style.color]="grossProfit >= 0 ? '#2e7d32' : '#d32f2f'">Rs. {{ grossProfit | number:'1.0-0' }}</span>
+        </div>
+        <div class="recon-row">
+          <span>Less: expenses</span>
+          <span class="num">- Rs. {{ totalExpenses | number:'1.0-0' }}</span>
+        </div>
+        <div class="recon-row strong">
+          <span>= Profit / Loss</span>
+          <span class="num" [style.color]="totalProfitLoss >= 0 ? '#2e7d32' : '#d32f2f'">Rs. {{ totalProfitLoss | number:'1.0-0' }}</span>
+        </div>
+        <div class="recon-row muted" *ngIf="internalTransferCount > 0">
+          <span>
+            Of which own-farm sales
+            ({{ internalTransferCount }} {{ internalTransferCount === 1 ? 'bill' : 'bills' }})
+          </span>
+          <span class="num">Rs. {{ internalTransferValue | number:'1.0-0' }}</span>
+        </div>
+        <div class="recon-row muted" *ngIf="internalTransferCount > 0">
+          <span>Of which still owed by your own farms</span>
+          <span class="num">Rs. {{ internalOutstanding | number:'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="recon-note" *ngIf="cogsWarnings.length > 0">
+      <strong>⚠ Data quality notes on the cost figure</strong>
+      <ul>
+        <li *ngFor="let w of cogsWarnings">{{ w }}</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Section Selector -->
+  <div class="sections-panel" *ngIf="!isLoading">
+    <div class="sections-panel-header">
+      <span class="sections-title">📋 Sections to Include in PDF</span>
+      <div class="sections-bulk">
+        <button class="bulk-btn" (click)="sections.inventory=true; sections.purchases=true; sections.purchaseReturns=true; sections.sales=true; sections.returns=true; sections.expenses=true; sections.summary=true; savePreferences()">All</button>
+        <button class="bulk-btn" (click)="sections.inventory=false; sections.purchases=false; sections.purchaseReturns=false; sections.sales=false; sections.returns=false; sections.expenses=false; sections.summary=false; savePreferences()">None</button>
+      </div>
+    </div>
+
+    <div class="sections-grid">
+      <label class="section-checkbox" [class.checked]="sections.summary">
+        <input type="checkbox" [(ngModel)]="sections.summary" (change)="savePreferences()" />
+        <span class="checkbox-icon">📊</span>
+        <span class="checkbox-info">
+          <span class="checkbox-label">Summary</span>
+          <span class="checkbox-meta">{{ totalProducts }} products, {{ totalSalesCount }} bills</span>
+        </span>
+      </label>
+
+      <label class="section-checkbox" [class.checked]="sections.inventory">
+        <input type="checkbox" [(ngModel)]="sections.inventory" (change)="savePreferences()" />
+        <span class="checkbox-icon">📦</span>
+        <span class="checkbox-info">
+          <span class="checkbox-label">Inventory</span>
+          <span class="checkbox-meta">{{ products.length }} products — Rs. {{ totalInventoryValue | number:'1.0-0' }}</span>
+        </span>
+      </label>
+
+      <label class="section-checkbox" [class.checked]="sections.purchases">
+        <input type="checkbox" [(ngModel)]="sections.purchases" (change)="savePreferences()" />
+        <span class="checkbox-icon">📥</span>
+        <span class="checkbox-info">
+          <span class="checkbox-label">Purchases</span>
+          <span class="checkbox-meta">{{ totalPurchasesCount }} orders — Rs. {{ totalPurchases | number:'1.0-0' }}</span>
+        </span>
+      </label>
+
+      <label class="section-checkbox" [class.checked]="sections.returns">
+        <input type="checkbox" [(ngModel)]="sections.returns" (change)="savePreferences()" />
+        <span class="checkbox-icon">↩</span>
+        <span class="checkbox-info">
+          <span class="checkbox-label">Sales Returns</span>
+          <span class="checkbox-meta">{{ totalReturnsCount }} returns — Rs. {{ totalReturns | number:'1.0-0' }}</span>
+        </span>
+      </label>
+
+      <label class="section-checkbox" [class.checked]="sections.purchaseReturns">
+        <input type="checkbox" [(ngModel)]="sections.purchaseReturns" (change)="savePreferences()" />
+        <span class="checkbox-icon">↩</span>
+        <span class="checkbox-info">
+          <span class="checkbox-label">Purchase Returns</span>
+          <span class="checkbox-meta">{{ totalPurchaseReturnsCount }} returns — Rs. {{ totalPurchaseReturns | number:'1.0-0' }}</span>
+        </span>
+      </label>
+
+      <label class="section-checkbox" [class.checked]="sections.sales">
+        <input type="checkbox" [(ngModel)]="sections.sales" (change)="savePreferences()" />
+        <span class="checkbox-icon">📤</span>
+        <span class="checkbox-info">
+          <span class="checkbox-label">Sales Bills</span>
+          <span class="checkbox-meta">{{ totalSalesCount }} bills — Rs. {{ totalSales | number:'1.0-0' }}</span>
+        </span>
+      </label>
+
+      <label class="section-checkbox" [class.checked]="sections.supplierPayables">
+        <input type="checkbox" [(ngModel)]="sections.supplierPayables" (change)="savePreferences()" />
+        <span class="checkbox-icon">🏢</span>
+        <span class="checkbox-info">
+          <span class="checkbox-label">Supplier Payables</span>
+          <span class="checkbox-meta">{{ activeSuppliers.length }} suppliers — Rs. {{ totalSupplierPayable | number:'1.0-0' }} owed</span>
+        </span>
+      </label>
+
+      <label class="section-checkbox" [class.checked]="sections.expenses">
+        <input type="checkbox" [(ngModel)]="sections.expenses" (change)="savePreferences()" />
+        <span class="checkbox-icon">💸</span>
+        <span class="checkbox-info">
+          <span class="checkbox-label">Expenses</span>
+          <span class="checkbox-meta">{{ totalExpensesCount }} expenses — Rs. {{ totalExpenses | number:'1.0-0' }}</span>
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Inventory Table -->
+  <div class="table-card" *ngIf="!isLoading && sections.inventory">
+    <h4>📦 Inventory (Current Stock)</h4>
+    <div class="empty-state" *ngIf="products.length === 0">
+      <p>No products in inventory.</p>
+    </div>
+    <table *ngIf="products.length > 0">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Category</th>
+          <th>Unit</th>
+          <th>Stock</th>
+          <th>Batches</th>
+          <th>Cost Price</th>
+          <th>Sell Price</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of products">
+          <td class="product-name">{{ p.product_name }}</td>
+          <td>{{ p.category || '—' }}</td>
+          <td>{{ p.unit || '—' }}</td>
+          <td>{{ p.calculated_stock || 0 | number }}</td>
+          <td>{{ p.batch_count || 0 }}</td>
+          <td>Rs. {{ getProductUnitCost(p) | number:'1.0-0' }}</td>
+          <td>Rs. {{ p.selling_price | number:'1.0-0' }}</td>
+          <td class="amount">Rs. {{ getProductValue(p) | number:'1.0-0' }}</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="7"><strong>Total Inventory Value</strong></td>
+          <td class="amount"><strong>Rs. {{ totalInventoryValue | number:'1.0-0' }}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Purchases Table -->
+  <div class="table-card" *ngIf="!isLoading && sections.purchases">
+    <h4>📥 Purchases</h4>
+    <div class="empty-state" *ngIf="filteredPurchases.length === 0">
+      <p>No purchase orders yet.</p>
+    </div>
+    <table *ngIf="filteredPurchases.length > 0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Product</th>
+          <th>Supplier</th>
+          <th>Qty</th>
+          <th>Cost</th>
+          <th>Total</th>
+          <th>Payment</th>
+          <th>Account</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of filteredPurchases">
+          <td>{{ p.date | date:'dd-MM-yyyy' }}</td>
+          <td class="product-name">{{ p.product_name || '—' }}</td>
+          <td>{{ p.supplier_name || '—' }}</td>
+          <td>{{ p.quantity }}</td>
+          <td>Rs. {{ p.cost_price | number:'1.0-0' }}</td>
+          <td class="amount">Rs. {{ p.total_amount | number:'1.0-0' }}</td>
+          <td>
+            <span class="payment-badge" [class.cash]="p.payment_type === 'cash'">
+              {{ p.payment_type === 'cash' ? 'Paid' : 'Credit' }}
+            </span>
+          </td>
+          <!-- An unpaid order moved no money, so it names no account. -->
+          <td class="account-cell" [class.bank]="orderWasPaid(p) && p.payment_source === 'bank'">
+            {{ orderWasPaid(p) ? accountLabel(p) : '—' }}
+          </td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="5"><strong>Total Purchases</strong></td>
+          <td class="amount"><strong>Rs. {{ totalPurchases | number:'1.0-0' }}</strong></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Sales Table -->
+  <div class="table-card" *ngIf="!isLoading && sections.sales">
+    <h4>📤 Sales Bills</h4>
+    <div class="empty-state" *ngIf="filteredSales.length === 0">
+      <p>No sales bills yet.</p>
+    </div>
+    <table *ngIf="filteredSales.length > 0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Bill #</th>
+          <th>Customer</th>
+          <th>Total</th>
+          <th>Paid</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let s of filteredSales">
+          <td>{{ s.bill_date | date:'dd-MM-yyyy' }}</td>
+          <td class="bill-number">{{ s.bill_number }}</td>
+          <td>{{ s.customer_name || 'Walk-in' }}</td>
+          <td class="amount">Rs. {{ s.total_amount | number:'1.0-0' }}</td>
+          <td>Rs. {{ getBillPaidAmount(s) | number:'1.0-0' }}</td>
+          <td>
+            <span class="status-badge" *ngIf="isInternalBill(s)">🔄 Own farm</span>
+            <span class="status-badge"
+                  [class.paid]="isBillPaid(s)" [class.unpaid]="!isBillPaid(s)">
+              {{ isBillPaid(s) ? '✅ Paid' : '⏳ Unpaid' }}
+            </span>
+          </td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="3"><strong>Totals (customer sales)</strong></td>
+          <td class="amount"><strong>Rs. {{ totalSales | number:'1.0-0' }}</strong></td>
+          <td class="amount"><strong>Rs. {{ totalPaidSales | number:'1.0-0' }}</strong></td>
+          <td class="amount"><strong>Rs. {{ totalUnpaidSales | number:'1.0-0' }}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="cash-note" *ngIf="internalTransferCount > 0">
+      Own-farm sales are included in these totals. Supplying your own flock or batch is a real sale
+      for this business: it earns the revenue and the farm owes the money until it settles, on the
+      same collected basis as any other customer. The Overview dashboard cancels both sides, so
+      selling to yourself never adds to company profit.
+    </p>
+  </div>
+
+  <!-- Expenses Table -->
+  <div class="table-card" *ngIf="!isLoading && sections.expenses">
+    <h4>💸 Expenses</h4>
+    <div class="empty-state" *ngIf="filteredExpenses.length === 0">
+      <p>No expenses recorded yet.</p>
+    </div>
+    <table *ngIf="filteredExpenses.length > 0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Category</th>
+          <th>Description</th>
+          <th>Payment</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let e of filteredExpenses">
+          <td>{{ e.transaction_date | date:'dd-MM-yyyy' }}</td>
+          <td>{{ e.category }}</td>
+          <td class="product-name">{{ e.description || '—' }}</td>
+          <td>
+            <span class="payment-badge" [class.cash]="e.payment_type === 'cash'">
+              {{ e.payment_type || 'cash' }}
+            </span>
+          </td>
+          <td class="amount">Rs. {{ e.amount | number:'1.0-0' }}</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="4"><strong>Total Expenses</strong></td>
+          <td class="amount"><strong>Rs. {{ totalExpenses | number:'1.0-0' }}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Supplier Payables — what is owed to each supplier, and what each payment
+       was paid from. Every figure is derived from supplier_ledger on load:
+       the payable is SUM(credit - debit) over it and is stored nowhere. -->
+  <div class="table-card" *ngIf="!isLoading && sections.supplierPayables">
+    <h4>🏢 Supplier Payables</h4>
+    <p class="cash-note">
+      What was bought from each supplier, what has actually been paid, and what is still owed.
+      These are balances as at today, so the date filter above does not apply to them — a payable
+      is not a figure you can take a slice out of. A purchase return reduces what is owed but is
+      shown apart from payments, because it is stock sent back rather than money paid.
+    </p>
+    <div class="empty-state" *ngIf="activeSuppliers.length === 0">
+      <p>No supplier purchases or payments recorded yet.</p>
+    </div>
+    <table *ngIf="activeSuppliers.length > 0">
+      <thead>
+        <tr>
+          <th>Supplier</th>
+          <th>Phone</th>
+          <th class="amount-header">Purchased</th>
+          <th class="amount-header">Paid</th>
+          <th class="amount-header">Returned</th>
+          <th class="amount-header">Still Owed</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let s of activeSuppliers">
+          <td class="product-name">{{ s.supplier_name }}</td>
+          <td>{{ s.phone || '—' }}</td>
+          <td class="amount">Rs. {{ s.total_purchased | number:'1.0-0' }}</td>
+          <td class="amount">Rs. {{ s.total_paid | number:'1.0-0' }}</td>
+          <td class="amount">{{ s.total_returned > 0 ? ('Rs. ' + (s.total_returned | number:'1.0-0')) : '—' }}</td>
+          <td class="amount" [class.outstanding]="s.outstanding_balance > 0">
+            Rs. {{ s.outstanding_balance | number:'1.0-0' }}
+          </td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="2"><strong>Total</strong></td>
+          <td class="amount"><strong>Rs. {{ totalSupplierPurchased | number:'1.0-0' }}</strong></td>
+          <td class="amount"><strong>Rs. {{ totalSupplierPaid | number:'1.0-0' }}</strong></td>
+          <td class="amount"><strong>{{ totalSupplierReturned > 0 ? ('Rs. ' + (totalSupplierReturned | number:'1.0-0')) : '—' }}</strong></td>
+          <td class="amount"><strong>Rs. {{ totalSupplierPayable | number:'1.0-0' }}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- "Kis bank ki hai payment kitni" -->
+    <h4 class="sub-head" *ngIf="supplierPaymentAccounts.length > 0">🏦 Supplier Payments by Account</h4>
+    <table *ngIf="supplierPaymentAccounts.length > 0">
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th>Payments</th>
+          <th class="amount-header">Amount Paid</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let a of supplierPaymentAccounts">
+          <td class="account-cell" [class.bank]="a.payment_source === 'bank'">{{ accountLabel(a) }}</td>
+          <td>{{ a.payment_count }}</td>
+          <td class="amount">Rs. {{ a.total_paid | number:'1.0-0' }}</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="2"><strong>Total Paid to Suppliers</strong></td>
+          <td class="amount"><strong>Rs. {{ totalSupplierPaid | number:'1.0-0' }}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="cash-note" *ngIf="supplierPaymentAccounts.length > 0">
+      A payment shows as <strong>Cash</strong> when no bank account was recorded against it — an
+      order paid in cash, a payment entered on the Supplier Ledger screen, or a row saved before
+      bank accounts were tracked. Bank-attributed supplier payments are entered through
+      <strong>Payment Voucher</strong>, which records the withdrawal at the same time.
+    </p>
+  </div>
+
+  <!-- Sales Returns Table -->
+  <div class="table-card" *ngIf="!isLoading && sections.returns">
+    <h4>↩ Sales Returns</h4>
+    <div class="empty-state" *ngIf="filteredReturns.length === 0">
+      <p>No sales returns recorded yet.</p>
+    </div>
+    <table *ngIf="filteredReturns.length > 0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Return #</th>
+          <th>Bill #</th>
+          <th>Customer</th>
+          <th>Amount</th>
+          <th>Refund</th>
+          <th>Method</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of filteredReturns">
+          <td>{{ r.return_date | date:'dd-MM-yyyy' }}</td>
+          <td class="bill-number">{{ r.return_number }}</td>
+          <td>{{ r.bill_number || '—' }}</td>
+          <td>{{ r.customer_name || 'Walk-in' }}</td>
+          <td class="amount">Rs. {{ r.return_amount | number:'1.0-0' }}</td>
+          <td>Rs. {{ r.refund_amount | number:'1.0-0' }}</td>
+          <td>
+            <span class="payment-badge" [class.cash]="r.refund_method === 'cash'">
+              {{ r.refund_method || 'cash' }}
+            </span>
+          </td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="4"><strong>Total Sales Returns</strong></td>
+          <td class="amount"><strong>Rs. {{ totalReturns | number:'1.0-0' }}</strong></td>
+          <td colspan="2"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Purchase Returns Table -->
+  <div class="table-card" *ngIf="!isLoading && sections.purchaseReturns">
+    <h4>↩ Purchase Returns</h4>
+    <div class="empty-state" *ngIf="filteredPurchaseReturns.length === 0">
+      <p>No purchase returns recorded yet.</p>
+    </div>
+    <table *ngIf="filteredPurchaseReturns.length > 0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Return #</th>
+          <th>Product</th>
+          <th>Supplier</th>
+          <th>Qty</th>
+          <th>Amount</th>
+          <th>Method</th>
+          <th>Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of filteredPurchaseReturns">
+          <td>{{ r.return_date | date:'dd-MM-yyyy' }}</td>
+          <td class="bill-number">{{ r.return_number }}</td>
+          <td class="product-name">{{ r.product_name || '—' }}</td>
+          <td>{{ r.supplier_name || '—' }}</td>
+          <td>{{ r.quantity }}</td>
+          <td class="amount">Rs. {{ r.return_amount | number:'1.0-0' }}</td>
+          <td>
+            <span class="payment-badge" [class.cash]="r.refund_method === 'cash'">
+              {{ r.refund_method || 'cash' }}
+            </span>
+          </td>
+          <td>{{ r.reason || '—' }}</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="5"><strong>Total Purchase Returns</strong></td>
+          <td class="amount"><strong>Rs. {{ totalPurchaseReturns | number:'1.0-0' }}</strong></td>
+          <td colspan="2"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+
+</div>

@@ -1,0 +1,286 @@
+<div class="accounts-container">
+  <div class="accounts-header">
+    <app-back-link *ngIf="!selectedSupplier"></app-back-link>
+    <button class="btn-back" (click)="goBack()" *ngIf="selectedSupplier">← Back</button>
+    <h2>
+      {{ selectedSupplier
+          ? '🏭 ' + selectedSupplier.supplier_name
+          : '🏭 Supplier Accounts' }}
+    </h2>
+    <p class="subtitle" *ngIf="!selectedSupplier">{{ currentFarm?.farm_name }}</p>
+    <p class="subtitle" *ngIf="selectedSupplier">
+      {{ selectedSupplier.phone || 'No phone' }}
+      <span *ngIf="selectedSupplier.products_supplied"> · {{ selectedSupplier.products_supplied }}</span>
+    </p>
+    <div class="header-actions" *ngIf="selectedSupplier">
+      <button class="btn-primary" (click)="recordPayment()">+ Record Payment</button>
+      <button class="btn-secondary" (click)="viewStatement()">📒 Supplier Ledger</button>
+      <button class="btn-secondary" (click)="printReport()">🖨️ Print</button>
+    </div>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <!-- ══ SUPPLIER LIST — one card per supplier ══════════════════════════ -->
+  <div class="supplier-list" *ngIf="!isLoading && !selectedSupplier">
+    <div class="summary-bar">
+      <div class="summary-item">
+        <span class="summary-label">Suppliers</span>
+        <span class="summary-value">{{ filteredSuppliers.length }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Total Purchased</span>
+        <span class="summary-value">Rs. {{ getTotalPurchased() | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Total Paid</span>
+        <span class="summary-value paid">Rs. {{ getTotalPaid() | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Outstanding Payable</span>
+        <span class="summary-value payable">Rs. {{ getTotalPayable() | number:'1.0-0' }}</span>
+      </div>
+    </div>
+
+    <div class="search-bar">
+      <input class="search-input" type="text" [(ngModel)]="searchTerm"
+             (ngModelChange)="applyFilter()"
+             placeholder="Search by name, phone or product…"/>
+      <button class="btn-clear" *ngIf="searchTerm" (click)="clearSearch()">✕</button>
+    </div>
+
+    <div class="card-grid">
+      <div class="supplier-card" *ngFor="let s of filteredSuppliers"
+           (click)="selectSupplier(s)">
+        <div class="card-top">
+          <span class="card-name">{{ s.supplier_name }}</span>
+          <span class="card-phone" *ngIf="s.phone">{{ s.phone }}</span>
+        </div>
+        <div class="card-figures">
+          <div class="figure">
+            <span class="figure-label">Purchased</span>
+            <span class="figure-value">Rs. {{ s.total_purchased | number:'1.0-0' }}</span>
+          </div>
+          <div class="figure">
+            <span class="figure-label">Paid</span>
+            <span class="figure-value paid">Rs. {{ s.total_paid | number:'1.0-0' }}</span>
+          </div>
+          <div class="figure">
+            <span class="figure-label">Outstanding Payable</span>
+            <span class="figure-value"
+                  [class.payable]="s.outstanding_balance > 0"
+                  [class.settled]="s.outstanding_balance <= 0">
+              Rs. {{ s.outstanding_balance | number:'1.0-0' }}
+            </span>
+          </div>
+        </div>
+        <div class="card-bottom">
+          <span class="card-last" *ngIf="s.last_transaction_date">
+            Last transaction: {{ s.last_transaction_date | date:'yyyy-MM-dd' }}
+          </span>
+          <span class="card-last muted" *ngIf="!s.last_transaction_date">
+            No transactions yet
+          </span>
+          <span class="card-open">View →</span>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="filteredSuppliers.length === 0">
+        <p *ngIf="suppliers.length === 0">No suppliers yet. Add one under Distribution → Suppliers.</p>
+        <p *ngIf="suppliers.length > 0">No supplier matches "{{ searchTerm }}".</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DRILLDOWN ══════════════════════════════════════════════════════ -->
+  <div class="supplier-detail" *ngIf="!isLoading && selectedSupplier">
+    <!-- Purchased / Paid / Payable, off the statement rows below. -->
+    <div class="detail-summary">
+      <div class="summary-item">
+        <span class="summary-label">Total Purchased</span>
+        <span class="summary-value">Rs. {{ totals.purchased | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-item" *ngIf="totals.otherCharges > 0">
+        <span class="summary-label">Other Charges</span>
+        <span class="summary-value">Rs. {{ totals.otherCharges | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Total Paid</span>
+        <span class="summary-value paid">Rs. {{ totals.paid | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-item" *ngIf="totals.returned > 0">
+        <span class="summary-label">Returned to Supplier</span>
+        <span class="summary-value">Rs. {{ totals.returned | number:'1.0-0' }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Outstanding Payable</span>
+        <span class="summary-value"
+              [class.payable]="getSupplierBalance() > 0"
+              [class.settled]="getSupplierBalance() <= 0">
+          Rs. {{ getSupplierBalance() | number:'1.0-0' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- ── PURCHASES ─────────────────────────────────────────────────── -->
+    <div class="section">
+      <h3>📥 Purchases</h3>
+      <div class="table-card">
+        <!-- 6 columns: Date | Product | Qty | Rate | Amount | Payment -->
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Product</th>
+              <th class="num">Qty</th>
+              <th class="num">Rate</th>
+              <th class="num">Amount</th>
+              <th>Payment</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of purchases">
+              <td>{{ p.date | date:'yyyy-MM-dd' }}</td>
+              <td>{{ p.product_name || '—' }}</td>
+              <td class="num">{{ p.quantity | number:'1.0-2' }}</td>
+              <td class="num">Rs. {{ p.cost_price | number:'1.0-0' }}</td>
+              <td class="num">Rs. {{ p.total_amount | number:'1.0-0' }}</td>
+              <td>
+                <span class="pill" *ngIf="isPaidOrder(p)">{{ accountLabel(p) }}</span>
+                <span class="pill credit" *ngIf="!isPaidOrder(p)">Credit</span>
+              </td>
+            </tr>
+            <tr *ngIf="purchases.length === 0">
+              <td colspan="6" class="empty-row">No purchases recorded for this supplier</td>
+            </tr>
+          </tbody>
+          <tfoot *ngIf="purchases.length > 0">
+            <tr>
+              <td colspan="4">Total</td>
+              <td class="num">Rs. {{ getPurchaseOrderTotal() | number:'1.0-0' }}</td>
+              <td>—</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── PAYMENTS ──────────────────────────────────────────────────── -->
+    <div class="section">
+      <h3>💸 Payments</h3>
+      <div class="table-card">
+        <!-- 5 columns: Date | Description | Type | Account | Amount -->
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Notes</th>
+              <th>Type</th>
+              <th>Account</th>
+              <th class="num">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let e of paymentHistory">
+              <td>{{ e.transaction_date | date:'yyyy-MM-dd' }}</td>
+              <td>{{ e.description || '—' }}</td>
+              <td class="notes-cell">{{ e.notes || '—' }}</td>
+              <td>{{ rowLabel(e) }}</td>
+              <td><span class="pill">{{ accountLabel(e) }}</span></td>
+              <td class="num">Rs. {{ e.debit | number:'1.0-0' }}</td>
+            </tr>
+            <tr *ngIf="paymentHistory.length === 0">
+              <td colspan="6" class="empty-row">No payments recorded for this supplier</td>
+            </tr>
+          </tbody>
+          <tfoot *ngIf="paymentHistory.length > 0">
+            <tr>
+              <td colspan="5">Total Paid</td>
+              <td class="num">Rs. {{ getPaymentsTotal() | number:'1.0-0' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── PAID FROM WHICH ACCOUNT ───────────────────────────────────── -->
+    <div class="section">
+      <h3>🏦 Paid From</h3>
+      <div class="table-card">
+        <!-- 3 columns: Account | Payments | Total Paid -->
+        <table>
+          <thead>
+            <tr>
+              <th>Account</th>
+              <th class="num">Payments</th>
+              <th class="num">Total Paid</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let a of paymentsByAccount">
+              <td>{{ accountLabel(a) }}</td>
+              <td class="num">{{ a.payment_count }}</td>
+              <td class="num">Rs. {{ a.total_paid | number:'1.0-0' }}</td>
+            </tr>
+            <tr *ngIf="paymentsByAccount.length === 0">
+              <td colspan="3" class="empty-row">Nothing has been paid to this supplier yet</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── THE STATEMENT ─────────────────────────────────────────────── -->
+    <!-- The same rows, in the same order and with the same running balance,
+         as the Supplier Ledger screen: one read, two screens. -->
+    <div class="section">
+      <h3>📜 Full Statement</h3>
+      <div class="table-card">
+        <!-- 7 columns: Date | Description | Type | Account | Debit | Credit | Balance -->
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Notes</th>
+              <th>Type</th>
+              <th>Account</th>
+              <th class="num">Debit</th>
+              <th class="num">Credit</th>
+              <th class="num">Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let e of ledgerEntries">
+              <td>{{ e.transaction_date | date:'yyyy-MM-dd' }}</td>
+              <td>{{ e.description || '—' }}</td>
+              <td class="notes-cell">{{ e.notes || '—' }}</td>
+              <td>{{ rowLabel(e) }}</td>
+              <td>{{ hasAccount(e) ? accountLabel(e) : '—' }}</td>
+              <td class="num debit">{{ e.debit > 0 ? ('Rs. ' + (e.debit | number:'1.0-0')) : '—' }}</td>
+              <td class="num credit">{{ e.credit > 0 ? ('Rs. ' + (e.credit | number:'1.0-0')) : '—' }}</td>
+              <td class="num balance">Rs. {{ e.balance | number:'1.0-0' }}</td>
+            </tr>
+            <tr *ngIf="ledgerEntries.length === 0">
+              <td colspan="8" class="empty-row">No transactions found</td>
+            </tr>
+          </tbody>
+          <tfoot *ngIf="ledgerEntries.length > 0">
+            <tr>
+              <td colspan="5">Closing payable</td>
+              <td class="num">Rs. {{ totals.paid + totals.returned | number:'1.0-0' }}</td>
+              <td class="num">Rs. {{ totals.purchased + totals.otherCharges | number:'1.0-0' }}</td>
+              <td class="num balance">Rs. {{ getSupplierBalance() | number:'1.0-0' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

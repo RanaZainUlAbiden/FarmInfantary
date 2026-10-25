@@ -1,0 +1,72 @@
+<div class="module-container">
+  <div class="module-header">
+    <div>
+      <h3>Labour Management</h3>
+      <p class="subtitle">{{ currentFarm?.farm_name }}</p>
+    </div>
+    <button class="btn-primary" (click)="openAddForm()" [disabled]="isLoading">+ Add Labour</button>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="loading-state" *ngIf="isLoading"><p>Loading...</p></div>
+
+  <div class="empty-state" *ngIf="!isLoading && roster.length === 0">
+    <p>No labour added yet. Click "Add Labour" to get started.</p>
+  </div>
+
+  <div class="table-card" *ngIf="!isLoading && roster.length > 0">
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Phone</th><th>Role</th><th>Status</th><th>Total Paid</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let l of paginatedRoster">
+          <td>{{ l.labour_name }}</td>
+          <td>{{ l.phone || '—' }}</td>
+          <td>{{ l.role || '—' }}</td>
+          <td>
+            <span class="status-badge" [class.inactive]="l.status === 'inactive'">
+              {{ l.status === 'inactive' ? 'Inactive' : 'Active' }}
+            </span>
+          </td>
+          <td class="amount">Rs. {{ l.total_paid | number:'1.0-0' }}</td>
+          <td class="actions">
+            <button class="btn-edit" (click)="openEditForm(l)">Edit</button>
+            <button class="btn-toggle" (click)="toggleStatus(l)">
+              {{ l.status === 'inactive' ? 'Mark Active' : 'Mark Inactive' }}
+            </button>
+            <button class="btn-delete" (click)="confirmDelete(l.labour_id)">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <app-pagination [currentPage]="currentPage" [totalItems]="roster.length" [pageSize]="pageSize" (pageChange)="currentPage = $event"></app-pagination>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showForm">
+  <div class="modal-card">
+    <h4>{{ editingId ? 'Edit Labour' : 'Add Labour' }}</h4>
+    <input class="inline-input" type="text" [(ngModel)]="form.labour_name" placeholder="Name" (keyup.enter)="saveForm()"/>
+    <input class="inline-input" type="text" [(ngModel)]="form.phone" placeholder="Phone (optional)"/>
+    <input class="inline-input" type="text" [(ngModel)]="form.role" placeholder="Role (optional, e.g. Catcher)"/>
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="cancelForm()">Cancel</button>
+      <button class="btn-primary" (click)="saveForm()">Save</button>
+    </div>
+  </div>
+</div>
+
+<app-delete-code-dialog
+  *ngIf="showDeleteCodeDialog"
+  (verified)="onDeleteCodeVerified()"
+  (cancelled)="onDeleteCodeCancelled()"
+/>
+<app-confirm-dialog
+  *ngIf="showDeleteDialog"
+  title="Delete Labour"
+  message="Delete this labour entry? Their past payment records will be kept for history."
+  confirmText="Delete" cancelText="Cancel" type="danger"
+  (confirmed)="onDeleteConfirmed()" (cancelled)="onDeleteCancelled()"
+/>

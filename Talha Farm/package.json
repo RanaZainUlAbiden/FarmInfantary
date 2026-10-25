@@ -1,0 +1,97 @@
+{
+  "name": "poultry-farm",
+  "version": "1.0.24",
+  "description": "Professional Poultry Farm Management System",
+  "author": "DevInfantary",
+  "main": "electron/main.js",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "electron": "ng build && electron .",
+    "electron:dev": "electron .",
+    "electron:build:win": "npm run build && electron-builder --win --x64",
+    "electron:build:win:ia32": "npm run build && electron-builder --win --ia32",
+    "electron:build:win:both": "npm run build && electron-builder --win --x64 --ia32",
+    "dist": "ng build && electron-builder build --win",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "^19.2.0",
+    "@angular/common": "^19.2.0",
+    "@angular/compiler": "^19.2.0",
+    "@angular/core": "^19.2.0",
+    "@angular/forms": "^19.2.0",
+    "@angular/platform-browser": "^19.2.0",
+    "@angular/platform-browser-dynamic": "^19.2.0",
+    "@angular/router": "^19.2.0",
+    "electron-updater": "^6.1.7",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
+    "node-machine-id": "^1.1.12",
+    "rxjs": "~7.8.0",
+    "sql.js": "^1.14.1",
+    "tslib": "^2.3.0",
+    "zone.js": "^0.15.1"
+  },
+  "build": {
+    "appId": "com.devinfantary.poultry-farm",
+    "productName": "Talha Farm",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "public/favicon.ico",
+      "publisherName": "DevInfantary",
+      "legalTrademarks": "Talha Farm is a trademark of DevInfantary",
+      "rfc3161TimeStampServer": "http://timestamp.comodoca.com/rfc3161"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "public/favicon.ico",
+      "installerHeaderIcon": "public/favicon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Talha Farm",
+      "uninstallDisplayName": "Talha Farm Management System",
+      "license": "LICENSE.txt",
+      "perMachine": true
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/**/*",
+      "node_modules/**/*",
+      "!node_modules/@angular/**/*",
+      "!node_modules/rxjs/**/*",
+      "!node_modules/zone.js/**/*",
+      "!node_modules/typescript/**/*",
+      "!node_modules/@angular-devkit/**/*",
+      "!node_modules/electron-builder/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/sql.js/dist/sql-wasm.wasm",
+        "to": "sql-wasm.wasm",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/sql.js/dist/sql-wasm.wasm"
+    ]
+  },
+  "devDependencies": {
+    "@angular/build": "^19.2.0",
+    "@angular/cli": "^19.2.0",
+    "@angular/compiler-cli": "^19.2.0",
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8",
+    "typescript": "~5.7.0"
+  }
+}
