@@ -4,12 +4,16 @@
   "private": true,
   "description": "FarmInfantary API — replaces the desktop app's Electron main process",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "db:schema": "node scripts/apply-schema.mjs",
+    "dev": "node src/server.js",
+    "start": "node src/server.js",
     "test": "node --test \"test/**/*.test.js\""
   },
   "dependencies": {
+    "fastify": "^5.12.7",
     "pg": "^8.13.1"
   }
 }

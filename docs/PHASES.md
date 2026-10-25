@@ -65,7 +65,8 @@ older still. The import path must handle a database that is behind the schema.
 - [x] Translate the dialect at the boundary — `server/src/db/dialect.js`, refuses what it cannot translate
 - [x] Parse integer columns to JS numbers (D15) — 214 of 555 columns were arriving as strings
 - [x] Build the `?` → `$n` placeholder rewrite at the boundary — `server/src/db/placeholders.js`
-- [ ] Stand up the 11 endpoints mirroring the IPC surface
+- [x] Stand up the database endpoints mirroring the IPC surface — `server/src/server.js`, 34 HTTP checks
+- [ ] Remaining endpoints: settings, backup, entitlement (small; auth-dependent)
 - [ ] Re-point all 29 verify scripts at the new schema module
 
 **Gate:** the same 29 scripts green against PostgreSQL, and reference totals
