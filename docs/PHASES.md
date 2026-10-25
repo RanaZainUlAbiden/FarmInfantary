@@ -86,7 +86,25 @@ makes a green run mean something: same code, same checks, different database.
 Each script gets its own PostgreSQL schema, dropped afterwards, so scripts
 cannot see each other's rows.
 
-**Ported so far: 1 of 29** (`verify_categories_pg.mjs`, 20 checks green).
+**Ported so far: 2 of 29.** `verify_categories_pg.mjs` (20 checks) and
+`verify_loans_pg.mjs` (133 checks) are green on PostgreSQL, running the real
+method bodies.
+
+`scripts/verify/lib/port.mjs` transforms an original into a PostgreSQL port.
+It is deliberately conservative: the assertion body is copied byte for byte
+apart from the substitutions sql.js's *synchronous* API forces — awaited reads,
+and the helper/arrow functions that must become async as a result. Nothing a
+script checks, and no message it prints, is rewritten.
+
+**The transform handles one of two shapes.** Scripts build their service stub
+in two different places, and the second shape (`svc` as a top-level literal,
+with a `call()` helper) also has preamble helpers that close over the sql.js
+handle and are reached from the body. Those need per-script attention rather
+than another layer of cleverness in the transform.
+
+Realistic estimate: shape-A scripts port in minutes each; shape-B ones need
+hand work. Expect each batch to surface engine differences — three have turned
+up in two scripts so far, and all three were real.
 
 That first port immediately found `COLLATE NOCASE` — 7 occurrences the dialect
 inventory had missed entirely, which PostgreSQL rejects outright. See below.

@@ -144,7 +144,14 @@ test('an unrecognised julianday form is reported, never guessed at', () => {
 
 test('CAST(x AS INTEGER) truncates, because SQLite truncates and PG rounds', () => {
   const { text } = translate(`SELECT CAST(months / 30.44 AS INTEGER) FROM t`);
-  assert.equal(text, `SELECT trunc(months / 30.44)::bigint FROM t`);
+  assert.equal(text, `SELECT trunc((months / 30.44)::numeric)::bigint FROM t`);
+});
+
+test('CAST(text AS INTEGER) works — PostgreSQL has no trunc(text)', () => {
+  // Found by the Phase 1 gate: addLoan casts a text column, and trunc(text)
+  // does not exist. Going through numeric covers text, numeric and double.
+  const { text } = translate(`SELECT CAST(reference_id AS INTEGER) FROM bank_ledger`);
+  assert.equal(text, `SELECT trunc((reference_id)::numeric)::bigint FROM bank_ledger`);
 });
 
 test('CAST to a non-integer type is left alone', () => {

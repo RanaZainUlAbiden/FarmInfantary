@@ -28,7 +28,9 @@
 
 import { translate } from './dialect.js';
 import { prepare } from './placeholders.js';
-import { withReturning, extractLastId, loadPrimaryKeys } from './primary-keys.js';
+import {
+  withReturning, extractLastId, loadPrimaryKeys, insertsExplicitPk, resyncSequenceSql,
+} from './primary-keys.js';
 import { validateBatch, resolveParams } from './batch.js';
 
 /** Turn any thrown thing into the error string the renderer expects. */
@@ -51,7 +53,16 @@ function compile(sql, params, primaryKeys) {
   }
   const withRet = withReturning(t.text, primaryKeys);
   const { text, values } = prepare(withRet.text, params);
-  return { text, values, idColumn: withRet.idColumn };
+
+  // An INSERT that supplies its own id leaves the identity sequence behind.
+  // SQLite advances AUTOINCREMENT in that case; PostgreSQL does not, so the
+  // sequence is pushed past the new maximum afterwards to match.
+  const pk = withRet.table ? primaryKeys.get(withRet.table) : null;
+  const resync = pk && insertsExplicitPk(t.text, withRet.table, pk)
+    ? resyncSequenceSql(withRet.table, pk)
+    : null;
+
+  return { text, values, idColumn: withRet.idColumn, resync };
 }
 
 export function createDb(pool) {
@@ -101,6 +112,7 @@ export function createDb(pool) {
       const { client } = target(token);
       const c = compile(sql, params, primaryKeys);
       const res = await client.query(c.text, c.values);
+      if (c.resync) await client.query(c.resync);
       return { success: true, lastId: extractLastId(res, c.idColumn) };
     } catch (err) {
       return { success: false, error: message(err) };
@@ -150,6 +162,7 @@ export function createDb(pool) {
         const params = resolveParams(op.params, ids, i);
         const c = compile(op.sql, params, primaryKeys);
         const res = await client.query(c.text, c.values);
+        if (c.resync) await client.query(c.resync);
         const lastId = extractLastId(res, c.idColumn);
         ids.push(lastId);
         results.push({ lastId });

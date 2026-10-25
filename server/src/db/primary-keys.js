@@ -119,3 +119,46 @@ export function extractLastId(result, idColumn) {
   const v = row[idColumn];
   return v === undefined ? null : v;
 }
+
+/**
+ * Does this INSERT supply the table's own primary key?
+ *
+ * SQLite and PostgreSQL disagree about what that means for the next generated
+ * id, and the difference is silent until it bites:
+ *
+ *   SQLite      INSERT (id, v) VALUES (900,..) advances AUTOINCREMENT, so the
+ *               next generated id is 901.
+ *   PostgreSQL  an identity column's sequence knows nothing about an explicit
+ *               insert, so the next generated id is still 2 — and will keep
+ *               colliding until the sequence catches up.
+ *
+ * The app never does this today (checked: zero INSERTs name their own primary
+ * key), but test fixtures do, and one added later would desync a sequence and
+ * produce duplicate-key errors a long way from the cause.
+ *
+ * Callers use this to resync the sequence afterwards, which reproduces the
+ * SQLite behaviour exactly. The cost is one extra statement, and only on the
+ * inserts that actually supply an id.
+ */
+export function insertsExplicitPk(sql, table, pk) {
+  if (!table || !pk) return false;
+  const mask = codeMask(sql);
+  const re = /\bINSERT\s+INTO\s+(?:"[^"]+"|[A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)/gi;
+  let m;
+  while ((m = re.exec(sql))) {
+    if (!mask[m.index]) continue;
+    return m[1]
+      .split(',')
+      .map((c) => c.trim().replace(/^"|"$/g, '').toLowerCase())
+      .includes(pk.toLowerCase());
+  }
+  return false;
+}
+
+/** SQL that pushes a table's identity sequence past its current maximum id. */
+export function resyncSequenceSql(table, pk) {
+  return `SELECT setval(
+            pg_get_serial_sequence('${table}', '${pk}'),
+            GREATEST((SELECT COALESCE(MAX("${pk}"), 0) FROM "${table}"), 1),
+            true)`;
+}

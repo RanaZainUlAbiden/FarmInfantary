@@ -163,7 +163,13 @@ export function translate(sql) {
       const asAt = /\s+AS\s+(INTEGER|INT)\s*$/i.exec(codeOnly(body));
       if (!asAt) continue;
       const expr = body.slice(0, asAt.index);
-      edits.push({ from: m.index + m[1].length, to: end, text: `trunc(${expr})::bigint` });
+      // ::numeric FIRST. SQLite casts text to an integer happily, and the app
+      // relies on it; PostgreSQL has no trunc(text):
+      //     ERROR: function trunc(text) does not exist
+      // Going through numeric works for text, numeric and double precision
+      // alike, and truncates toward zero as SQLite does — a plain cast would
+      // ROUND, turning -2.9 into -3 instead of -2.
+      edits.push({ from: m.index + m[1].length, to: end, text: `trunc((${expr})::numeric)::bigint` });
     }
     if (edits.length) {
       for (const e of edits.reverse()) out = out.slice(0, e.from) + e.text + out.slice(e.to);
