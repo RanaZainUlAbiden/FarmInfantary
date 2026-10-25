@@ -33,6 +33,26 @@ import {
 } from './primary-keys.js';
 import { validateBatch, resolveParams } from './batch.js';
 
+/**
+ * Log a failed statement when LOG_SQL_ERRORS is set.
+ *
+ * Failures are returned as results rather than thrown, which is the contract
+ * 341 call sites depend on — but it also means a broken query is invisible
+ * server-side. A screen can show "unknown error" while the server says
+ * nothing at all, which is exactly what happened on the Overview dashboard.
+ */
+function logFailure(sql, params, err) {
+  if (!process.env.LOG_SQL_ERRORS) return;
+  console.error(
+    `
+SQL FAILED: ${err?.message ?? err}` +
+    `
+  ${String(sql).replace(/\s+/g, ' ').trim().slice(0, 500)}` +
+    `
+  params: ${JSON.stringify(params)?.slice(0, 200)}`
+  );
+}
+
 /** Turn any thrown thing into the error string the renderer expects. */
 function message(err) {
   if (!err) return 'Unknown database error';
@@ -103,6 +123,7 @@ export function createDb(pool) {
       const res = await client.query(c.text, c.values);
       return { success: true, data: res.rows };
     } catch (err) {
+      logFailure(sql, params, err);
       return { success: false, error: message(err) };
     }
   }
@@ -115,6 +136,7 @@ export function createDb(pool) {
       if (c.resync) await client.query(c.resync);
       return { success: true, lastId: extractLastId(res, c.idColumn) };
     } catch (err) {
+      logFailure(sql, params, err);
       return { success: false, error: message(err) };
     }
   }

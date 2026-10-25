@@ -26,7 +26,7 @@
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
-            "baseHref": "./",
+            "baseHref": "/",
             "assets": [
               {
                 "glob": "**/*",

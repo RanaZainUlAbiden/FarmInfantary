@@ -389,8 +389,17 @@ export class LayoutComponent implements OnInit, OnDestroy {
   /**
    * Navigate to activation page
    */
+  /**
+   * Dead end by design. The template still carries two "Activate Now" buttons
+   * from the desktop licence banner, but /activation no longer exists (D11)
+   * and the entitlement stub always reports activated, so the banners never
+   * render and this is never reached.
+   *
+   * Kept as a no-op rather than deleted so the template stays valid without
+   * being edited; Phase 5 removes the banner markup along with the stub.
+   */
   navigateToActivation(): void {
-    this.router.navigate(['/activation']);
+    /* no activation screen on the web */
   }
 
 

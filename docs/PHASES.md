@@ -184,11 +184,61 @@ Corrected table: `db/CLAUDE.md`.
 - [x] Remove Electron build configuration from `package.json`
 - [x] **The app builds** — `dist/farminfantary`, 6.0 MB, **zero `electronAPI` in the bundle**
 - [x] Dev proxy so `ng serve` reaches the API
-- [ ] Walk all 60 screens against real data — needs a seeded account
+- [x] Seed a demo account — `db/seed.mjs`, 41 tables across all four modules
+- [x] **Walk the app in a real browser** — login, all four module tabs, and the
+      broiler screens, verified against the seeded figures
+- [ ] Walk the remaining individual screens (vouchers, returns, ledgers, reports)
 
 **Gate:** every screen works in a browser with no Electron present.
-**Status:** it builds and the API answers the app's exact calls. Screens not
-yet walked.
+**Status:** the app runs. Logged in through the real login screen and drove
+Flock Health, Expenses, Feed, Sale, Report, Batch Management, Inventory and the
+Overview dashboard against PostgreSQL. Figures match the seed exactly.
+
+### Three real defects found by running it
+
+Each was invisible to the build and to the verify suite.
+
+**1. `<base href="./">` — every refresh and deep link was broken.**
+The desktop loaded `index.html` from disk over `file://` and always opened at
+the index, so a relative base was correct and deep URLs did not exist. On the
+web, `./` resolves against the current path: at `/app/sale` the browser asks
+for `/app/main.js`, gets a 404, and the app never boots — a white page with no
+console error. Fixed in `src/index.html` and `angular.json` (`baseHref`).
+
+**2. The dialect translator corrupted nested `MIN(MAX(..))`.**
+Two Overview queries failed with `syntax error at or near ")"`. Collecting
+overlapping edits in a single pass spliced the inner replacement into text the
+outer one had already rewritten, leaving unbalanced parentheses. Now only the
+outermost, non-overlapping edits apply per pass and the loop converges.
+Regression test added.
+
+These are money queries — the distribution outstanding totals. They would have
+shipped silently.
+
+**3. `friendlySqlError` only recognises SQLite messages.**
+`sql-error.util.ts` matches `constraint failed|SQLITE_|no such table|...`.
+PostgreSQL's wording matches none of it, so a real failure surfaced as
+"unknown error" with the actual message discarded. The screen told the user
+nothing and the server logged nothing. Mitigated by `LOG_SQL_ERRORS=1`, which
+logs the failing statement server-side; the pattern itself still needs
+PostgreSQL's error shapes adding.
+
+### Verified in the browser
+
+| Screen | Checked against the seed |
+|---|---|
+| Flock Health | 4,777 birds, 198 mortality, 18,600 bags |
+| Expenses | Rs. 34,700 over 3 entries |
+| Feed | Rs. 2,048,000 across three deliveries |
+| Sale | 4,200 kg, Rs. 1,806,000, 1 vehicle |
+| Report | income Rs. 24,000, expenses Rs. 34,700, 4,200 kg sold |
+| Batch Management | Batch L-1, 3,000 birds, Lohmann Brown |
+| Inventory | Broiler Starter 50kg, expiry 2026-09-30, low-stock flag |
+| Overview | Cash Rs. 77,900, bank Rs. 500,000, loans 150,000 / 90,000 |
+
+One note on method: the automation's synthetic clicks do not reach Angular's
+handlers, so navigation was driven programmatically. That is a tooling quirk,
+**not** an app defect — a dispatched `.click()` navigates correctly.
 
 ### What changed, and what deliberately did not
 

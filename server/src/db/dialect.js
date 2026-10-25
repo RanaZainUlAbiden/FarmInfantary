@@ -60,8 +60,33 @@ function rewriteCalls(sql, name, accept, build) {
     edits.push({ from: nameAt, to: end, text: build(args) });
   }
 
+  
+  // Apply only the OUTERMOST, non-overlapping edits in this pass.
+  //
+  // A nested call produces overlapping ranges: in
+  //     MAX(a - MIN(MAX(p, 0), t), 0)
+  // the outer MAX's range CONTAINS the inner MAX's. Applying both — even
+  // right-to-left — splices the inner replacement into text the outer one has
+  // already rewritten, and the result is malformed SQL that PostgreSQL rejects
+  // with "syntax error at or near )".
+  //
+  // That is not hypothetical: it broke two Overview dashboard queries, and the
+  // screen reported only "unknown error" because the SQLite-shaped friendly
+  // error mapping did not recognise PostgreSQL's message.
+  //
+  // Taking the outermost match and letting the caller's loop run again is what
+  // makes nesting converge.
+  const outermost = [];
+  let lastEnd = -1;
+  for (const e of edits.sort((a, b) => a.from - b.from)) {
+    if (e.from >= lastEnd) {
+      outermost.push(e);
+      lastEnd = e.to;
+    }
+  }
+
   let out = sql;
-  for (const e of edits.reverse()) out = out.slice(0, e.from) + e.text + out.slice(e.to);
+  for (const e of outermost.reverse()) out = out.slice(0, e.from) + e.text + out.slice(e.to);
   return out;
 }
 

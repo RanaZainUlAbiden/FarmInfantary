@@ -96,6 +96,25 @@ test('nested MIN(MAX(..)) clamps translate all the way down', () => {
   );
 });
 
+test('a MAX containing a nested MIN(MAX(..)) does not corrupt the SQL', () => {
+  // The Overview dashboard's real query. Collecting overlapping edits in one
+  // pass spliced the inner replacement into text the outer one had already
+  // rewritten, producing unbalanced parentheses that PostgreSQL rejected with
+  // "syntax error at or near )". The screen showed only "unknown error".
+  const sql =
+    `SELECT COALESCE(SUM(
+` +
+    `  MAX(COALESCE(bl.total_amount, 0) - MIN(MAX(COALESCE(bl.amount_paid, 0), 0), ` +
+    `COALESCE(bl.total_amount, 0)), 0)
+), 0) AS amount FROM bills bl`;
+  const { text } = translate(sql);
+
+  const balance = [...text].reduce((n, c) => n + (c === '(') - (c === ')'), 0);
+  assert.equal(balance, 0, 'parentheses must stay balanced');
+  assert.equal(/(MAX|MIN)\s*\(/.test(text), false, 'no two-arg MAX/MIN may remain');
+  assert.match(text, /LEAST\(GREATEST\(/);
+});
+
 test('the real debt definition translates', () => {
   const { text } = translate(
     `SELECT COALESCE(SUM(MAX(COALESCE(total_amount,0) - COALESCE(amount_paid,0), 0)),0) FROM bills`

@@ -3,7 +3,13 @@
 <head>
   <meta charset="utf-8">
   <title>Talha Protein Farm</title>
-  <base href="./">
+  <!-- ABSOLUTE, not "./".
+       The desktop app loaded this file from disk over file:// and always
+       opened at the index, so a relative base was fine and deep URLs never
+       existed. On the web, "./" resolves against the CURRENT path: at
+       /app/sale the browser asks for /app/main.js, gets a 404, and the app
+       never boots — a white page on every refresh and every shared link. -->
+  <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>

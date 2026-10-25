@@ -59,6 +59,11 @@ const check = (label, cond, detail) => {
 }
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v)
 
+// Fixture ids are deliberately far out of the way (90001+). This script runs
+// against the real database, which now carries seeded demo data, and
+// hard-coded id 1 collided with it:
+//     duplicate key value violates unique constraint "farms_pkey"
+// Everything still runs inside a transaction that is rolled back.
 const client = new pg.Client({ connectionString: url })
 await client.connect()
 
@@ -88,25 +93,25 @@ try {
   console.log('\n=== B. round-trip through the real money paths ===')
 
   await client.query('BEGIN')
-  await client.query(`INSERT INTO farms (farm_id, farm_name, password_hash) VALUES (1,'T','x')`)
-  await client.query(`INSERT INTO flocks (flock_id, farm_id, flock_name, start_date) VALUES (1,1,'F','2026-01-01')`)
-  await client.query(`INSERT INTO batches (batch_id, farm_id, batch_name, start_date, initial_birds) VALUES (1,1,'B','2026-01-01',100)`)
-  await client.query(`INSERT INTO bank_accounts (bank_id, farm_id, bank_name, opening_balance, current_balance) VALUES (1,1,'Meezan',1000.5,1000.5)`)
-  await client.query(`INSERT INTO sales (sale_id, flock_id, date, rate, total_amount) VALUES (1,1,'2026-01-02',250.75,1000.5)`)
-  await client.query(`INSERT INTO expenses (expense_id, flock_id, date, amount) VALUES (1,1,'2026-01-02',300.25)`)
-  await client.query(`INSERT INTO bills (bill_id, farm_id, bill_number, bill_date, subtotal, total_amount, amount_paid) VALUES (1,1,'B-1','2026-01-02',900.5,1000.5,400.25)`)
-  await client.query(`INSERT INTO bills (bill_id, farm_id, bill_number, bill_date, subtotal, total_amount, amount_paid) VALUES (2,1,'B-2','2026-01-03',500,500,700)`)
-  await client.query(`INSERT INTO loans (loan_id, farm_id, direction, party_name, date, principal) VALUES (1,1,'given','A','2026-01-02',5000.5)`)
+  await client.query(`INSERT INTO farms (farm_id, farm_name, password_hash) VALUES (90001,'vt_money','x')`)
+  await client.query(`INSERT INTO flocks (flock_id, farm_id, flock_name, start_date) VALUES (90001,90001,'F','2026-01-01')`)
+  await client.query(`INSERT INTO batches (batch_id, farm_id, batch_name, start_date, initial_birds) VALUES (90001,90001,'B','2026-01-01',100)`)
+  await client.query(`INSERT INTO bank_accounts (bank_id, farm_id, bank_name, opening_balance, current_balance) VALUES (90001,90001,'Meezan',1000.5,1000.5)`)
+  await client.query(`INSERT INTO sales (sale_id, flock_id, date, rate, total_amount) VALUES (90001,90001,'2026-01-02',250.75,1000.5)`)
+  await client.query(`INSERT INTO expenses (expense_id, flock_id, date, amount) VALUES (90001,90001,'2026-01-02',300.25)`)
+  await client.query(`INSERT INTO bills (bill_id, farm_id, bill_number, bill_date, subtotal, total_amount, amount_paid) VALUES (90001,90001,'B-1','2026-01-02',900.5,1000.5,400.25)`)
+  await client.query(`INSERT INTO bills (bill_id, farm_id, bill_number, bill_date, subtotal, total_amount, amount_paid) VALUES (90002,90001,'B-2','2026-01-03',500,500,700)`)
+  await client.query(`INSERT INTO loans (loan_id, farm_id, direction, party_name, date, principal) VALUES (90001,90001,'given','A','2026-01-02',5000.5)`)
 
   const one = async (sql) => (await client.query(sql)).rows[0]
 
   for (const [label, sql, expected] of [
-    ['sales.total_amount', `SELECT total_amount AS v FROM sales WHERE sale_id=1`, 1000.5],
-    ['sales.rate', `SELECT rate AS v FROM sales WHERE sale_id=1`, 250.75],
-    ['expenses.amount', `SELECT amount AS v FROM expenses WHERE expense_id=1`, 300.25],
-    ['bills.amount_paid', `SELECT amount_paid AS v FROM bills WHERE bill_id=1`, 400.25],
-    ['bank_accounts.current_balance', `SELECT current_balance AS v FROM bank_accounts WHERE bank_id=1`, 1000.5],
-    ['loans.principal', `SELECT principal AS v FROM loans WHERE loan_id=1`, 5000.5],
+    ['sales.total_amount', `SELECT total_amount AS v FROM sales WHERE sale_id=90001`, 1000.5],
+    ['sales.rate', `SELECT rate AS v FROM sales WHERE sale_id=90001`, 250.75],
+    ['expenses.amount', `SELECT amount AS v FROM expenses WHERE expense_id=90001`, 300.25],
+    ['bills.amount_paid', `SELECT amount_paid AS v FROM bills WHERE bill_id=90001`, 400.25],
+    ['bank_accounts.current_balance', `SELECT current_balance AS v FROM bank_accounts WHERE bank_id=90001`, 1000.5],
+    ['loans.principal', `SELECT principal AS v FROM loans WHERE loan_id=90001`, 5000.5],
   ]) {
     const v = (await one(sql)).v
     check(`${label} is a number`, isNumber(v), `got ${typeof v} ${JSON.stringify(v)}`)
@@ -118,10 +123,10 @@ try {
 
   // SUM() over double precision returns double precision. Over numeric it
   // would return numeric — i.e. a string. This is where totals break first.
-  const sum = (await one(`SELECT COALESCE(SUM(amount),0) AS v FROM expenses`)).v
+  const sum = (await one(`SELECT COALESCE(SUM(amount),0) AS v FROM expenses WHERE flock_id=90001`)).v
   check('COALESCE(SUM(..),0) is a number', isNumber(sum), `got ${typeof sum}`)
 
-  const empty = (await one(`SELECT COALESCE(SUM(amount),0) AS v FROM expenses WHERE 1=0`)).v
+  const empty = (await one(`SELECT COALESCE(SUM(amount),0) AS v FROM expenses WHERE flock_id=90001 AND 1=0`)).v
   check('COALESCE over no rows is a number', isNumber(empty), `got ${typeof empty}`)
   check('COALESCE over no rows is 0', empty === 0, `got ${JSON.stringify(empty)}`)
 
@@ -129,17 +134,17 @@ try {
   // PostgreSQL — a scalar/aggregate name collision that is easy to miss,
   // because MAX(x) with one argument is valid in both and means something else.
   const debt = (await one(
-    `SELECT COALESCE(SUM(GREATEST(total_amount - amount_paid, 0)),0) AS v FROM bills WHERE farm_id=1`
+    `SELECT COALESCE(SUM(GREATEST(total_amount - amount_paid, 0)),0) AS v FROM bills WHERE farm_id=90001`
   )).v
   check('SUM(GREATEST(total-paid,0)) is a number', isNumber(debt), `got ${typeof debt}`)
   check('overpaid bill does not reduce the debt', debt === 600.25, `got ${JSON.stringify(debt)}`)
 
-  const a = (await one(`SELECT total_amount AS v FROM sales WHERE sale_id=1`)).v
-  const b = (await one(`SELECT amount AS v FROM expenses WHERE expense_id=1`)).v
+  const a = (await one(`SELECT total_amount AS v FROM sales WHERE sale_id=90001`)).v
+  const b = (await one(`SELECT amount AS v FROM expenses WHERE expense_id=90001`)).v
   check('JS addition adds', a + b === 1300.75, `got ${JSON.stringify(a + b)}`)
   check('JS subtraction subtracts', a - b === 700.25, `got ${JSON.stringify(a - b)}`)
 
-  const total = (await client.query(`SELECT amount FROM expenses`)).rows
+  const total = (await client.query(`SELECT amount FROM expenses WHERE flock_id=90001`)).rows
     .reduce((s, r) => s + r.amount, 0)
   check('reduce() over rows totals correctly', total === 300.25, `got ${JSON.stringify(total)}`)
 
@@ -168,7 +173,7 @@ try {
 
   // Real columns, not casts: ids and counts straight out of the schema.
   const row = await one(
-    `SELECT b.batch_id, b.initial_birds, s.sale_id FROM batches b, sales s WHERE b.batch_id=1 AND s.sale_id=1`
+    `SELECT b.batch_id, b.initial_birds, s.sale_id FROM batches b, sales s WHERE b.batch_id=90001 AND s.sale_id=90001`
   )
   for (const [k, v] of Object.entries(row)) {
     check(`${k} is a number`, typeof v === 'number', `got ${typeof v} ${JSON.stringify(v)}`)
