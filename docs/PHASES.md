@@ -187,7 +187,8 @@ Corrected table: `db/CLAUDE.md`.
 - [x] Seed a demo account — `db/seed.mjs`, 41 tables across all four modules
 - [x] **Walk the app in a real browser** — login, all four module tabs, and the
       broiler screens, verified against the seeded figures
-- [ ] Walk the remaining individual screens (vouchers, returns, ledgers, reports)
+- [x] Walk every screen in all four modules — **690 queries, 12 failures in 4 classes** (below)
+- [ ] Fix the 4 dialect gaps the walk found
 
 **Gate:** every screen works in a browser with no Electron present.
 **Status:** the app runs. Logged in through the real login screen and drove
@@ -239,6 +240,71 @@ PostgreSQL's error shapes adding.
 One note on method: the automation's synthetic clicks do not reach Angular's
 handlers, so navigation was driven programmatically. That is a tooling quirk,
 **not** an app defect — a dispatched `.click()` navigates correctly.
+
+### Walking every screen: 4 more dialect gaps
+
+Driving all four modules issued **690 queries and produced 12 failures in 4
+classes**. None of them appear in the dialect inventory, because none is a
+construct a text search was looking for — they are differences in what
+PostgreSQL *accepts*, not in what the SQL *says*.
+
+They were only visible because `LOG_SQL_ERRORS=1` records the failing
+statement server-side. From the browser each was a blank card or a silent zero.
+
+**A. `date(x, modifier)` — SQLite's date arithmetic.**
+
+```sql
+date(o.start_date, '+' || (fh.week_number - 1) || ' days') >= ?
+```
+
+PostgreSQL has no two-argument `date()`. Needs `(x::date + n)` with the
+modifier parsed out of a concatenation, which is why the existing
+`date('now')` rule does not reach it. **Breaks the per-unit flock-health
+consolidation.**
+
+**B. Multi-statement SQL in one call.**
+
+```sql
+UPDATE product_batches SET status = 'expired'  WHERE ...;
+UPDATE product_batches SET status = 'depleted' WHERE ...;
+UPDATE product_batches SET status = 'expiring' WHERE ...;
+```
+
+Three statements in one string. PostgreSQL permits that only without
+parameters, and the guard in Phase 3 will reject multi-statement input
+outright — so this has to be split into a batch regardless.
+
+**C. `could not determine data type of parameter $N`.**
+
+```sql
+AND s.date <= COALESCE(?, '9999-12-31') AND (? IS NULL OR ...)
+```
+
+A parameter used only in `? IS NULL` has nothing for PostgreSQL to infer a
+type from. SQLite does not care. The fix is an explicit cast, and deciding
+*which* cast per placeholder is not mechanical — this is the hardest of the
+four.
+
+**D. `column "p.product_name" must appear in the GROUP BY clause`.**
+
+```sql
+SELECT po.*, p.product_name, s.supplier_name, COALESCE(SUM(pr.quantity),0) ...
+GROUP BY po.purchase_id
+```
+
+SQLite allows bare columns alongside an aggregate and picks an arbitrary row.
+PostgreSQL requires each one grouped, aggregated, or functionally dependent on
+a grouped primary key. **Breaks the Purchase Orders screen.**
+
+### Honest status
+
+Phase 2's gate is **not met**. The app runs, every module loads, and the
+screens checked against the seed are correct — but four query classes fail,
+and two of them (A and D) break a screen outright.
+
+A and B are mechanical. C and D need judgement per query, and D in particular
+cannot be auto-rewritten safely: adding columns to `GROUP BY` changes results
+when they are not functionally dependent.
 
 ### What changed, and what deliberately did not
 
