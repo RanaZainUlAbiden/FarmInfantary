@@ -59,11 +59,12 @@ older still. The import path must handle a database that is behind the schema.
 - [x] Prove money returns as JS numbers — `verify_money_types_pg.mjs`, 26 checks
 - [x] Measure the dialect inventory — `verify_sql_dialect.mjs`; found 22 two-arg MAX/MIN the hand count missed
 - [ ] Convert `alterStatements` and the guarded migrations into numbered forward-only migrations under an advisory lock
-- [ ] Port `runQuery`, `getQuery`, `runBatch` and the transaction layer to `node-postgres`
-- [ ] Reimplement `lastId` via `RETURNING`, keeping the primary-key map complete
-- [ ] Reimplement `$lastId` batch back-references, negative indexing included, with tests
-- [ ] Translate the ~20 dialect lines (`db/CLAUDE.md` has the table)
-- [ ] Build the `?` → `$n` placeholder rewrite at the boundary
+- [x] Port `runQuery`, `getQuery`, `runBatch` and the transaction layer to `node-postgres` — `server/src/db/execute.js`
+- [x] Reimplement `lastId` via `RETURNING` — keys read from the catalogue at startup, so there is no map to keep complete
+- [x] Reimplement `$lastId` batch back-references, negative indexing included, with tests
+- [x] Translate the dialect at the boundary — `server/src/db/dialect.js`, refuses what it cannot translate
+- [x] Parse integer columns to JS numbers (D15) — 214 of 555 columns were arriving as strings
+- [x] Build the `?` → `$n` placeholder rewrite at the boundary — `server/src/db/placeholders.js`
 - [ ] Stand up the 11 endpoints mirroring the IPC surface
 - [ ] Re-point all 29 verify scripts at the new schema module
 
