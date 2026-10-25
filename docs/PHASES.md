@@ -55,7 +55,9 @@ older still. The import path must handle a database that is behind the schema.
 
 ## Phase 1 · Backend
 
-- [ ] Translate the 60-table schema to PostgreSQL DDL — no FK constraints, `REAL` → `double precision`, dates as `TEXT`
+- [x] Translate the 60-table schema to PostgreSQL DDL — **generated** by `db/generate-schema.mjs`
+- [x] Verify `PRIMARY_KEY_MAP` against the real schema — `scripts/verify/verify_primary_keys.js`
+- [ ] **Execute the schema against PostgreSQL** — blocked on database credentials
 - [ ] Convert `alterStatements` and the guarded migrations into numbered forward-only migrations under an advisory lock
 - [ ] Port `runQuery`, `getQuery`, `runBatch` and the transaction layer to `node-postgres`
 - [ ] Reimplement `lastId` via `RETURNING`, keeping the primary-key map complete
@@ -68,6 +70,39 @@ older still. The import path must handle a database that is behind the schema.
 
 **Gate:** the same 29 scripts green against PostgreSQL, and reference totals
 matching Phase 0 exactly.
+**Status:** schema generated and self-consistent; nothing executed against
+PostgreSQL yet.
+
+### The schema is generated, not hand-written
+
+`node db/generate-schema.mjs` derives `db/schema/001_tables.sql` and
+`002_indexes.sql` from the desktop app's real `createTables` + `alterStatements`
++ the one structural migration. 60 tables, 555 columns, 86 `double precision`,
+58 identity columns, 1 composite key, 49 indexes.
+
+Hand-transcribing 60 tables is 60 chances to mistype a default or a
+nullability, and each would surface only indirectly as a confusing failure
+somewhere else. Generating it means the PostgreSQL schema cannot drift from the
+schema the app actually builds. **The emitted `.sql` files are the schema of
+record** — commit them, review them in diffs; the generator exists so they are
+reproducible.
+
+### Blocked: PostgreSQL credentials
+
+PostgreSQL 18.3 is installed and accepting connections on `:5432`, but every
+connection needs a password that is not available here:
+
+```
+psql: error: connection to server ... failed: fe_sendauth: no password supplied
+```
+
+So the generated DDL **has never been executed**. It is consistent with itself
+and with the source schema, but unverified against a real server. Until it runs,
+treat it as a draft: PostgreSQL will reject things SQLite accepted, and the
+point of this phase is to find out which.
+
+Needed: a role and database the work can use, or the password for an existing
+one. A throwaway local database is enough.
 
 ---
 

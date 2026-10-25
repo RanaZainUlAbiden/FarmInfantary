@@ -47,6 +47,19 @@ function extractFn(src, name, kw) {
 
 const createTables = eval('(' + extractFn(DB_SRC, 'createTables', 'function ') + ')')
 
+// The shape under test must be the shape a fresh install actually ends up with:
+// createTables(), then the alterStatements loop, then the one migration that
+// changes structure. createTables alone is one REAL column short, and an
+// inventory that silently misses a money column is worse than no inventory.
+const migrateVaccinations = eval(
+  '(' + extractFn(DB_SRC, 'migrateVaccinationsNullableBatchId', 'function ') + ')'
+)
+const alterStatements = (() => {
+  const start = DB_SRC.indexOf('const alterStatements = [')
+  const end = DB_SRC.indexOf('\n  ]', start)
+  return eval(DB_SRC.slice(start, end + 4) + '; alterStatements')
+})()
+
 // ── harness ────────────────────────────────────────────────
 let passed = 0
 const failures = []
@@ -71,6 +84,10 @@ async function openDatabase() {
   })
   const db = new SQL.Database()
   createTables(db)
+  // try/catch per statement is how the app itself detects "already applied":
+  // a duplicate-column error is the signal, not a failure.
+  for (const sql of alterStatements) { try { db.run(sql) } catch { /* already applied */ } }
+  try { migrateVaccinations(db) } catch { /* best effort */ }
   return db
 }
 
