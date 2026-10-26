@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "authority": "catalogue-only; no table access is implied",
-  "sourceDigest": "12a34b8198c29477147e1b939a243c88ed88e697ab5b43fcc1e8416862d90f97",
+  "sourceDigest": "d76d482e14cf3d96104c40f5ddcdd561bacb3a3a5255ee4d44351589d5989031",
   "entries": [
     {
       "key": "broiler.chicks",

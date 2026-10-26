@@ -32,6 +32,15 @@ components:
 
 # FarmInfantary design context
 
+## Business navigation at narrow widths
+
+The existing green sidebar is a compact 60px rail at widths up to 768px. Its
+native, named expand/collapse button opens a 240px drawer over content; selecting
+a screen closes it. This preserves form width without changing tenant/module
+selection. Menu actions are named native buttons, operable by keyboard in either
+state. Inventory header actions wrap and its search field can shrink within the
+available content width. Desktop navigation retains the established full sidebar.
+
 ## Overview
 
 The user selected FarmInfantary branding and supplied replacement logo/favicon

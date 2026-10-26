@@ -4,7 +4,7 @@
       <h3>Inventory Management</h3>
       <p class="subtitle">{{ currentFarm?.farm_name }}</p>
     </div>
-    <div style="display: flex; gap: 8px;">
+    <div class="header-actions">
       <button class="btn-secondary" (click)="openCategoryModal()" [disabled]="isLoading">+ Add Category</button>
       <button class="btn-primary" (click)="addNewRow()" *ngIf="!showNewRow" [disabled]="isLoading">+ Add Product</button>
     </div>

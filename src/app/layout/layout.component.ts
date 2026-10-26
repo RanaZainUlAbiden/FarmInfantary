@@ -62,7 +62,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   showFlockDropdown = false;
   showUnitDropdown = false;
-  sidebarCollapsed = false;
+  sidebarCollapsed = typeof window !== 'undefined' && window.innerWidth <= 768;
   activeRoute = 'flock-health';
   activeBusinessTab: string = 'broiler';
   private savedBusinessType: string = 'broiler';
@@ -525,6 +525,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   navigate(route: string, queryParams?: any) {
+    if (window.innerWidth <= 768) this.sidebarCollapsed = true;
     this.activeRoute = route;
     if (route === 'inventory') {
       this.activeBusinessTab = 'distribution';

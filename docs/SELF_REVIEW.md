@@ -1,5 +1,17 @@
 # Codex release self-review — 2026-10-26
 
+Screen reliability follow-up: reviewed source digest
+`e4d91ede9d913e7c1d180757cf422aadafec2a8bd7e2c7fd8383b40b270907ca`.
+The browser bridge bounds report bursts, captures payloads before queuing,
+cancels old-identity waiting work, rejects stale results and never retries writes.
+The server's admission/auth/guard/RLS/transaction boundaries are unchanged.
+Reviewed native navigation semantics, narrow drawer geometry and shared Income
+empty wording. Permission metadata refresh changes no keys or active policy.
+Validation: 86/86 scripts (~9,899 checks), 83 backend tests, production build,
+50 slow-PostgreSQL browser navigation contexts, a persisted browser income save,
+and 561px/390px Inventory/keyboard checks. See `SCREEN_FIXES.md`.
+This remains the user-authorized Codex self-review under D17.
+
 Branding/CSP follow-up: reviewed source digest
 `52d248cec5dade12ae4707109a3323e29643acfe2369077e374d072ab466d303`.
 The production CSS loader incompatibility is resolved by the Angular build setting,

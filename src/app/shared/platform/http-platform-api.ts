@@ -27,13 +27,51 @@ export class HttpPlatformApi implements PlatformApi {
   /** The open transaction's token, if any. Mirrors the desktop's one-at-a-time rule. */
   private txToken: string | null = null;
   private sessionGeneration = 0;
-  resetSession(): void { this.txToken = null; this.sessionGeneration++; }
+  private activePosts = 0;
+  private readonly postLimit = 4;
+  private readonly queueLimit = 128;
+  private postQueue: Array<{ start: () => void; cancel: () => void }> = [];
+  resetSession(): void {
+    this.txToken = null;
+    this.sessionGeneration++;
+    const discarded = this.postQueue.splice(0);
+    discarded.forEach(task => task.cancel());
+  }
 
   constructor(private http: HttpClient) {}
 
-  private async post<T>(path: string, body: unknown, onTransportError: (msg: string) => T): Promise<T> {
+  /** Bound bursts from reports without replaying reads or mutations. A queued
+   * request belongs to the identity and payload present when it was requested. */
+  private post<T>(path: string, body: unknown, onTransportError: (msg: string) => T): Promise<T> {
+    const generation = this.sessionGeneration;
+    let payload: unknown;
+    try { payload = JSON.parse(JSON.stringify(body)); }
+    catch { return Promise.resolve(onTransportError('Invalid database operation.')); }
+    return new Promise(resolve => {
+      const cancelled = () => resolve(onTransportError('Your sign-in changed. Start again.'));
+      const task = { cancel: cancelled, start: () => {
+        if (generation !== this.sessionGeneration) { cancelled(); return; }
+        this.activePosts++;
+        void this.sendPost(path, payload, onTransportError).then(result => {
+          resolve(generation === this.sessionGeneration ? result : onTransportError('Your sign-in changed. Start again.'));
+        }).finally(() => {
+          this.activePosts--;
+          this.drainPosts();
+        });
+      }};
+      if (this.activePosts < this.postLimit) task.start();
+      else if (this.postQueue.length < this.queueLimit) this.postQueue.push(task);
+      else resolve(onTransportError('Too many database operations are waiting. Wait for this screen to finish and try again.'));
+    });
+  }
+
+  private drainPosts(): void {
+    while (this.activePosts < this.postLimit && this.postQueue.length) this.postQueue.shift()!.start();
+  }
+
+  private async sendPost<T>(path: string, body: unknown, onTransportError: (msg: string) => T): Promise<T> {
     try {
-      return await firstValueFrom(this.http.post<T>(`${this.base}/${path}`, body));
+      return await firstValueFrom(this.http.post<T>(`${this.base}/${path}`, body).pipe(timeout(45_000)));
     } catch (err: any) {
       // Transport, not SQL. Keep the result shape so callers need no catch.
       const detail =

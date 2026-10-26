@@ -6,6 +6,8 @@
 
 .module-header {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
@@ -22,6 +24,8 @@
     margin: 4px 0 0 0;
   }
 }
+
+.header-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 // ── SEARCH BAR ──────────────────────────────────────────────
 
@@ -472,4 +476,10 @@ tr.expiring td {
   gap: 8px;
   padding: 12px 20px 18px;
   border-top: 1px solid #eee;
+}
+
+@media (max-width: 768px) {
+  .module-container { padding: 12px; }
+  .search-box { min-width: 0; width: 100%; }
+  .search-input { min-width: 0; }
 }

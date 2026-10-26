@@ -1,5 +1,44 @@
 # Handoff
 
+## Screen reliability fixes — 2026-10-26
+
+[Codex] The three audit findings have local repairs: bounded session-aware HTTP
+admission for the dashboard burst, responsive/keyboard sidebar and wrapping
+Inventory actions, and neutral flock/batch Income wording. All 50 views opened
+against a deliberately slower disposable PostgreSQL fixture with zero failed
+business API results. A UI income save survives reload. Inventory actions fit
+561px and 390px. Final verification: 86/86 scripts (~9,899 checks), 83 backend
+tests and production build/output gate. Read `SCREEN_FIXES.md` for scope/evidence.
+Reviewed digest: `e4d91ede9d913e7c1d180757cf422aadafec2a8bd7e2c7fd8383b40b270907ca`,
+Codex self-review under D17. Railway rollout/live checks are in progress.
+
+The audit section below is the historical pre-fix state, not a claim that its
+findings remain open after the repair release is verified.
+
+## Live farm screen audit — 2026-10-26
+
+[Codex] Inspected all 50 business menu contexts plus Staff & Security in the
+signed-in production farm. **Open P1: Overview repeatedly shows database capacity
+errors and incomplete totals.** Its service launches 39 reads together against
+an eight-operation session admission boundary. A controlled latency diagnostic
+reproduces 31 rejected reads. Next work is bounded scheduling/backpressure plus
+latency and live Railway verification; do not remove the server resource guard.
+
+Also found Inventory action clipping at 561px and incorrect flock wording on
+Layer Income with no selected batch. Most live screens had no farms/flocks/batches;
+their empty-state loads do not certify every write path. Representative disposable
+browser tests passed income create/edit/refresh and module isolation, egg collection,
+product/category creation, partial sales and stock deduction, receipts/customer
+balances and owner memo filters. Fresh suite: 85/85 scripts (~9,894 checks).
+
+No production business/security settings or records were changed. No application
+code was changed or deployed during this audit. The isolated fixture exited cleanly
+after removing its temporary schemas/login; zero failed business API results were
+observed in the sampled local flows. Read `FARM_SCREEN_AUDIT.md` for all 51 entries,
+findings and coverage limits. The local screenshot gallery is
+`qa-results/farm-screen-audit-20261026/index.html`; the shared artifact has two
+checked `[Codex]` audit milestones and explicitly leaves these fixes open.
+
 ## FarmInfantary branding / production CSS fix — 2026-10-26
 
 Commit `352be8965f0ed97bc8588e4e9b7cb424b949d2f3` deployed successfully through

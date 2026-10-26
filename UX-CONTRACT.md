@@ -58,6 +58,17 @@ popup ownership; its confirmed mutation now goes through the dedicated API.
 
 ## Recovery and privacy
 
+Business HTTP operations use the shared HttpPlatformApi admission queue: at most
+four active posts and 128 waiting requests, with a 45-second transport deadline.
+Queueing is in memory for the current active page/session, not offline sync.
+Payloads are captured at invocation; writes are never automatically retried.
+Identity changes discard queued work and invalidate late in-flight results.
+The server's resource, authorization and transaction boundaries remain mandatory.
+
+At widths up to 768px, LayoutComponent owns the compact navigation rail/drawer;
+named native buttons support keyboard activation. Choosing a menu item closes the
+drawer. Inventory actions wrap instead of being clipped by the sidebar.
+
 Identity is memory-only. Session storage may hold a non-authoritative UI-cache
 owner and pending sign-out intent; these can only discard/deny state. A fresh
 server identity is required before restoring preferences. Cached financial drafts

@@ -10,7 +10,9 @@
 
   <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
 
-    <div class="sidebar-header" (click)="toggleSidebar()">
+    <button type="button" class="sidebar-header" (click)="toggleSidebar()"
+      [attr.aria-label]="sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'"
+      [attr.aria-expanded]="!sidebarCollapsed">
       <div class="farm-logo">
         <span><img src="/logo.png?v=20261026" alt=""></span>
       </div>
@@ -20,7 +22,7 @@
       </div>
       <div class="collapse-icon" *ngIf="!sidebarCollapsed">‹</div>
       <div class="collapse-icon expanded" *ngIf="sidebarCollapsed">›</div>
-    </div>
+    </button>
 
     <!-- License Status Warning -->
     <div class="license-status-bar" *ngIf="!sidebarCollapsed">
@@ -86,21 +88,22 @@
     <nav class="sidebar-nav">
       <!-- An "Add ..." shortcut shares its route with the management item
            beside it, so only the plain item takes the active state. -->
-      <div
+      <button type="button"
         class="nav-item"
         *ngFor="let item of menuItems"
         [class.active]="activeRoute === item.route && !item.queryParams"
         (click)="navigate(item.route, item.queryParams)"
+        [attr.aria-label]="item.label"
         [title]="sidebarCollapsed ? item.label : ''">
         <span class="nav-icon">{{ item.icon }}</span>
         <span class="nav-label" *ngIf="!sidebarCollapsed">{{ item.label }}</span>
-      </div>
+      </button>
 
-      <button type="button" class="nav-item export-action" (click)="backupDatabase()" [disabled]="isExporting" [title]="sidebarCollapsed?'Download farm data':''"><span class="nav-icon">💾</span><span class="nav-label" *ngIf="!sidebarCollapsed">{{isExporting?'Preparing export…':'Download farm data'}}</span></button>
+      <button type="button" class="nav-item export-action" (click)="backupDatabase()" [disabled]="isExporting" aria-label="Download farm data" [title]="sidebarCollapsed?'Download farm data':''"><span class="nav-icon">💾</span><span class="nav-label" *ngIf="!sidebarCollapsed">{{isExporting?'Preparing export…':'Download farm data'}}</span></button>
     </nav>
 
     <div class="sidebar-footer">
-      <a class="nav-item" href="/team" title="Manage staff & security"><span class="nav-icon">👥</span><span class="nav-label" *ngIf="!sidebarCollapsed">Staff &amp; security</span></a>
+      <a class="nav-item" href="/team" aria-label="Staff & security" title="Manage staff & security"><span class="nav-icon">👥</span><span class="nav-label" *ngIf="!sidebarCollapsed">Staff &amp; security</span></a>
       <!-- License Status in Footer (Collapsed Mode) -->
       <div class="license-status-collapsed" *ngIf="sidebarCollapsed" [title]="licenseStatus">
         <span class="status-icon-small">{{ isLicenseActivated ? '✅' : (showLicenseWarning ? '⚠️' : '🚀') }}</span>
@@ -108,11 +111,11 @@
 
 
       
-      <div class="nav-item logout" (click)="logout()"
+      <button type="button" class="nav-item logout" (click)="logout()" aria-label="Logout"
         [title]="sidebarCollapsed ? 'Logout' : ''">
         <span class="nav-icon">🚪</span>
         <span class="nav-label" *ngIf="!sidebarCollapsed">Logout</span>
-      </div>
+      </button>
     </div>
   </aside>
 

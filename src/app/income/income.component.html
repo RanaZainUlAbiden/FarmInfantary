@@ -31,7 +31,7 @@
 
   <!-- Empty states -->
   <div class="empty-state" *ngIf="!currentFlock">
-    <p>{{ moduleType === 'layer' ? 'Please select a batch first.' : 'Please select a flock first.' }}</p>
+    <p>Please select a flock or batch first.</p>
   </div>
   <div class="empty-state"
     *ngIf="currentFlock && incomeList.length === 0 && pendingRows.length === 0">
