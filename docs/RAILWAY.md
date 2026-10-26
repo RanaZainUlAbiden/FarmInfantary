@@ -1,5 +1,13 @@
 # Railway — FarmInfantary
 
+Latest screen repair: main commit `dd8c004` automatically deployed successfully
+as `294e415b-bd9d-4a51-aa2d-f374e2661817`. Current reviewed source digest is
+`e4d91ede9d913e7c1d180757cf422aadafec2a8bd7e2c7fd8383b40b270907ca`.
+Readiness, nine live HTTPS/auth checks and public bundle matching pass. The
+signed-in real-farm dashboard refresh, narrow Inventory actions and Layer Income
+wording were verified on 2026-10-27 PKT. See `SCREEN_FIXES.md`.
+The earlier deployment evidence below is retained as history.
+
 **Live and healthy, 2026-10-26.** PR #1 merged into main; Railway's app deployment
 `211e035c-3ac9-4998-bfe7-153d7cad1397` was automatically triggered by merge commit
 `3519ff33141e825b9dd9eef3a77c493d6b8b2a1e` and succeeded. Nine live HTTPS smoke

@@ -40,6 +40,25 @@ independent security review. Railway/live verification is recorded below when
 completed. Local evidence: `qa-results/screen-fixes-20261026/` and
 `qa-results/screen-fixes-*` logs.
 
+## Deployment and real-farm confirmation
+
+Railway automatically deployed main commit
+`dd8c004d860b0873aef5a17ae31eb0d48bed64d9` successfully as deployment
+`294e415b-bd9d-4a51-aa2d-f374e2661817`. Public readiness and all nine HTTPS/auth
+smoke scenarios pass. Public queue/navigation/Income JavaScript bundle bytes
+exactly match the tested production build.
+
+After the user renewed the expired farm sign-in, the real production Overview
+loaded and refreshed its date filter with zero warning cards and no capacity
+errors. Inventory's Add Category/Add Product controls fit within the measured
+532px pane. Layer Income displays “Please select a flock or batch first.”
+These live follow-up checks completed on 2026-10-27 PKT. The farm has no physical
+farms/flocks/batches yet; zero/empty state data was preserved, with no production
+business writes or security-setting changes. The browser automation session
+stalled during verification and recovered after its kernel was reset; this was
+not an application/database outage. The disposable database fixture exited
+cleanly after dropping its temporary schemas/login.
+
 The existing full business regressions cover more financial permutations than
 the browser samples; these checks still do not certify every possible record,
 device, simultaneous-user load or create/edit/delete/print combination. Staff

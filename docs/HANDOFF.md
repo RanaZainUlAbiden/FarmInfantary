@@ -10,7 +10,13 @@ business API results. A UI income save survives reload. Inventory actions fit
 561px and 390px. Final verification: 86/86 scripts (~9,899 checks), 83 backend
 tests and production build/output gate. Read `SCREEN_FIXES.md` for scope/evidence.
 Reviewed digest: `e4d91ede9d913e7c1d180757cf422aadafec2a8bd7e2c7fd8383b40b270907ca`,
-Codex self-review under D17. Railway rollout/live checks are in progress.
+Codex self-review under D17. Main commit `dd8c004` deployed automatically as
+Railway `294e415b-bd9d-4a51-aa2d-f374e2661817`; readiness, nine HTTPS/auth checks
+and exact public bundle matching pass. After renewed user sign-in, real-farm
+Overview date-filter refresh has zero warning/capacity errors, Inventory actions
+fit the 532px live pane and Layer Income shows corrected flock/batch wording.
+Live follow-up completed 2026-10-27 PKT. Production business data/settings were
+preserved. Shared artifact repair milestones carry `[Codex]` attribution.
 
 The audit section below is the historical pre-fix state, not a claim that its
 findings remain open after the repair release is verified.
