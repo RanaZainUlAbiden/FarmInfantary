@@ -41,7 +41,7 @@ export async function loadPrimaryKeys(client) {
       JOIN pg_namespace n ON n.oid = c.relnamespace
       JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = ANY(i.indkey)
      WHERE i.indisprimary
-       AND n.nspname = 'public'
+       AND n.nspname = current_schema()
        AND c.relkind = 'r'`);
 
   const map = new Map();

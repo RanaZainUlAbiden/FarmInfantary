@@ -1,25 +1,25 @@
 #!/usr/bin/env node
 /**
- * Seeds a demo account so the app can actually be used and walked.
+ * Seeds inherited development/parity fixtures, not server user credentials.
  *
  *   node db/seed.mjs              # seed into DATABASE_URL
  *   node db/seed.mjs --reset      # wipe every table first
  *
- * Login:  demo / demo123
+ * Historical desktop login: demo / demo123. It cannot sign in to the web app.
  *
  * The account is `business_type = 'all'` on purpose, so the sidebar shows the
  * broiler, layer and distribution tabs and every screen is reachable.
  *
  * THE PASSWORD HASH IS THE APP'S OWN, DELIBERATELY
  * ------------------------------------------------
- * `auth.service.ts` hashes with a 32-bit non-cryptographic function (Java's
+ * The former `auth.service.ts` hashed with a 32-bit non-cryptographic function (Java's
  * String.hashCode, bit-shifted and hex-encoded). It is reproduced here so a
- * seeded account can log in through the real login screen rather than through
- * a special case.
+ * parity fixture retains its historical shape. The migrated browser never uses it.
  *
  * It is NOT an endorsement: docs/DECISIONS.md D7 replaces it with argon2id in
- * Phase 3, and existing hashes rehash on next successful login. Seeded demo
- * accounts are throwaway.
+ * the separate server login path. Under D14 no old hashes are imported or
+ * rehashed on login; fresh server users use Argon2id. Seeded demo accounts
+ * are throwaway fixtures for inherited development/parity tests only.
  */
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -46,7 +46,7 @@ const pg = require(join(ROOT, 'server', 'node_modules', 'pg'));
 const { registerTypeParsers } = await import(new URL('../server/src/db/types.js', import.meta.url));
 registerTypeParsers(pg);
 
-/** auth.service.ts hashPassword(), reproduced exactly. */
+/** Historical desktop hashPassword(), retained for parity fixture shape only. */
 function hashPassword(password) {
   let hash = 0;
   for (let i = 0; i < password.length; i++) {
@@ -83,6 +83,7 @@ try {
     ['demo', hashPassword('demo123')]
   );
   const F = farm.farm_id;
+  await client.query("SELECT set_config('app.farm_id',$1,true)",[String(F)]);
 
   // Physical sites. `farms` is the login account; these are what the client
   // calls "Farms" in the interface.
@@ -314,7 +315,7 @@ try {
   }
 
   console.log('\nSeeded.');
-  console.log(`  login: demo / demo123   (farm_id ${F}, business_type 'all')`);
+  console.log(`  legacy parity fixture: farm_id ${F}, business_type 'all'; no server user created`);
   console.log(`  broiler flock ${FL} · layer batch ${B} · bank ${hbl.bank_id}`);
   console.log(`\n  ${counts.length} tables populated:`);
   console.log('  ' + counts.map((c) => `${c.table}=${c.rows}`).join(', '));

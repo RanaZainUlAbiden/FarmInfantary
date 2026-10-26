@@ -651,3 +651,7 @@ app-layout .sidebar.collapsed {
   box-sizing: border-box;
   padding-top: 48px;
 }
+.app-layout .export-action { width:100%; border:0; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+.app-layout .export-action:disabled { opacity:.6; cursor:wait; }
+.app-layout .export-action:focus-visible { outline:2px solid var(--fi-primary); outline-offset:-3px; }
+.export-notice { padding:12px 16px; background:var(--fi-soft); color:var(--fi-primary); margin-bottom:16px; border-radius:8px; }

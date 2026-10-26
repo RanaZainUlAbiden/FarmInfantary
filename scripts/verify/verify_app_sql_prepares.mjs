@@ -21,10 +21,9 @@
 //
 // SCOPE, STATED HONESTLY
 // ----------------------
-// Only SQL that is a self-contained template literal is checked. Strings built
-// with ${...} interpolation are skipped and counted: their final text is not
-// knowable without running the app. The skipped count is reported so the gap
-// is visible rather than implied.
+// Self-contained SQL in all three JavaScript quote styles is checked. Strings
+// built with interpolation or concatenation are counted as gaps: their final
+// text is not knowable without executing the application builders.
 //
 // Skips (exit 0) when no database is configured.
 
@@ -32,6 +31,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
+import { collectSqlLiterals } from './lib/sql-literals.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const require = createRequire(import.meta.url)
@@ -74,59 +74,16 @@ const SRC = [join(ROOT, 'src', 'app'), join(ROOT, 'Talha Farm', 'src', 'app')]
 
 if (!SRC) { console.log('SKIP — no Angular source tree found'); process.exit(0) }
 
-/** Template literals whose content reads as a complete SQL statement. */
-function sqlLiterals(src) {
-  const found = []
-  let fragments = 0
-  for (let i = 0; i < src.length; i++) {
-    if (src[i] !== '`') continue
-    let j = i + 1
-    for (; j < src.length; j++) {
-      if (src[j] === '\\') { j++; continue }
-      if (src[j] === '`') break
-    }
-    const body = src.slice(i + 1, j)
-    // Is this literal a FRAGMENT of a concatenated statement?
-    //
-    // overview.service.ts builds queries as `SELECT ... WHERE ...` + a date
-    // clause + ` GROUP BY ...`. Taking the first piece alone yields a query
-    // with an aggregate and no GROUP BY, which PostgreSQL rightly rejects —
-    // and reports as a GROUP BY defect that does not exist. Seven of the ten
-    // failures in the first run were this.
-    //
-    // A `+` immediately before or after the backticks is the signal.
-    const before = src.slice(Math.max(0, i - 3), i)
-    const after = src.slice(j + 1, j + 4)
-    const isFragment = /\+\s*$/.test(before) || /^\s*\+/.test(after)
-    i = j
-    if (isFragment) { fragments++; continue }
-    // A bare keyword is not a statement. The app has literals like `update`
-    // and `insert` used as mode flags, and a comment-ish `INSERT INTO
-    // *_vouchers`; requiring the matching clause keyword filters those out
-    // without needing a parser.
-    if (!/^\s*(SELECT|INSERT|UPDATE|DELETE)\b/i.test(body)) continue
-    if (body.trim().length < 25) continue
-    const kind = /^\s*(\w+)/.exec(body)[1].toUpperCase()
-    const needs = {
-      SELECT: /\bFROM\b/i,
-      INSERT: /\bINTO\b[\s\S]*\b(VALUES|SELECT)\b/i,
-      UPDATE: /\bSET\b/i,
-      DELETE: /\bFROM\b/i,
-    }[kind]
-    if (needs && !needs.test(body)) continue
-    found.push(body)
-  }
-  sqlLiterals.fragments = (sqlLiterals.fragments || 0) + fragments
-  return found
-}
-
 const statements = []
 let skippedInterpolated = 0
+let skippedFragments = 0
 
 for (const file of walk(SRC)) {
   const rel = relative(ROOT, file).replace(/\\/g, '/')
-  for (const body of sqlLiterals(readFileSync(file, 'utf8'))) {
-    if (body.includes('${')) { skippedInterpolated++; continue }
+  const inventory = collectSqlLiterals(readFileSync(file, 'utf8'))
+  skippedInterpolated += inventory.interpolated
+  skippedFragments += inventory.fragments
+  for (const body of inventory.statements) {
     statements.push({ file: rel, sql: body })
   }
 }
@@ -143,7 +100,8 @@ let n = 0
 console.log('App SQL, translated and PREPAREd against PostgreSQL')
 console.log('='.repeat(68))
 console.log(`  ${statements.length} self-contained statements from ${relative(ROOT, SRC)}`)
-console.log(`  ${skippedInterpolated} skipped (built with \${...} interpolation)\n`)
+console.log(`  ${skippedInterpolated} skipped (built with \${...} interpolation)`)
+console.log(`  ${skippedFragments} skipped (SQL fragments joined by concatenation)\n`)
 
 for (const s of statements) {
   // Split FIRST, then translate and number each piece — exactly the order

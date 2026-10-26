@@ -111,11 +111,11 @@ function tablesDdl() {
 /**
  * A pool whose every connection is pinned to a fresh scratch schema.
  *
- * `search_path` is set on connect rather than per query, so the extracted
+ * `search_path` is set in the connection startup options, so the extracted
  * method bodies — which issue unqualified SQL, exactly as the app does — land
  * in the scratch schema without being rewritten.
  */
-export async function createScratchDb(label = 'v') {
+export async function createScratchDb(label = 'v', { farmContext = null } = {}) {
   const url = process.env.DATABASE_URL
   if (!url) throw new Error('DATABASE_URL is not set')
 
@@ -132,8 +132,12 @@ export async function createScratchDb(label = 'v') {
     .replace(/[^a-z0-9_]/gi, '')
     .toLowerCase()
 
-  const pool = new pg.Pool({ connectionString: url, max: 4 })
-  pool.on('connect', (c) => c.query(`SET search_path TO ${schema}, public`))
+  // A connect-event query is not awaited by pg.Pool. Parallel service reads
+  // could arrive while that SET is still running on a newly opened client.
+  // Set the scratch path during startup before any connection can be borrowed.
+  if (farmContext !== null && (!Number.isSafeInteger(farmContext) || farmContext < 1)) throw new Error('Invalid fixture farm context')
+  const pool = new pg.Pool({ connectionString: url, max: 4,
+    options: `-c search_path=${schema},public` + (farmContext === null ? '' : ` -c app.farm_id=${farmContext}`) })
 
   const admin = await pool.connect()
   try {
@@ -143,6 +147,9 @@ export async function createScratchDb(label = 'v') {
     // places. Without it those statements fail outright.
     await admin.query(collationsDdl())
     await admin.query(tablesDdl())
+    // DDL intentionally used the scratch schema alone. Restore public for
+    // unqualified COLLATE NOCASE before this client is returned to the pool.
+    await admin.query(`SET search_path TO ${schema}, public`)
   } finally {
     admin.release()
   }

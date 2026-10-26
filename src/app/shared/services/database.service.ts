@@ -516,7 +516,7 @@ export class DatabaseService {
       const batch = batchResult.success && batchResult.data && batchResult.data.length > 0 ? batchResult.data[0] : null;
       const qty = batch ? Number(batch.quantity) : 0;
 
-      const result = await this.run('UPDATE product_batches SET status = "depleted", quantity = 0 WHERE batch_id = ?', [batchId]);
+      const result = await this.run(`UPDATE product_batches SET status = 'depleted', quantity = 0 WHERE batch_id = ?`, [batchId]);
 
       if (batch && qty > 0) {
         await this.addBatchTransaction(
@@ -709,19 +709,16 @@ export class DatabaseService {
   }
 
   async updateBatchStatuses(): Promise<any> {
-    return this.run(`
+    return this.runBatch([{ sql: `
       UPDATE product_batches SET status = 'expired' 
-      WHERE expiry_date < date('now') AND (status IN ('active', 'expiring') OR status IS NULL OR status = '');
-      
+      WHERE expiry_date < date('now') AND (status IN ('active', 'expiring') OR status IS NULL OR status = '')`, params: [] }, { sql: `
       UPDATE product_batches SET status = 'depleted' 
-      WHERE quantity <= 0 AND (status IN ('active', 'expiring') OR status IS NULL OR status = '');
-      
+      WHERE quantity <= 0 AND (status IN ('active', 'expiring') OR status IS NULL OR status = '')`, params: [] }, { sql: `
       UPDATE product_batches SET status = 'expiring' 
       WHERE expiry_date >= date('now') 
         AND expiry_date <= date('now', '+3 months')
         AND quantity > 0
-        AND (status = 'active' OR status IS NULL OR status = '');
-    `, []);
+        AND (status = 'active' OR status IS NULL OR status = '')`, params: [] }]);
   }
 
   async migrateExistingStock(farmId: number): Promise<any> {
@@ -2104,25 +2101,22 @@ async deleteCategory(categoryId: number): Promise<any> {
 
   // 🔥 NEW: Force update batch statuses for a specific product
   async forceUpdateBatchStatuses(productId: number): Promise<any> {
-    return this.run(`
+    return this.runBatch([{ sql: `
       UPDATE product_batches 
       SET status = 'expired' 
       WHERE product_id = ? AND expiry_date < date('now') 
-        AND (status IN ('active', 'expiring') OR status IS NULL OR status = '');
-      
+        AND (status IN ('active', 'expiring') OR status IS NULL OR status = '')`, params: [productId] }, { sql: `
       UPDATE product_batches 
       SET status = 'depleted' 
       WHERE product_id = ? AND quantity <= 0 
-        AND (status IN ('active', 'expiring') OR status IS NULL OR status = '');
-      
+        AND (status IN ('active', 'expiring') OR status IS NULL OR status = '')`, params: [productId] }, { sql: `
       UPDATE product_batches 
       SET status = 'expiring' 
       WHERE product_id = ? 
         AND expiry_date >= date('now') 
         AND expiry_date <= date('now', '+3 months')
         AND quantity > 0
-        AND (status = 'active' OR status IS NULL OR status = '');
-    `, [productId, productId, productId]);
+        AND (status = 'active' OR status IS NULL OR status = '')`, params: [productId] }]);
   }
 
   // 🔥 NEW: Get all batches with their calculated status

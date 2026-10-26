@@ -60,6 +60,14 @@ poison flag. **None of that survives concurrent users.** Replace with:
 Only **2** call sites use explicit transactions; 54 use `runBatch`, which is
 self-contained. Prefer batches for new work.
 
+[Codex] `db/session-execute.js` now implements this ownership boundary behind
+a mandatory trusted authorize callback. buildServer now supplies the real AST
+compiler after restricted-role attestation in session mode. Read
+`../docs/SESSION_TRANSACTIONS.md`; its 28 PG scenarios use a disposable restricted
+role/FORCE RLS fixture. Auth hooks, scoped routes and shutdown are connected;
+future admin routes still need proactive invalidation. Never use a permissive
+fixture authorizer in the app. The original executor remains the dev/parity path.
+
 Keep the nested-batch behaviour: a batch inside an open transaction uses
 `SAVEPOINT`, not a nested `BEGIN`. PostgreSQL requires this too.
 
@@ -98,12 +106,43 @@ tables** and must not have `BYPASSRLS`.
 
 ## Auth
 
+[Codex] Migration 004 now installs full-schema FORCE RLS and stamping triggers.
+`db/runtime-role.mjs` and `src/db/runtime-role.js` provision/attest narrow fresh
+logins; no persistent runtime login is installed locally yet. Private auth farm
+metadata access preserves policies without an owner bypass exception. Read
+`../docs/TENANT_ISOLATION.md` before wiring pools or changing grants/policies.
+Business SQL must use an attested runtime pool, never the auth/migration pool.
+The real AST guard and pool/session path are now verified for farm admins in
+development when runtime credentials are configured. Missing setup returns 503;
+staff business SQL remains denied in the owner-only first release. Dedicated
+admin/seat/audit/delete/export operations are implemented. Production requires
+the reviewed exact release digest and separate attested auth/runtime roles;
+actual independent approval remains outstanding. Read `../docs/OWNER_RELEASE.md`.
+
+[Codex] Server identity foundation is implemented in `src/auth/` with migration
+003, 28 PostgreSQL/HTTP scenarios and seven unit tests. Read
+`../docs/AUTHENTICATION.md` before extending it. `AUTH_MODE=session` registers
+real auth routes. Business SQL additionally requires an attested runtime pool;
+it never falls back to the privileged auth pool. `AUTH_MODE=development` retains only the legacy local demo
+stub; development must be explicit. Production uses only the reviewed owner-only
+session profile. Never fabricate reviewer approval to bypass the startup gate.
+
+D14 means fresh `users` with Argon2id hashes: the new server path never verifies
+the old 32-bit `farms.password_hash`. The Angular AuthService now uses cookie
+login/restore, guarded routes and central session cleanup. See `../docs/AUTHENTICATION.md`.
+
+[Codex] Migration 005 adds private permission catalogue/grant metadata and
+revocation. Runtime attestation requires those tables and denies access. The
+50-key catalogue is generated; four observed voucher scopes across 2/50 screens
+are a draft only. Staff SQL remains denied pending reviewed operation/module
+enforcement. Never import observations as policy. Read `../docs/STAFF_PERMISSIONS.md`.
+
 argon2id. Sessions in `httpOnly` + `Secure` + `SameSite=Strict` cookies, never
 `localStorage`. `farm_id`, `user_id` and `role` resolved from the session on
 every request.
 
-The desktop hash was 32-bit `String.hashCode` — rehash on next successful login,
-verifying against the old hash once.
+The desktop hash was 32-bit `String.hashCode`. Its import/rehash requirement is
+superseded by D14; do not reintroduce legacy credential acceptance.
 
 ## Admin routes
 

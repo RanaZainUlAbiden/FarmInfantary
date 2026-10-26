@@ -4,7 +4,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { Router, RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../shared/services/auth.service';
 import { FlockService } from '../shared/services/flock.service';
 import { FarmUnitService } from '../shared/services/farm-unit.service';
@@ -35,6 +35,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private dataChange = inject(DataChangeService);
   private db = inject(DatabaseService);
   private router = inject(Router);
+  private activatedRoute = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
   private pendingState = inject(PendingStateService);
   public licenseService = inject(LicenseService); // public for template access
@@ -74,6 +75,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private licenseCheckInterval: any = null;
 
   private subs = new Subscription();
+  private destroyed=false;
+  isExporting=false;
+  exportMessage='';
 
   broilerMenu: any[] = [
     { label: 'Flock Health',  icon: '🐔', route: 'flock-health'    },
@@ -263,10 +267,18 @@ export class LayoutComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.savedBusinessType = localStorage.getItem('businessType') || 'broiler';
+    this.savedBusinessType = this.currentFarm.business_type || 'broiler';
+    const requestedRoute = this.activatedRoute.snapshot.firstChild?.url[0]?.path || '';
+    const routeOwner = ({ 'distribution-batch': 'inventory', 'customer-ledger': 'account-ledger',
+      'supplier-ledger': 'account-ledger', 'bank-ledger': 'account-ledger' } as Record<string, string>)[requestedRoute] || requestedRoute;
 
     if (this.savedBusinessType === 'all') {
       this.activeBusinessTab = localStorage.getItem('activeBusinessTab') || 'broiler';
+      const menus: Record<string, any[]> = { broiler: this.broilerMenu, layer: this.layerMenu,
+        distribution: this.distributionMenu, overview: this.overviewMenu };
+      if (!menus[this.activeBusinessTab]?.some(m => m.route === routeOwner)) {
+        this.activeBusinessTab = Object.keys(menus).find(tab => menus[tab].some(m => m.route === routeOwner)) || 'broiler';
+      }
     } else {
       this.activeBusinessTab = this.savedBusinessType;
     }
@@ -306,11 +318,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
     const remembered = this.lastRouteByTab[this.activeBusinessTab];
     const isValidForTab = remembered && this.menuItems.some((m: any) => m.route === remembered);
-    const targetRoute = isValidForTab ? remembered : (this.menuItems[0]?.route || 'flock-health');
+    const validRequested = requestedRoute && this.menuItems.some(m => m.route === routeOwner);
+    const targetRoute = validRequested ? routeOwner : isValidForTab ? remembered : (this.menuItems[0]?.route || 'flock-health');
 
     const currentUrl = this.router.url.split('/').pop();
     this.activeRoute = targetRoute;
-    if (currentUrl !== targetRoute) {
+    if (!validRequested && currentUrl !== targetRoute) {
       this.router.navigate(['/app', targetRoute]);
     }
 
@@ -323,6 +336,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.destroyed=true;
     this.subs.unsubscribe();
     if (this.licenseCheckInterval) {
       clearInterval(this.licenseCheckInterval);
@@ -363,19 +377,18 @@ export class LayoutComponent implements OnInit, OnDestroy {
    */
   private async checkLicense(): Promise<void> {
     const status = await this.licenseService.getStatus();
+    if(this.destroyed)return;
 
     this.isLicenseActivated = status.activated;
     this.licenseExpired = !status.activated && status.trialExpired;
 
     if (this.licenseExpired) {
-      this.licenseExpiredMessage = status.clockTampered
-        ? 'System clock problem — licence cannot be verified. Your work is still saved.'
-        : 'Trial expired. Your work is still saved — activate to keep using the app.';
+      this.licenseExpiredMessage = 'Account access could not be checked. Check your connection or sign in again.';
     }
 
     if (status.activated) {
       // An activated licence is permanent — no countdown, no expiry warning.
-      this.licenseStatus = '✅ Licensed';
+      this.licenseStatus = 'Account active';
       this.showLicenseWarning = false;
     } else {
       this.licenseStatus = await this.licenseService.getTrialStatusMessage();
@@ -536,11 +549,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  logout() {
-    this.pendingState.clearAll();
-    this.flockService.reset();
-    this.farmUnitService.reset();
-    this.authService.logout();
+  async logout() {
+    await this.authService.logout();
   }
 
   autoBackupPath: string | null = null;
@@ -553,12 +563,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
 
   async backupDatabase() {
+    if(this.isExporting)return;this.isExporting=true;this.exportMessage='Preparing your farm export…';this.cdr.detectChanges();
     const result = await this.db.backupDatabase();
-    if (result.success) {
-      alert('Backup saved to: ' + result.path);
-    } else if (!result.cancelled) {
-      alert('Backup failed: ' + friendlySqlError(result.error, 'Unknown error'));
-    }
+    this.isExporting=false;this.exportMessage=result.success?'Downloaded '+result.filename:(result.error||'Export failed. Try again.');if(!this.destroyed)this.cdr.detectChanges();
   }
 
   async restoreDatabase() {

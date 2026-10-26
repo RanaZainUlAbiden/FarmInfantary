@@ -1,0 +1,361 @@
+{
+  "schemaVersion": 1,
+  "status": "observations-only; not authorized policy",
+  "sourceDigest": "c72c13480dd108ea16f4bda762f7ac1ea3cd8cce4c5ab64a7e21ba296eb46f76",
+  "catalogueDigest": "12a34b8198c29477147e1b939a243c88ed88e697ab5b43fcc1e8416862d90f97",
+  "producerDigest": "4f75426aab9f94d63bc0ab3d5e52441ee3e1dcf96326131da8f9065ac75be4b4",
+  "scopes": [
+    {
+      "key": "distribution.payment-voucher",
+      "action": "create",
+      "scenario": "voucher regression savePaymentVoucher",
+      "invocations": 6,
+      "failedResults": 0,
+      "thrownResults": 0,
+      "failedWorkflows": 2,
+      "thrownWorkflows": 0,
+      "unresolved": 0,
+      "observations": [
+        {
+          "sqlDigest": "1c40d90419e02c0e488f3233ba4f46e12c14acf4ec7950267fed4260f25a9cc1",
+          "readTables": [],
+          "writeTables": {
+            "payment_vouchers": [
+              "insert"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "53f4e23334bf7152debb13b69f1d1425b37d5be69d783939b0cc23fe091cf044",
+          "readTables": [
+            "supplier_ledger"
+          ],
+          "writeTables": {}
+        },
+        {
+          "sqlDigest": "71ce3110727f1f1edc69a8a232ddb98d89c6886240ee825282bae049cddc1fb3",
+          "readTables": [
+            "bank_accounts",
+            "bank_ledger"
+          ],
+          "writeTables": {}
+        },
+        {
+          "sqlDigest": "7227fdff54f1c786a9c6e801e91a6f4ba8e444440732b48336d80249ba7d0952",
+          "readTables": [
+            "bank_ledger"
+          ],
+          "writeTables": {
+            "bank_ledger": [
+              "insert"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "855c77ed473360f2cb8f4b8ffaa6aca89fb587bcf835c061afa52c0fdb819c20",
+          "readTables": [
+            "supplier_ledger"
+          ],
+          "writeTables": {
+            "supplier_ledger": [
+              "insert"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "c6856d28b9eca21ca8af0bfa756a52574449bfadf00517d3a3ff1deb86eb3a8f",
+          "readTables": [
+            "supplier_ledger"
+          ],
+          "writeTables": {
+            "supplier_ledger": [
+              "insert"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "fe8beebc6b6402d5b4417262265c44ef6a5caca54b332cc81cc5848dff472f00",
+          "readTables": [
+            "bank_accounts",
+            "bank_ledger"
+          ],
+          "writeTables": {
+            "bank_accounts": [
+              "update"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "key": "distribution.payment-voucher",
+      "action": "delete",
+      "scenario": "voucher regression deletePaymentVoucher",
+      "invocations": 4,
+      "failedResults": 0,
+      "thrownResults": 0,
+      "failedWorkflows": 1,
+      "thrownWorkflows": 0,
+      "unresolved": 0,
+      "observations": [
+        {
+          "sqlDigest": "0f9944a724202101ab2deadd5dee749bc8e5a722abd54b6486d06555bfb76668",
+          "readTables": [
+            "bank_ledger",
+            "payment_vouchers"
+          ],
+          "writeTables": {}
+        },
+        {
+          "sqlDigest": "acb6e049dced6bd81beac0e9a51bc5a7005f0c5fe6433562baa15ccd22a95539",
+          "readTables": [
+            "bank_ledger"
+          ],
+          "writeTables": {
+            "bank_ledger": [
+              "delete"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "b718657e736e80e3ac558d98d9c98d2776178aa26211ad107a2d3841635c7fca",
+          "readTables": [
+            "supplier_ledger"
+          ],
+          "writeTables": {
+            "supplier_ledger": [
+              "delete"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "cd0e0cda33380cc77cd897005d43a630a1bd85710260e2b0c984d977ed86fbcf",
+          "readTables": [
+            "payment_vouchers"
+          ],
+          "writeTables": {}
+        },
+        {
+          "sqlDigest": "f26d6eaff183a99e624d653a3ac99d82be5c05c825bca8eaa25df5bdb2e8c801",
+          "readTables": [
+            "payment_vouchers"
+          ],
+          "writeTables": {
+            "payment_vouchers": [
+              "delete"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "fe8beebc6b6402d5b4417262265c44ef6a5caca54b332cc81cc5848dff472f00",
+          "readTables": [
+            "bank_accounts",
+            "bank_ledger"
+          ],
+          "writeTables": {
+            "bank_accounts": [
+              "update"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "key": "distribution.receive-voucher",
+      "action": "create",
+      "scenario": "voucher regression saveReceiveVoucher",
+      "invocations": 8,
+      "failedResults": 0,
+      "thrownResults": 0,
+      "failedWorkflows": 2,
+      "thrownWorkflows": 0,
+      "unresolved": 0,
+      "observations": [
+        {
+          "sqlDigest": "0a3421f9a8e0a034db330a423e62f84c3a5ea90be71704a330d7ee610e19786e",
+          "readTables": [
+            "bills"
+          ],
+          "writeTables": {
+            "bills": [
+              "update"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "1ee76d8978c50665167171e7a17880130c97f8093123b55738d6ff3630b5f0cf",
+          "readTables": [],
+          "writeTables": {
+            "receive_vouchers": [
+              "insert"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "399e45f38522a18f35607a872625ba74d4d2ef9c570dc3477222e29125627dba",
+          "readTables": [
+            "bills",
+            "customers"
+          ],
+          "writeTables": {
+            "customers": [
+              "update"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "7734cfbcf2c666de2119b319fc22d98e4abd62df29dc416c1319ccac0ec0e2c4",
+          "readTables": [
+            "customer_ledger"
+          ],
+          "writeTables": {
+            "customer_ledger": [
+              "insert"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "99fba318ec0b3c3845bee504845696aad41c0dcc653c7d92eac55e780683a40e",
+          "readTables": [
+            "bills"
+          ],
+          "writeTables": {}
+        },
+        {
+          "sqlDigest": "f8a650ed3ae28fca189ddd926435ba90380e9a4be84f5c89600b35144c5f698e",
+          "readTables": [
+            "bank_ledger"
+          ],
+          "writeTables": {
+            "bank_ledger": [
+              "insert"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "fe8beebc6b6402d5b4417262265c44ef6a5caca54b332cc81cc5848dff472f00",
+          "readTables": [
+            "bank_accounts",
+            "bank_ledger"
+          ],
+          "writeTables": {
+            "bank_accounts": [
+              "update"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "key": "distribution.receive-voucher",
+      "action": "delete",
+      "scenario": "voucher regression deleteReceiveVoucher",
+      "invocations": 4,
+      "failedResults": 0,
+      "thrownResults": 0,
+      "failedWorkflows": 0,
+      "thrownWorkflows": 0,
+      "unresolved": 0,
+      "observations": [
+        {
+          "sqlDigest": "0a3421f9a8e0a034db330a423e62f84c3a5ea90be71704a330d7ee610e19786e",
+          "readTables": [
+            "bills"
+          ],
+          "writeTables": {
+            "bills": [
+              "update"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "387e7d9ef2fb10cfac8c250ae81f70506322c4d01c3e09b0ffba1f9636f6f18b",
+          "readTables": [
+            "customer_ledger"
+          ],
+          "writeTables": {
+            "customer_ledger": [
+              "delete"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "399e45f38522a18f35607a872625ba74d4d2ef9c570dc3477222e29125627dba",
+          "readTables": [
+            "bills",
+            "customers"
+          ],
+          "writeTables": {
+            "customers": [
+              "update"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "4f3c3ed67dcb8fb9a15abb2a647f690d3b7520d8930b67ff95c2e3ee74e160df",
+          "readTables": [
+            "bills"
+          ],
+          "writeTables": {}
+        },
+        {
+          "sqlDigest": "6ad7dd8c1fa7aa90bff8e12b5e1064ce01067f658f0e7f6b323b9c56433b2322",
+          "readTables": [
+            "customer_ledger"
+          ],
+          "writeTables": {}
+        },
+        {
+          "sqlDigest": "a3ee65b79389eecd423b2b17797c4269afe6b59f91bdc6a442ec23ec103814c2",
+          "readTables": [
+            "receive_vouchers"
+          ],
+          "writeTables": {
+            "receive_vouchers": [
+              "delete"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "a732d3873f051d81cc8ec05a91e7a2d2521c10931a41b8a3a2c447b18ddb5665",
+          "readTables": [
+            "receive_vouchers"
+          ],
+          "writeTables": {}
+        },
+        {
+          "sqlDigest": "acb6e049dced6bd81beac0e9a51bc5a7005f0c5fe6433562baa15ccd22a95539",
+          "readTables": [
+            "bank_ledger"
+          ],
+          "writeTables": {
+            "bank_ledger": [
+              "delete"
+            ]
+          }
+        },
+        {
+          "sqlDigest": "ecf784bc582c4f8d1ce320661de8fb4d05a6f5976a30c212685cf98dcbcbc977",
+          "readTables": [
+            "bank_ledger",
+            "receive_vouchers"
+          ],
+          "writeTables": {}
+        },
+        {
+          "sqlDigest": "fe8beebc6b6402d5b4417262265c44ef6a5caca54b332cc81cc5848dff472f00",
+          "readTables": [
+            "bank_accounts",
+            "bank_ledger"
+          ],
+          "writeTables": {
+            "bank_accounts": [
+              "update"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "regressionPassed": true
+}

@@ -5,7 +5,7 @@
   <div class="license-expired-banner" *ngIf="licenseExpired">
     <span class="banner-icon">⚠️</span>
     <span class="banner-text">{{ licenseExpiredMessage }}</span>
-    <button class="btn-banner-activate" (click)="navigateToActivation()">Activate Now</button>
+    <a class="btn-banner-activate" href="/login">Sign in again</a>
   </div>
 
   <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
@@ -29,7 +29,7 @@
         <span class="status-text">{{ licenseStatus }}</span>
       </div>
       <div class="license-activate" *ngIf="showLicenseWarning">
-        <button class="btn-activate-small" (click)="navigateToActivation()">Activate Now</button>
+        <a class="btn-activate-small" href="/login">Sign in again</a>
       </div>
     </div>
 
@@ -96,31 +96,11 @@
         <span class="nav-label" *ngIf="!sidebarCollapsed">{{ item.label }}</span>
       </div>
 
-      <ng-container *ngIf="isDistributionMode">
-        <div class="nav-item" (click)="backupDatabase()"
-          [title]="sidebarCollapsed ? 'Backup Database' : ''">
-          <span class="nav-icon">💾</span>
-          <span class="nav-label" *ngIf="!sidebarCollapsed">Backup</span>
-        </div>
-        <div class="nav-item" (click)="restoreDatabase()"
-          [title]="sidebarCollapsed ? 'Restore Database' : ''">
-          <span class="nav-icon">♻️</span>
-          <span class="nav-label" *ngIf="!sidebarCollapsed">Restore</span>
-        </div>
-        <div class="nav-item"
-          (click)="resetAutoBackupLocation()"
-          [title]="sidebarCollapsed ? ('Auto-Backup Location' + (autoBackupPath ? ': ' + autoBackupPath : ': not set')) : ''">
-          <span class="nav-icon">📍</span>
-          <span class="nav-label" *ngIf="!sidebarCollapsed">
-            Auto-Backup Location
-            <span class="auto-backup-path" *ngIf="autoBackupPath">{{ autoBackupPath }}</span>
-            <span class="auto-backup-path not-set" *ngIf="!autoBackupPath">Not set yet</span>
-          </span>
-        </div>
-      </ng-container>
+      <button type="button" class="nav-item export-action" (click)="backupDatabase()" [disabled]="isExporting" [title]="sidebarCollapsed?'Download farm data':''"><span class="nav-icon">💾</span><span class="nav-label" *ngIf="!sidebarCollapsed">{{isExporting?'Preparing export…':'Download farm data'}}</span></button>
     </nav>
 
     <div class="sidebar-footer">
+      <a class="nav-item" href="/team" title="Manage staff & security"><span class="nav-icon">👥</span><span class="nav-label" *ngIf="!sidebarCollapsed">Staff &amp; security</span></a>
       <!-- License Status in Footer (Collapsed Mode) -->
       <div class="license-status-collapsed" *ngIf="sidebarCollapsed" [title]="licenseStatus">
         <span class="status-icon-small">{{ isLicenseActivated ? '✅' : (showLicenseWarning ? '⚠️' : '🚀') }}</span>
@@ -153,11 +133,12 @@
       <div class="header-right">
         <!-- License indicator in header -->
         <span class="license-indicator" [class.expired]="showLicenseWarning" [class.active]="!showLicenseWarning && isLicenseActivated">
-          {{ isLicenseActivated ? '✅ Licensed' : (showLicenseWarning ? '⚠️ Expiring Soon' : '🚀 Trial') }}
+          {{ isLicenseActivated ? 'Account active' : 'Checking account access' }}
         </span>
       </div>
     </div>
     <div class="content-body">
+      <p *ngIf="exportMessage" class="export-notice" role="status">{{exportMessage}}</p>
       <div *ngIf="!currentFlock() && !isDistributionMode && !isOverviewMode" class="no-flock-message">
         <p>{{ isLayerMode ? 'No batch found. Create your first batch to get started.' : 'No flock found. Create your first flock to get started.' }}</p>
         <button class="btn-primary" (click)="goToFlockManagement()">

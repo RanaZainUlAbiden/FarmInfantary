@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { sessionGuard, signedInGuard, adminGuard, teamGuard } from './shared/guards/session.guard';
 import { FlockHealthResolver } from './shared/resolvers/flock-health.resolver';
 import { LedgerResolver } from './shared/resolvers/ledger.resolver';
 import { ExpensesResolver } from './shared/resolvers/expenses.resolver';
@@ -34,6 +35,8 @@ export const routes: Routes = [
   },
   {
     path: 'app',
+    canActivate: [sessionGuard],
+    canActivateChild: [sessionGuard],
     loadComponent: () =>
       import('./layout/layout.component')
         .then(m => m.LayoutComponent),
@@ -371,8 +374,18 @@ export const routes: Routes = [
     ]
   },
   // ── Fallback Routes (Outside App) ──────────────────────
+  {path:'admin',canActivate:[adminGuard],loadComponent:()=>import('./admin/admin.component').then(m=>m.AdminComponent)},
+  {path:'team',canActivate:[teamGuard],loadComponent:()=>import('./admin/admin.component').then(m=>m.AdminComponent)},
+  {
+    path: 'access',
+    canActivate: [signedInGuard],
+    loadComponent: () => import('./auth/access/access.component').then(m => m.AccessComponent)
+  },
   {
     path: 'distribution-batch/:productId',
-    loadComponent: () => import('./distribution-batch/distribution-batch.component').then(m => m.DistributionBatchComponent)
+    redirectTo: 'app/distribution-batch/:productId'
+  },
+  {
+    path: '**', redirectTo: 'login'
   }
 ];

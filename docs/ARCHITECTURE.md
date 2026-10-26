@@ -73,10 +73,17 @@ The 8 with no key: `bank_ledger`, `bill_items`, `customer_ledger`,
 `customer_payments`, `internal_transfers`, `sales_return_items`,
 `supplier_ledger`, `activation`. Several hold money.
 
-**Phase 3 denormalises `farm_id` onto all 30 tables that lack one.** One uniform
+**Migration 004 denormalises `farm_id` onto 30 business tables that lack one.**
+There were 31 unscoped tables including retired activation, which is denied
+entirely. All 59 tenant tables now have indexed ENABLE/FORCE policies and the
+58 writable business tables stamp server context. One uniform
 policy instead of five variants, index-backed rather than per-row subqueries,
 and real protection on the eight money tables that have none today. Details and
-policy SQL in `db/CLAUDE.md`.
+policy SQL in `db/CLAUDE.md`. Restricted-role provisioning/attestation is tested
+with actual fresh logins. The AST guard, runtime/session pool wiring and browser
+cookie integration are implemented for configured farm-admin development use.
+Staff permissions, admin provisioning and production operations remain. See
+`TENANT_ISOLATION.md` and `AUTHENTICATION.md`.
 
 ## Access control
 
@@ -89,10 +96,12 @@ Three roles. `farms` stops being the login and becomes the tenant record; a new
 | `farm_admin` | One farm | Full access to that farm; creates staff only if granted, within quota |
 | `staff` | One farm | Only granted permissions, enforced at the SQL guard |
 
-Permissions mirror the sidebar: 47 keys (14 broiler, 15 layer, 15 distribution,
+Permissions mirror the current sidebar: 50 generated keys (14 broiler, 15 layer, 15 distribution,
 6 owner) with view/create/edit/delete flags. Screens shared between modules get
 **one key per module** — the rows are separated by `module_type`, so a shared
-key would grant layer access to anyone with broiler access.
+key would grant layer access to anyone with broiler access. Migration 005 installs
+private catalogue/grant metadata and revocation; the final operation/module map
+and staff guard activation are still pending. See `STAFF_PERMISSIONS.md`.
 
 Seat quotas are enforced by a database trigger taking `FOR UPDATE` on the farm
 row, so concurrent creation cannot exceed the limit.

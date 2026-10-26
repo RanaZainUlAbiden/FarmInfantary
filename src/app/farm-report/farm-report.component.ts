@@ -151,7 +151,7 @@ export class FarmReportComponent implements OnInit, OnDestroy {
    * describe.
    */
   private detectModule(): FarmReportModuleType {
-    const businessType = localStorage.getItem('businessType') || 'broiler';
+    const businessType = this.authService.getCurrentFarm()?.business_type || 'broiler';
     const tab = businessType === 'all'
       ? (localStorage.getItem('activeBusinessTab') || 'broiler')
       : businessType;

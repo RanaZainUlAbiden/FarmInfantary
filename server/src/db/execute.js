@@ -33,6 +33,7 @@ import {
 } from './primary-keys.js';
 import { validateBatch, resolveParams } from './batch.js';
 import { splitStatements, countPlaceholders } from './scan.js';
+import { readPrepared } from './prepared.js';
 
 /**
  * Log a failed statement when LOG_SQL_ERRORS is set.
@@ -68,6 +69,11 @@ function message(err) {
  * containing neither `?` nor a RETURNING clause, and must happen first.
  */
 function compile(sql, params, primaryKeys) {
+  const guarded = readPrepared(sql);
+  if (guarded) {
+    if (!Array.isArray(params) || params.length !== guarded.parameterCount) throw new Error('Invalid guarded parameters.');
+    return { ...guarded, values: params };
+  }
   const t = translate(sql);
   if (t.unhandled.length) {
     throw new Error(`Untranslatable SQL: ${t.unhandled.join('; ')}`);
@@ -86,7 +92,7 @@ function compile(sql, params, primaryKeys) {
   return { text, values, idColumn: withRet.idColumn, resync };
 }
 
-export function createDb(pool) {
+export function createDb(pool, { transactionTimeoutMs = 60_000 } = {}) {
   /** @type {Map<string,string>} */
   let primaryKeys = new Map();
 
@@ -95,7 +101,13 @@ export function createDb(pool) {
   let tokenSeq = 0;
 
   /** Abandoned transactions must not hold a pooled connection forever. */
-  const TRANSACTION_TIMEOUT_MS = 60_000;
+  // The session executor owns its serialized idle/absolute deadlines. A zero
+  // timeout disables this legacy watchdog only for that trusted internal caller.
+  if (!Number.isSafeInteger(transactionTimeoutMs) || transactionTimeoutMs < 0) {
+    throw new Error('Invalid transaction timeout.');
+  }
+  const watchdog = token => transactionTimeoutMs
+    ? setTimeout(() => void rollback(token), transactionTimeoutMs) : null;
 
   async function init() {
     const client = await pool.connect();
@@ -113,7 +125,7 @@ export function createDb(pool) {
     const tx = transactions.get(token);
     if (!tx) throw new Error('This transaction is no longer open.');
     clearTimeout(tx.timer);
-    tx.timer = setTimeout(() => void rollback(token), TRANSACTION_TIMEOUT_MS);
+    tx.timer = watchdog(token);
     return { client: tx.client, release: () => {} };
   }
 
@@ -122,6 +134,7 @@ export function createDb(pool) {
       const { client } = target(token);
       const c = compile(sql, params, primaryKeys);
       const res = await client.query(c.text, c.values);
+      if (c.rowLimit && res.rows.length > c.rowLimit) throw new Error('Query result exceeds the row limit.');
       return { success: true, data: res.rows };
     } catch (err) {
       logFailure(sql, params, err);
@@ -137,7 +150,7 @@ export function createDb(pool) {
       // (`updateBatchStatuses()` issues three UPDATEs in one call), which
       // SQLite ran happily. PostgreSQL allows that only without parameters,
       // so each statement is translated and executed on its own instead.
-      const statements = splitStatements(sql);
+      const statements = readPrepared(sql) ? [sql] : splitStatements(sql);
       if (statements.length > 1) {
         return await runMany(statements, params, token);
       }
@@ -302,17 +315,20 @@ export function createDb(pool) {
   // batch(), which is self-contained. Prefer batch() for new work.
 
   async function begin() {
+    let client;
     try {
-      const client = await pool.connect();
+      client = await pool.connect();
       await client.query('BEGIN');
       const token = `tx_${++tokenSeq}_${Date.now()}`;
       const tx = {
         client,
-        timer: setTimeout(() => void rollback(token), TRANSACTION_TIMEOUT_MS),
+        timer: watchdog(token),
       };
       transactions.set(token, tx);
       return { success: true, token };
     } catch (err) {
+      // A failed BEGIN must not exhaust the pool with an unreleased lease.
+      if (client) client.release(err);
       return { success: false, error: message(err) };
     }
   }
@@ -323,7 +339,12 @@ export function createDb(pool) {
     transactions.delete(token);
     clearTimeout(tx.timer);
     try {
-      await tx.client.query(verb);
+      const result = await tx.client.query(verb);
+      // PostgreSQL answers COMMIT with ROLLBACK after an aborted statement.
+      // Reporting success here would tell the browser that lost writes saved.
+      if (verb === 'COMMIT' && result.command === 'ROLLBACK') {
+        return { success: false, error: 'The database transaction was rolled back.' };
+      }
       return { success: true };
     } catch (err) {
       return { success: false, error: message(err) };

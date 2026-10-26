@@ -1,0 +1,30 @@
+{
+ auto_https off
+ admin off
+}
+:{$PORT:8080} {
+ encode zstd gzip
+ request_body {
+  max_size 2MB
+ }
+ header {
+  Strict-Transport-Security "max-age=31536000"
+  X-Content-Type-Options "nosniff"
+  X-Frame-Options "DENY"
+  Referrer-Policy "same-origin"
+  Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+ }
+ handle /api/* {
+  reverse_proxy 127.0.0.1:3000 {
+   transport http {
+    response_header_timeout 90s
+   }
+  }
+ }
+ handle {
+  root * /srv
+  try_files {path} /index.html
+  header Cache-Control "no-cache"
+  file_server
+ }
+}

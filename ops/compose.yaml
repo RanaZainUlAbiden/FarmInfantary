@@ -1,0 +1,84 @@
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: farm_migration
+      POSTGRES_DB: farminfantary
+      POSTGRES_PASSWORD: ${DB_MIGRATION_PASSWORD:?Set a random database migration password}
+    ports:
+      - "127.0.0.1:${DB_BACKUP_PORT:-55432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    networks:
+      - private
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U farm_migration -d farminfantary"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 1g
+    pids_limit: 128
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      AUTH_MODE: session
+      RELEASE_PROFILE: owner-only
+      APP_ORIGIN: https://${APP_DOMAIN:?Set the public domain}
+      DATABASE_URL: ${DATABASE_URL:?Set the private auth login URL using host db}
+      RUNTIME_DATABASE_URL: ${RUNTIME_DATABASE_URL:?Set the separate business login URL using host db}
+      SESSION_SECRET: ${SESSION_SECRET:?Set a random session secret}
+      REVIEWED_RELEASE_SHA: ${REVIEWED_RELEASE_SHA:?Independent review of the release digest is required}
+      SECURITY_REVIEWER: ${SECURITY_REVIEWER:?Name the independent reviewer}
+      DATABASE_SCHEMA: public
+      TRUST_PROXY: 172.30.0.10
+      PG_POOL_MAX: "8"
+    networks:
+      - private
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 768m
+    cpus: 2
+    pids_limit: 128
+  web:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set the public domain}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      private:
+        ipv4_address: 172.30.0.10
+    mem_limit: 256m
+    pids_limit: 128
+networks:
+  private:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

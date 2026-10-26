@@ -1,5 +1,24 @@
 # Decisions
 
+## D17 · Codex self-review for this owner-only deployment (2026-10-26)
+
+After being shown PR #1 and the second-reviewer requirement, the user explicitly
+instructed: "you will review it". Codex performs and records the final review of
+this release. This supersedes the second-reviewer requirement for this deployment;
+it is a self-review and must never be described as independent approval. The
+production digest, HTTPS, session-only, separate-role and no-migration-credentials
+checks remain mandatory. Findings and remaining limits are in `SELF_REVIEW.md`.
+
+## D16 · Owner-only first release (2026-10-26)
+
+The user selected an owner-only first release to meet the deadline. Farm owners
+retain business access and platform administrators manage account metadata.
+Staff accounts/grants may be prepared, but staff business SQL stays denied.
+The original staff permission goal is deferred, not complete or cancelled.
+Per-farm import is deferred; operator encrypted whole-database recovery is the
+supported restore path for this release. Independent security review remains
+required before production. See `OWNER_RELEASE.md` for activation and evidence.
+
 Each entry records what was decided and, more importantly, **why** — so nobody
 re-opens it six months from now without the context.
 

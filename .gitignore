@@ -37,6 +37,10 @@ yarn-error.log*
 # ── Test & coverage output ──────────────────────────────────
 coverage/
 qa-results/
+backups/
+*.fibak
+*.fibak.partial
+ops/*.env
 
 # ── Editor / OS ─────────────────────────────────────────────
 .DS_Store

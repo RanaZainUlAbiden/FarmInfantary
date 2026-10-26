@@ -243,9 +243,27 @@ export function translate(sql) {
       const end = matchParen(out, open, mask);
       if (end === -1) continue;
       const body = out.slice(open + 1, end - 1);
-      const asAt = /\s+AS\s+(INTEGER|INT)\s*$/i.exec(codeOnly(body));
+      const asAt = /\bAS\s+(INTEGER|INT)\s*$/i.exec(codeOnly(body));
       if (!asAt) continue;
-      const expr = body.slice(0, asAt.index);
+      const expr = body.slice(0, asAt.index).trimEnd();
+      // Known TEXT expressions: sequence suffixes, literal text, and the
+      // desktop's text reference_id. SQLite takes an integer PREFIX and yields
+      // zero when it is absent (IS-HAND -> 0; '12tail' -> 12; '1e3' -> 1).
+      // Keep the numeric path below for arithmetic: converting a tiny REAL to
+      // text first could turn 1e-8 into integer 1 rather than the correct zero.
+      // The regexp consumes its input once, preserving placeholder order and
+      // NULL. Replacement inserts a zero after the optional sign, so even an
+      // empty/non-numeric prefix becomes a valid numeric value.
+      const value = expr.trim();
+      const substrOpen = /^substr\s*\(/i.exec(value);
+      const textValue = (substrOpen && matchParen(value, value.indexOf('('), codeMask(value)) === value.length)
+        || /^'(?:[^']|'')*'$/s.test(value)
+        || /^(?:[A-Za-z_]\w*\.)?reference_id$/i.test(value);
+      if (textValue) {
+        edits.push({ from: m.index + m[1].length, to: end,
+          text: `regexp_replace((${expr})::text, '^[[:space:]]*([+-]?)([0-9]*).*$', E'\\\\10\\\\2', 's')::bigint` });
+        continue;
+      }
       // ::numeric FIRST. SQLite casts text to an integer happily, and the app
       // relies on it; PostgreSQL has no trunc(text):
       //     ERROR: function trunc(text) does not exist
@@ -289,6 +307,26 @@ export function translate(sql) {
       for (const e of edits.reverse()) out = out.slice(0, e.from) + e.text + out.slice(e.to);
       note('? IS NULL cast');
     }
+  }
+
+  // SQLite counts a negative substr start from the END; PostgreSQL does not.
+  // Receipt/withdrawal and layer-bill numbering use this to zero-pad suffixes.
+  // Without it DEP-0001 silently becomes DEP-00001 (an extra leading zero).
+  {
+    const before = out;
+    let previous;
+    do {
+      previous = out;
+      out = rewriteCalls(out, 'substr', (args) => {
+        if (args.length < 2 || !/^-\s*[1-9]\d*$/.test(args[1].trim())) return false;
+        if (args.length !== 2) {
+          unhandled.push('substr() with a negative start and a length is not supported');
+          return false;
+        }
+        return true;
+      }, (args) => `RIGHT(${args[0]}, ${args[1].trim().replace(/^-\s*/, '')})`);
+    } while (out !== previous);
+    if (out !== before) note('negative substr->RIGHT');
   }
 
   // ── GROUP_CONCAT(x, sep) -> STRING_AGG(x::text, sep) ─────

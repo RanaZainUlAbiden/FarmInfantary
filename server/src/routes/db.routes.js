@@ -30,9 +30,17 @@ function badBody(body) {
   return null;
 }
 
-export function registerDbRoutes(app, { db, session }) {
+export function registerDbRoutes(app, { db, session, sessionDb, guarded = false }) {
   /** Every handler resolves who it is acting as from the SERVER, never the body. */
   const actor = (req) => session.resolve(req);
+  const executor = async req => {
+    const identity = await actor(req);
+    if(guarded&&!sessionDb) {
+      const denied=async()=>({success:false,error:'Business database access is unavailable.'});
+      return Object.fromEntries(['get','run','batch','begin','commit','rollback'].map(key=>[key,denied]));
+    }
+    return sessionDb ? sessionDb.forActor(identity) : db;
+  };
 
   app.post('/api/db/get', async (req, reply) => {
     const bad = badBody(req.body);
@@ -42,8 +50,7 @@ export function registerDbRoutes(app, { db, session }) {
     if (typeof sql !== 'string' || sql.trim() === '') {
       return reply.code(400).send({ success: false, error: 'sql must be a non-empty string.' });
     }
-    actor(req);
-    return db.get(sql, params ?? [], token ?? null);
+    return (await executor(req)).get(sql, params ?? [], token ?? null);
   });
 
   app.post('/api/db/run', async (req, reply) => {
@@ -54,8 +61,7 @@ export function registerDbRoutes(app, { db, session }) {
     if (typeof sql !== 'string' || sql.trim() === '') {
       return reply.code(400).send({ success: false, error: 'sql must be a non-empty string.' });
     }
-    actor(req);
-    return db.run(sql, params ?? [], token ?? null);
+    return (await executor(req)).run(sql, params ?? [], token ?? null);
   });
 
   app.post('/api/db/batch', async (req, reply) => {
@@ -63,28 +69,24 @@ export function registerDbRoutes(app, { db, session }) {
     if (bad) return reply.code(400).send({ success: false, error: bad });
 
     const { ops, token } = req.body;
-    actor(req);
     // A malformed batch comes back as success:false rather than 400 — the
     // desktop validated it the same way, inside runBatch.
-    return db.batch(ops, token ?? null);
+    return (await executor(req)).batch(ops, token ?? null);
   });
 
   app.post('/api/db/tx/begin', async (req) => {
-    actor(req);
-    return db.begin();
+    return (await executor(req)).begin();
   });
 
   app.post('/api/db/tx/commit', async (req, reply) => {
     const bad = badBody(req.body);
     if (bad) return reply.code(400).send({ success: false, error: bad });
-    actor(req);
-    return db.commit(req.body.token);
+    return (await executor(req)).commit(req.body.token);
   });
 
   app.post('/api/db/tx/rollback', async (req, reply) => {
     const bad = badBody(req.body);
     if (bad) return reply.code(400).send({ success: false, error: bad });
-    actor(req);
-    return db.rollback(req.body.token);
+    return (await executor(req)).rollback(req.body.token);
   });
 }

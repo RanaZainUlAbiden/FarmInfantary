@@ -1,4 +1,10 @@
 .dialog-overlay {
+  border: 0;
+  margin: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
@@ -7,8 +13,13 @@
   justify-content: center;
   z-index: 2100; // above the confirm-dialog it precedes
 }
+.dialog-overlay:not([open]) { display: none; }
+.dialog-overlay::backdrop { background: transparent; }
+.code-error { min-height: 36px; }
 
 .dialog-box {
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
   background: #fff;
   border-radius: 12px;
   padding: 28px;

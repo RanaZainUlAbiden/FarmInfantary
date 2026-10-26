@@ -16,7 +16,7 @@ import { toLocalDateString } from '../shared/utils/date.util';
   selector: 'app-Feed',
   standalone: true,
   imports: [CommonModule, FormsModule, ConfirmDialogComponent, DateOnlyPipe, PaginationComponent],
-  templateUrl: './Feed.component.html',
+  templateUrl: './feed.component.html',
   styleUrl: './feed.component.scss'
 })
 export class FeedComponent implements OnInit, OnDestroy {

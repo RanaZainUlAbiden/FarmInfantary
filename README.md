@@ -14,7 +14,34 @@ and every business rule carry over unchanged.
 
 ## Status
 
-Pre-development. The repository is the agreed structure; no phase has started.
+The owner-only release is prepared for Railway. Numbered migrations are applied
+locally through version 007. All 29 inherited verification gates pass on the web
+target (28 PostgreSQL, one source-only). The full suite is **85/85 green
+(~9,894 reported checks)**; backend tests are **83/83**. The patched Angular
+20.3.34 build passes, and both production dependency audits report zero issues.
+Server authentication, session transaction execution, full-schema tenant RLS and
+restricted-role provisioning/attestation are implemented. The AST SQL guard and
+farm-admin session HTTP pipeline are wired and tested. Browser cookie sign-in,
+restore, expiry, logout and guarded routes are integrated; business-type changes
+use a dedicated account endpoint. Admin provisioning, seat controls, audit,
+server delete authorization, exports, entitlement and encrypted operator
+backup/restore are implemented. See [authentication status](docs/AUTHENTICATION.md).
+The 50-key permission catalogue and private grant/revocation storage are now
+implemented. Instrumented voucher evidence covers four action scopes across
+2/50 screens; the final module/operation policy is not active. See
+[permission status](docs/STAFF_PERMISSIONS.md).
+The user selected an owner-only first release; staff business SQL stays denied.
+Railway builds the production container successfully and the candidate HTTPS
+readiness endpoint is healthy. The user assigned the final review to Codex;
+[self-review findings](docs/SELF_REVIEW.md) and D17 record this explicitly.
+GitHub main is connected for automatic deployments. Current deployment and backup
+details: [Railway runbook](docs/RAILWAY.md).
+Transaction ownership is documented in
+[session transactions](docs/SESSION_TRANSACTIONS.md).
+Database policies, role provisioning and activation limits are documented in
+[tenant isolation](docs/TENANT_ISOLATION.md).
+Guard activation, limits and remaining security work: [SQL guard](docs/SQL_GUARD.md).
+See [`docs/PHASES.md`](docs/PHASES.md) for the task list.
 
 Full plan, including the schema translation, tenancy map, guard design and risk
 register: **[Conversion Plan](https://claude.ai/artifact/Q6j4fjcuH4m8kiuUcTGfH5)**
@@ -80,7 +107,7 @@ build their test schema, so it is a build input. Do not edit it.
 
 ## Getting started
 
-Nothing is runnable yet. When Phase 1 lands:
+Install dependencies, create an empty PostgreSQL database, and configure `.env`:
 
 ```bash
 npm install                 # Angular app (root)
@@ -88,13 +115,25 @@ npm --prefix server install # API
 
 createdb farminfantary
 npm --prefix server run db:migrate
-npm --prefix server run db:seed
 
 npm --prefix server run dev # API  → http://localhost:3000
 npm start                   # SPA  → http://localhost:4200
 ```
 
 Copy `.env.example` to `.env` first. Never commit `.env`.
+
+The browser requires `AUTH_MODE=session`, an exact `APP_ORIGIN`, a generated
+`SESSION_SECRET` and a provisioned restricted runtime login. See
+[authentication setup](docs/AUTHENTICATION.md). The development compatibility
+mode is retained for parity tests and has no browser sign-in API. The legacy
+demo seed does not create a server user; `demo/demo123` cannot sign in. The
+one-time bootstrap creates a super admin only; farm/staff provisioning is still
+pending. No real account or persistent runtime login has been created locally.
+
+For a database installed manually with the old schema files, first run
+`npm run db:migrate -- --baseline`. This validates the existing structure before
+recording its initial version. Later runs omit `--baseline`. See
+[`db/migrations/README.md`](db/migrations/README.md) for the deployment workflow.
 
 ---
 

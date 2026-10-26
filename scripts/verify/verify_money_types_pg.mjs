@@ -93,6 +93,7 @@ try {
   console.log('\n=== B. round-trip through the real money paths ===')
 
   await client.query('BEGIN')
+  await client.query("SELECT set_config('app.farm_id','90001',true)")
   await client.query(`INSERT INTO farms (farm_id, farm_name, password_hash) VALUES (90001,'vt_money','x')`)
   await client.query(`INSERT INTO flocks (flock_id, farm_id, flock_name, start_date) VALUES (90001,90001,'F','2026-01-01')`)
   await client.query(`INSERT INTO batches (batch_id, farm_id, batch_name, start_date, initial_birds) VALUES (90001,90001,'B','2026-01-01',100)`)

@@ -68,7 +68,10 @@ try {
   console.log('\n=== A. health ===')
   const health = await app.inject({ method: 'GET', url: '/api/health' })
   check('GET /api/health answers 200', health.statusCode === 200, `got ${health.statusCode}`)
-  check('it reports the loaded primary keys', health.json().primaryKeys === 58,
+  const expectedKeys=Number((await pool.query(`SELECT count(*) AS n FROM pg_index i JOIN pg_class c ON c.oid=i.indrelid
+    JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=ANY(i.indkey)
+    WHERE i.indisprimary AND i.indnkeyatts=1 AND n.nspname=current_schema() AND c.relkind='r' AND a.atttypid IN (20,21,23)`)).rows[0].n);
+  check('it reports the loaded primary keys', expectedKeys>=58 && health.json().primaryKeys === expectedKeys,
     `got ${health.json().primaryKeys}`)
   check('it states plainly that nobody is authenticated',
     /development stub/.test(health.json().session ?? ''), health.json().session)
@@ -99,7 +102,9 @@ try {
     token,
     ops: [
       { sql: `INSERT INTO flocks (farm_id, flock_name, start_date) VALUES (?, ?, ?)`,
-        params: [ran.body.lastId, 'F1', '2026-01-01'] },
+        // Development SQL acts as the server's fixed farm, even though this
+        // legacy transport test also creates a throwaway root metadata row.
+        params: [Number(env.DEV_FARM_ID ?? 1), 'F1', '2026-01-01'] },
       { sql: `INSERT INTO expenses (flock_id, date, amount) VALUES (?, ?, ?)`,
         params: [{ $lastId: -1 }, '2026-01-02', 250.5] },
     ],

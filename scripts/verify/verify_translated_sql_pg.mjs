@@ -121,6 +121,7 @@ try {
   // Everything runs inside one transaction that is rolled back, so the writes
   // below leave nothing behind.
   await client.query('BEGIN')
+  await client.query("SELECT set_config('app.farm_id','1',true)")
 
   for (const [name, sql, params] of QUERIES) {
     const t = dialect.translate(sql)
@@ -140,6 +141,48 @@ try {
     }
   }
 
+  // Unlike PREPARE, these assert results. The money ports found that negative
+  // SQLite substr starts silently add a zero to generated transaction numbers.
+  for (const width of [3, 4]) {
+    for (const n of [1, 9, 10, 999, 1000, 9999, 10000]) {
+      const name = `number padding width ${width}, value ${n}`
+      const sql = `SELECT CASE WHEN length(CAST(n AS TEXT)) >= ${width}
+                         THEN CAST(n AS TEXT)
+                         ELSE substr('${'0'.repeat(width)}' || CAST(n AS TEXT), -${width}) END AS v
+                   FROM (SELECT CAST(? AS INTEGER) AS n) AS source`
+      const t = dialect.translate(sql)
+      const { text, values } = placeholders.prepare(t.text, [n])
+      const actual = (await client.query(text, values)).rows[0].v
+      const expected = String(n).padStart(width, '0')
+      if (!t.unhandled.length && actual === expected) {
+        console.log(`  PASS  ${name}: ${actual}`)
+        passed++
+      } else {
+        console.log(`  FAIL  ${name}: got ${actual}, expected ${expected}`)
+        failures.push(name)
+      }
+    }
+  }
+
+  for (const [value, expected] of [
+    ['HAND', 0], ['', 0], ['12tail', 12], [' \t-12.9', -12], ['+003', 3],
+    ['1e3', 1], ['- 4', 0], [null, null], ['\n42suffix', 42], ['0x10', 0],
+  ]) {
+    const sql = 'SELECT CAST(substr(?, 1) AS INTEGER) AS v'
+    const t = dialect.translate(sql)
+    const { text, values } = placeholders.prepare(t.text, [value])
+    const raw = (await client.query(text, values)).rows[0].v
+    const actual = raw === null ? null : Number(raw)
+    const name = `text integer prefix ${JSON.stringify(value)}`
+    if (!t.unhandled.length && actual === expected) {
+      console.log(`  PASS  ${name}: ${actual}`)
+      passed++
+    } else {
+      console.log(`  FAIL  ${name}: got ${actual}, expected ${expected}`)
+      failures.push(name)
+    }
+  }
+
   await client.query('ROLLBACK')
 } finally {
   await client.end()
@@ -151,4 +194,4 @@ if (failures.length) {
   for (const f of failures) console.log(`  - ${f}`)
   process.exit(1)
 }
-console.log(`ALL CHECKS PASSED — ${passed} real app queries executed`)
+console.log(`ALL CHECKS PASSED — ${passed} real queries and numbering checks executed`)
