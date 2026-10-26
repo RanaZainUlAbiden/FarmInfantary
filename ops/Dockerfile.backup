@@ -1,0 +1,15 @@
+FROM node:24-bookworm-slim AS dependencies
+WORKDIR /app/server
+COPY server/package*.json ./
+RUN npm ci --omit=dev --no-audit
+
+FROM postgres:18-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 libatomic1 ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=dependencies /usr/local/bin/node /usr/local/bin/node
+WORKDIR /app
+COPY --from=dependencies /app/server/node_modules ./server/node_modules
+COPY server/package.json ./server/package.json
+COPY scripts/ops/backup.mjs ./scripts/ops/backup.mjs
+COPY scripts/ops/railway-backup.mjs ./scripts/ops/railway-backup.mjs
+ENV BACKUP_DIR=/backups BACKUP_RETAIN=7
+ENTRYPOINT ["node","scripts/ops/railway-backup.mjs"]

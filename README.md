@@ -14,10 +14,10 @@ and every business rule carry over unchanged.
 
 ## Status
 
-The owner-only release candidate is implemented. Numbered migrations are applied
+The owner-only release is prepared for Railway. Numbered migrations are applied
 locally through version 007. All 29 inherited verification gates pass on the web
-target (28 PostgreSQL, one source-only). The full suite is **84/84 green
-(~9,892 reported checks)**; backend tests are **83/83**. The patched Angular
+target (28 PostgreSQL, one source-only). The full suite is **85/85 green
+(~9,894 reported checks)**; backend tests are **83/83**. The patched Angular
 20.3.34 build passes, and both production dependency audits report zero issues.
 Server authentication, session transaction execution, full-schema tenant RLS and
 restricted-role provisioning/attestation are implemented. The AST SQL guard and
@@ -31,9 +31,11 @@ implemented. Instrumented voucher evidence covers four action scopes across
 2/50 screens; the final module/operation policy is not active. See
 [permission status](docs/STAFF_PERMISSIONS.md).
 The user selected an owner-only first release; staff business SQL stays denied.
-Deployment images/Compose are prepared but untested because Docker is unavailable
-here. Independent security review, host/domain/secrets, public HTTPS checks and
-backup activation remain. See the [deployment runbook](docs/OWNER_RELEASE.md).
+Railway builds the production container successfully and the candidate HTTPS
+readiness endpoint is healthy. The user assigned the final review to Codex;
+[self-review findings](docs/SELF_REVIEW.md) and D17 record this explicitly.
+GitHub main is connected for automatic deployments. Current deployment and backup
+details: [Railway runbook](docs/RAILWAY.md).
 Transaction ownership is documented in
 [session transactions](docs/SESSION_TRANSACTIONS.md).
 Database policies, role provisioning and activation limits are documented in

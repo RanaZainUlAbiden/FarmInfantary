@@ -1,5 +1,12 @@
 # Owner-only release candidate
 
+Current deployment target is Railway project **FarmInfantary (Talha Farm)**,
+with PostgreSQL 18 and a combined frontend/API service. The user authorized
+Codex to perform the final self-review (D17); references to an independent
+review below describe the original default. `SELF_REVIEW.md` records the actual
+review and fixes. No independent review is claimed. See `RAILWAY.md` for the
+current platform workflow rather than the alternative Compose host steps.
+
 The user selected an owner-only first release on 2026-10-26. Farm owners can
 use business screens; platform administrators manage account metadata. Staff
 business SQL stays denied, including for staff with grant rows. The derived

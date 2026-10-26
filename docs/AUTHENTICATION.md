@@ -1,5 +1,10 @@
 # Cookie authentication — Codex
 
+Current release update: Railway's owner-only candidate runs with attested auth
+and business roles, HTTPS and reviewed source digest. The user selected Codex
+self-review (D17); this supersedes the original independent-review default for
+this deployment. See `SELF_REVIEW.md` and `RAILWAY.md` for current status.
+
 Implemented and verified on 2026-10-26, including browser AuthService integration.
 Dedicated admin provisioning, seat controls, audit and delete authorization are
 implemented. Staff business access is deferred for the owner-only first release.

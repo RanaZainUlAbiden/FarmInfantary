@@ -24,6 +24,10 @@ export function registerOwnerData(app,{session,runtime,schema='public',maxBytes=
    const tables={},deadline=Date.now()+60_000;let bytes=0;
    for(const table of BUSINESS_TABLES) {
     if(Date.now()>deadline)throw new Error('Export deadline');
+    // Refuse oversized rows inside PostgreSQL before the driver loads them into
+    // Node memory. The existing serialized-size check also covers array overhead.
+    const size=(await c.query(`SELECT count(*)::int AS n,coalesce(sum(octet_length(row_to_json(export_row)::text)),0)::text AS bytes FROM (SELECT * FROM ${sqlIdentifier(schema)}.${sqlIdentifier(table)} LIMIT 50001) export_row`)).rows[0];
+    if(size.n>50_000||Number(size.bytes)>maxBytes-bytes){await c.query('ROLLBACK');return reply.code(413).send({success:false,error:'This farm needs an operator-assisted export because its data is too large.'});}
     const rows=(await c.query(`SELECT * FROM ${sqlIdentifier(schema)}.${sqlIdentifier(table)} LIMIT 50001`)).rows;
     if(rows.length>50_000){await c.query('ROLLBACK');return reply.code(413).send({success:false,error:'This farm needs an operator-assisted export because one table is too large.'});}
     bytes+=Buffer.byteLength(JSON.stringify(rows));if(bytes>maxBytes){await c.query('ROLLBACK');return reply.code(413).send({success:false,error:'This farm needs an operator-assisted export because its data is too large.'});}

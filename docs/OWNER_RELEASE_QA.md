@@ -1,5 +1,14 @@
 # Owner release verification — 2026-10-26
 
+Current final run: **85/85 scripts (~9,894 checks)** in
+`qa-results/verify-railway-approved.log`, backend **83/83** in
+`backend-railway-final.log`, and successful build in `angular-railway-final.log`.
+The extra case verifies documented eight-character delete-code setup/verification;
+the new source gate checks Linux filename casing. Cloud Docker/Caddy builds and
+candidate HTTPS readiness now pass on Railway. The user authorized Codex
+self-review (D17); no independent-review claim is made. This update supersedes
+the earlier workstation-only status below.
+
 All 84 verification scripts pass (approximately 9,892 reported checks), with
 83/83 backend tests. The production Angular build passes on Node 24.14.0.
 Angular core/framework is 20.3.34; CLI/build is 20.3.41; TypeScript is 5.9.3.

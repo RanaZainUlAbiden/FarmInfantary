@@ -16,6 +16,14 @@ export async function hashPassword(password) {
   if (!validNewPassword(password)) throw new Error('Use a password of 15 to 128 characters.');
   return argon2.hash(password, PASSWORD_OPTIONS);
 }
+export function validDeleteCode(code) {
+  return typeof code==='string' && [...code].length>=8 && [...code].length<=128
+    && Buffer.byteLength(code)<=1024 && !/[\x00-\x1f]/.test(code);
+}
+export async function hashDeleteCode(code) {
+  if(!validDeleteCode(code))throw new Error('Use a delete code of 8 to 128 characters.');
+  return argon2.hash(code,PASSWORD_OPTIONS);
+}
 export async function verifyPassword(hash, password) {
   if (!validLoginPassword(password) || typeof hash !== 'string' || !hash.startsWith('$argon2id$')) return false;
   // Bound work even for a damaged or unexpectedly modified database record.

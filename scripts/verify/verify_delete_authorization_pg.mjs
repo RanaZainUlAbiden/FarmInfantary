@@ -62,6 +62,11 @@ try {
  await check('logout invalidates grants and another login does not inherit them',async()=>{ok(await req('POST','/api/auth/logout',{}));assert.equal((await remove()).statusCode,401);a=await login('delete.owner');assert.equal((await remove()).json().success,false);});
  await check('runtime login cannot read or mutate code/grant metadata',async()=>{for(const t of ['farm_security','auth_delete_grants']){await assert.rejects(runtime.query('SELECT * FROM '+t));await assert.rejects(runtime.query('DELETE FROM '+t));}});
  await check('audit stores the security change without code/password/hash values',async()=>{const rows=(await q("SELECT details FROM audit_events WHERE action='security.delete-code'")).rows;assert.equal(rows.length,2);assert.ok(rows.every(r=>JSON.stringify(r.details)==='{}'));});
+ await check('documented eight-character delete codes configure and verify while shorter codes fail',async()=>{
+  now+=61_000;assert.equal((await req('PUT','/api/account/delete-code',{currentPassword:password,newCode:'1234567'})).statusCode,400);
+  ok(await req('PUT','/api/account/delete-code',{currentPassword:password,newCode:'A8code!x'}));ok(await verify(a,'A8code!x'));
+  ok(await req('PUT','/api/account/delete-code',{currentPassword:password,newCode:'replacement private code'}));
+ });
  await check('repeated wrong codes are throttled before further verification',async()=>{now+=61_000;for(let i=0;i<5;i++)assert.equal((await verify(a,'wrong delete code')).statusCode,400);assert.equal((await verify(a,'replacement private code')).statusCode,429);});
  console.log('ALL CHECKS PASSED — '+passed+' delete authorization scenarios');
 } finally {await app?.close();await runtime?.end();await q(`DROP SCHEMA IF EXISTS ${f.schema}_meta CASCADE`);await f.close();if(created){const p=new Pool({connectionString:process.env.DATABASE_URL});try{await p.query('DROP ROLE '+role);}finally{await p.end();}}}

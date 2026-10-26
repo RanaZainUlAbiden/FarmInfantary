@@ -1,5 +1,22 @@
 # Handoff
 
+## Railway deployment update — 2026-10-26
+
+The user selected Railway, requested a new **FarmInfantary (Talha Farm)** project
+and GitHub automatic deployment, and assigned the final review to Codex. D17
+records this as self-review, not independent approval. PR #1 contains the release
+branch. The Railway app is connected to GitHub `main`; merging the reviewed
+release will trigger its build. Private PostgreSQL 18 is online, migration 007
+and both restricted roles are applied/attested by the successful one-off job.
+The operator password was rotated and the privileged setup job removed. App
+runtime credentials are distinct and migration credentials are not passed to it.
+
+Linux builds found a Feed template/import filename-case mismatch, now fixed.
+Final self-review fixed eight-character delete-code hashing and moved export
+size screening into PostgreSQL before row transfer. Updated tests and Railway
+web startup/HTTPS validation are in progress. Current actual status and recovery
+steps belong in `RAILWAY.md`; older counts/requirements below are historical.
+
 ## Owner-only release candidate — 2026-10-26
 
 This block supersedes earlier milestone status below. The user chose an

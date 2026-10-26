@@ -6,4 +6,4 @@ function stop(code=0){if(stopping)return;stopping=true;exitCode=code;for(const c
 function start(bin,args,env){const child=spawn(bin,args,{env,stdio:'inherit'});children.push(child);child.on('error',()=>stop(1));child.on('exit',code=>{if(!stopping)stop(code||1);if(children.every(c=>c.exitCode!==null||c.signalCode!==null))process.exit(exitCode);});}
 process.on('SIGTERM',()=>stop());process.on('SIGINT',()=>stop());
 start(process.execPath,['server/src/server.js'],{...process.env,HOST:'127.0.0.1',PORT:'3000',TRUST_PROXY:'127.0.0.1'});
-start('caddy',['run','--config','/app/ops/Caddyfile.railway','--adapter','caddyfile'],process.env);
+start('caddy',['run','--config','/app/ops/Caddyfile.railway','--adapter','caddyfile'],{PATH:process.env.PATH,HOME:'/home/node',PORT:process.env.PORT||'8080'});

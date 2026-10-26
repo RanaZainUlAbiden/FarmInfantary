@@ -1,5 +1,10 @@
 # Guarded session SQL — Codex
 
+Current deployment review: the user assigned the final review to Codex (D17).
+`SELF_REVIEW.md` records the findings/fixes and explicitly does not claim
+independence. The owner-only Railway candidate passes readiness with its reviewed
+digest and attested roles. Staff business access remains denied.
+
 The farm-admin HTTP SQL path now connects cookie authentication, the AST guard,
 session-owned transactions, a separately attested restricted pool and FORCE RLS.
 It runs in explicit development, or the owner-only production profile after

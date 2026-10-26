@@ -1,4 +1,4 @@
-import {verifyPassword,hashPassword,validLoginPassword} from './password.js';
+import {verifyPassword,hashDeleteCode,validDeleteCode,validLoginPassword} from './password.js';
 import {sameOriginRequest} from './config.js';
 import {sameSessionContext} from './context.js';
 export function createDeleteAuthorization(pool,session,{clock=()=>Date.now()}={}) {
@@ -13,7 +13,7 @@ export function createDeleteAuthorization(pool,session,{clock=()=>Date.now()}={}
     AND u.auth_version=g.auth_version AND s.auth_version=u.auth_version AND u.role='farm_admin' AND u.status='active'`,
    [actor.sessionKey,actor.userId,actor.farmId,actor.authVersion,now()]);return r.rowCount===1;
  }
- const validCode=code=>typeof code==='string'&&[...code].length>=8&&[...code].length<=128&&Buffer.byteLength(code)<=1024&&!/[\x00-\x1f]/.test(code);
+ const validCode=validDeleteCode;
  function register(app) {
   const scope={bodyLimit:4096,preHandler:async(req,reply)=>{
    reply.header('Cache-Control','no-store');if(!sameOriginRequest(req,session.config,req.method!=='GET'))return reply.code(403).send({success:false,error:'Request origin is not allowed.'});
@@ -29,7 +29,7 @@ export function createDeleteAuthorization(pool,session,{clock=()=>Date.now()}={}
    if(!await session.store.throttle(req.ip,String(a.userId),'delete-config',{windowSeconds:60,ipAttempts:15,userAttempts:5}))return reply.code(429).send({success:false,error:'Too many attempts. Try again later.'});
    const result=await session.passwordWork(async()=>{
     const user=await session.store.findUser(a.username);if(!user||user.auth_version!==a.authVersion||!await verifyPassword(user.password_hash,b.currentPassword))return false;
-    const hash=await hashPassword(b.newCode),c=await pool.connect();
+    const hash=await hashDeleteCode(b.newCode),c=await pool.connect();
     try{await c.query('BEGIN');const fresh=await c.query("SELECT user_id FROM users WHERE user_id=$1 AND farm_id=$2 AND auth_version=$3 AND role='farm_admin' AND status='active' FOR SHARE",[a.userId,a.farmId,a.authVersion]);
      if(!fresh.rowCount){await c.query('ROLLBACK');return false;}
      await c.query('INSERT INTO farm_security(farm_id,delete_code_hash) VALUES($1,$2) ON CONFLICT(farm_id) DO UPDATE SET delete_code_hash=excluded.delete_code_hash',[a.farmId,hash]);

@@ -1,5 +1,15 @@
 # Verify scripts
 
+## Owner-only Railway release — Codex
+
+Current validation: **85/85 scripts (~9,894 checks)**, **83/83 backend tests** and
+the patched Angular production build pass. Real admin/delete/export/release and
+encrypted backup/restore suites are included. `verify_source_case.mjs` checks
+Linux filename casing across relative imports/templates/styles (761 references).
+The final review fixed eight-character delete-code hashing and screens oversized
+exports inside PostgreSQL before loading rows into Node. Older milestone counts
+below are historical. See `docs/SELF_REVIEW.md` and `docs/RAILWAY.md`.
+
 ## Staff permission foundation — Codex
 
 `verify_staff_permissions_pg.mjs` covers 16 real PostgreSQL scenarios for private

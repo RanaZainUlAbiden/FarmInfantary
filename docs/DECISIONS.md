@@ -1,5 +1,14 @@
 # Decisions
 
+## D17 · Codex self-review for this owner-only deployment (2026-10-26)
+
+After being shown PR #1 and the second-reviewer requirement, the user explicitly
+instructed: "you will review it". Codex performs and records the final review of
+this release. This supersedes the second-reviewer requirement for this deployment;
+it is a self-review and must never be described as independent approval. The
+production digest, HTTPS, session-only, separate-role and no-migration-credentials
+checks remain mandatory. Findings and remaining limits are in `SELF_REVIEW.md`.
+
 ## D16 · Owner-only first release (2026-10-26)
 
 The user selected an owner-only first release to meet the deadline. Farm owners
