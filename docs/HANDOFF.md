@@ -1,5 +1,24 @@
 # Handoff
 
+## Staff access development — 2026-10-27
+
+[Codex] User chose per-screen View/Create/Edit/Delete controls. The
+`codex/staff-access` branch adds owner management of their own staff's prepared
+grants, status and password, with audit, expected-version checks and revocation.
+The owner Team screen reuses the existing 50-row permission editor. Local browser
+checks confirm persisted flags. All 87 verification scripts (~9,908 reported
+checks), 83 backend tests and production build pass; the targeted 22 administration
+scenarios also pass after the final locked-target role recheck.
+
+The source workflow checklist covers 50 keys, 697 roots and 147 candidate mutation
+roots. It does not authorize staff operations or extend measured runtime evidence.
+Staff business SQL/routes remain denied; this branch is not deployed. Continue
+with trusted operation/action/module enforcement and permission-aware staff UI,
+then hostile-access regression and release review. See `STAFF_ACCESS.md`.
+The disposable local fixture was stopped through its cleanup endpoint. Production
+data, grants and the owner-only deployment were not changed. The shared artifact
+contains two completed `[Codex]` development milestones and states what remains.
+
 ## Screen reliability fixes — 2026-10-26
 
 [Codex] The three audit findings have local repairs: bounded session-aware HTTP

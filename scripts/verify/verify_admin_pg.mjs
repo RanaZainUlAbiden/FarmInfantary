@@ -15,7 +15,7 @@ const authRole='vp_auth_'+randomBytes(6).toString('hex');
 const check=async(label,fn)=>{await fn();passed++;console.log('  PASS  '+label);};
 const req=(method,url,payload,cookie=root,headers={})=>app.inject({method,url,...(payload===undefined?{}:{payload}),headers:{origin,...(cookie?{cookie}:{}),...headers}});
 const ok=r=>{assert.equal(r.statusCode,200,r.body);assert.equal(r.json().success,true,r.body);return r.json();};
-const login=async username=>{const r=await req('POST','/api/auth/login',{username,password},null);ok(r);return r.headers['set-cookie'].split(';')[0];};
+const login=async(username,secret=password)=>{const r=await req('POST','/api/auth/login',{username,password:secret},null);ok(r);return r.headers['set-cookie'].split(';')[0];};
 const farms=async()=>ok(await req('GET','/api/admin/farms')).farms;
 const currentFarm=async()=> (await farms()).find(x=>x.farm_id===farmId);
 const currentUser=async()=>ok(await req('GET',`/api/admin/farms/${farmId}/users`)).users.find(u=>u.user_id===staffId);
@@ -118,6 +118,51 @@ try {
   assert.equal((await req('PUT',`/api/admin/users/${id}/status`,{expectedVersion:1,status:'suspended'})).statusCode,404);
   assert.equal((await req('POST','/api/db/get',{sql:'SELECT * FROM users'})).statusCode,403);
   assert.equal((await req('GET','/api/admin/farms?limit=100000')).json().farms.length,1);
+ });
+ await check('farm owners can prepare all 50 screen grants for their own staff without platform access',async()=>{
+  const catalogue=ok(await req('GET','/api/account/permissions',undefined,ownerCookie));assert.equal(catalogue.permissions.length,50);
+  const before=ok(await req('GET',`/api/account/staff/${staffId}/permissions`,undefined,ownerCookie));assert.equal(before.user.farm_id,farmId);
+  staffCookie=await login('admin.staff','replacement workflow password');
+  const payload={expectedVersion:before.user.auth_version,grants:[{key:'broiler.income',view:true,create:true,edit:false,delete:false}]};
+  ok(await req('PUT',`/api/account/staff/${staffId}/permissions`,payload,ownerCookie));
+  assert.equal((await req('GET','/api/auth/me',undefined,staffCookie)).statusCode,401);
+  const after=ok(await req('GET',`/api/account/staff/${staffId}/permissions`,undefined,ownerCookie));
+  assert.equal(after.grants.length,1);assert.equal(after.grants[0].permission_key,'broiler.income');assert.equal(after.grants[0].can_create,1);
+  assert.equal((await req('PUT',`/api/account/staff/${staffId}/permissions`,payload,ownerCookie)).statusCode,409);
+  assert.equal((await req('GET','/api/admin/permissions',undefined,ownerCookie)).statusCode,403);
+ });
+ await check('owner grant routes reject spoofed identities, invalid flags, unknown keys and stale contexts',async()=>{
+  const before=await currentUser(),path=`/api/account/staff/${staffId}/permissions`,grant={key:'broiler.income',view:true,create:false,edit:false,delete:false};
+  for(const grants of [[{...grant,key:'invented'}],[{...grant,view:false,create:true}],[grant,grant],[{...grant,delete:1}]])
+   assert.equal((await req('PUT',path,{expectedVersion:before.auth_version,grants},ownerCookie)).statusCode,400);
+  assert.equal((await req('PUT',path,{expectedVersion:before.auth_version,grants:[grant],farmId:999},ownerCookie)).statusCode,400);
+  assert.equal((await req('GET',path,undefined,ownerCookie,{'x-fi-session-context':'999:999'})).statusCode,409);
+  assert.equal((await currentUser()).auth_version,before.auth_version);
+ });
+ await check('owners cannot read or mutate another farm staff, themselves or platform administrators',async()=>{
+  const other=ok(await req('POST','/api/admin/farms',{farmName:'Other staff farm',businessType:'all',username:'other.owner',password}));
+  await q('UPDATE farms SET staff_seat_limit=1 WHERE farm_id=$1',[other.farmId]);
+  const otherStaff=ok(await req('POST',`/api/admin/farms/${other.farmId}/staff`,{username:'other.staff',password})).user;
+  const rootId=(await q("SELECT user_id FROM users WHERE role='super_admin'")).rows[0].user_id;
+  for(const targetId of [otherStaff.user_id,ownerId,rootId]){
+   const base=`/api/account/staff/${targetId}`;
+   assert.equal((await req('GET',base+'/permissions',undefined,ownerCookie)).statusCode,404);
+   assert.equal((await req('PUT',base+'/permissions',{expectedVersion:1,grants:[]},ownerCookie)).statusCode,404);
+   assert.equal((await req('PUT',base+'/status',{expectedVersion:1,status:'suspended'},ownerCookie)).statusCode,404);
+   assert.equal((await req('POST',base+'/password',{expectedVersion:1,password},ownerCookie)).statusCode,404);
+  }
+  const unchanged=(await q('SELECT status,auth_version FROM users WHERE user_id=$1',[otherStaff.user_id])).rows[0];assert.equal(unchanged.status,'active');assert.equal(unchanged.auth_version,1);
+ });
+ await check('owners can suspend and reset own staff; staff cannot administer or run prepared business grants',async()=>{
+  staffCookie=await login('admin.staff','replacement workflow password');
+  assert.equal((await req('GET','/api/account/permissions',undefined,staffCookie)).statusCode,403);
+  assert.equal((await req('GET',`/api/account/staff/${staffId}/permissions`,undefined,staffCookie)).statusCode,403);
+  let u=await currentUser();ok(await req('PUT',`/api/account/staff/${staffId}/status`,{expectedVersion:u.auth_version,status:'suspended'},ownerCookie));
+  assert.equal((await req('GET','/api/auth/me',undefined,staffCookie)).statusCode,401);
+  u=await currentUser();ok(await req('PUT',`/api/account/staff/${staffId}/status`,{expectedVersion:u.auth_version,status:'active'},ownerCookie));
+  u=await currentUser();ok(await req('POST',`/api/account/staff/${staffId}/password`,{expectedVersion:u.auth_version,password},ownerCookie));
+  staffCookie=await login('admin.staff');assert.equal((await req('POST','/api/db/get',{sql:'SELECT * FROM income',params:[]},staffCookie)).statusCode,503); // This metadata-only fixture has no runtime pool.
+  const events=ok(await req('GET','/api/admin/audit')).events;assert.ok(events.some(e=>e.actor_id===ownerId&&e.action==='user.permissions'));assert.ok(!JSON.stringify(events).includes(password));
  });
  console.log('ALL CHECKS PASSED — '+passed+' admin provisioning/seat/audit scenarios');
 } finally {await app?.close();await authPool?.end();await q(`DROP SCHEMA IF EXISTS ${f.schema}_meta CASCADE`);await f.close();if(authCreated){const {Pool}=createRequire(new URL('../../server/package.json',import.meta.url))('pg'),p=new Pool({connectionString:process.env.DATABASE_URL});try{await p.query('DROP ROLE '+authRole);}finally{await p.end();}}}

@@ -24,7 +24,7 @@ Evidence: `tools/permission-evidence/vouchers.json`; scenarios include bank/cash
 and overpayment/deletion cases in `verify_vouchers_pg.mjs`. Query text, parameter
 values, rows and database error details are not saved. Only query hashes, table
 names, operation kinds and counters persist. The source digest is
-`7f993a0c795ee184dabd09273003fc49db43a7c0e725daaf9d00bfe7334ec736`.
+`ed951426df10a969aee4e9c4b8c86173d0caf4f5f423193b8f2016cb259d6f41`.
 
 ## Unobserved screen keys
 

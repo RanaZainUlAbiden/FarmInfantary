@@ -1,5 +1,11 @@
 # Staff permission foundation — Codex
 
+**Current development update (2026-10-27):** owner management of prepared
+per-screen View/Create/Edit/Delete grants is implemented on `codex/staff-access`.
+See [STAFF_ACCESS.md](STAFF_ACCESS.md) for current validation and remaining trusted
+operation enforcement. Staff business access is still denied. The historical
+foundation notes below describe the earlier batch, not current deployment status.
+
 Migration 005 is applied locally. It adds private catalogue/grant metadata,
 validation and durable session revocation. **Staff SQL remains denied.** Neither
 these rows nor the generated observation report authorizes a business query.

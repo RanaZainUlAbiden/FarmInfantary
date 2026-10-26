@@ -26,7 +26,7 @@ export class AdminComponent implements OnInit,OnDestroy {
   this.selectedUser=null;
   if(this.root){this.farms=(await this.read('/api/admin/farms')).farms;this.farmMore=this.farms.length===50;this.catalogue=(await this.read('/api/admin/permissions')).permissions;
    if(this.selected)await this.loadFarm((await this.read('/api/admin/farms/'+this.selected.farm_id)).farm);
-  }else{const r=await this.read('/api/account/staff');this.selected=r.farm;this.users=r.users;this.userMore=r.users.length===50;this.deleteConfigured=(await this.read('/api/account/delete-code')).configured;}
+  }else{const r=await this.read('/api/account/staff');this.selected=r.farm;this.users=r.users;this.userMore=r.users.length===50;this.catalogue=(await this.read('/api/account/permissions')).permissions;this.deleteConfigured=(await this.read('/api/account/delete-code')).configured;}
  });}
  async tab(value:string){if(this.busy)return;this.view=value;this.render();if(value==='audit')await this.task(async()=>{this.events=(await this.read('/api/admin/audit')).events;this.auditMore=this.events.length===50;});}
  private async loadFarm(f:any){this.selected={...f};this.draft={farmName:f.farm_name,businessType:f.business_type,status:f.status,seatLimit:f.staff_seat_limit,allowStaffCreation:f.can_admin_add_staff===1,expectedVersion:f.admin_version};
@@ -51,13 +51,14 @@ export class AdminComponent implements OnInit,OnDestroy {
  private async reloadUsers(){this.selectedUser=null;if(this.root){const f=(await this.read('/api/admin/farms/'+this.selected.farm_id)).farm;this.farms=this.farms.map(x=>x.farm_id===f.farm_id?f:x);await this.loadFarm(f);}
   else{const r=await this.read('/api/account/staff');this.selected=r.farm;this.users=r.users;this.userMore=r.users.length===50;}}
  async selectUser(u:any){await this.task(async()=>{this.selectedUser={...u};this.pendingStatus=u.status;this.replacementPassword='';
-  if(u.role==='staff'){const r=await this.read(`/api/admin/users/${u.user_id}/permissions`);this.selectedUser=r.user;this.pendingStatus=r.user.status;this.grants=this.catalogue.map(c=>{const g=r.grants.find((x:any)=>x.permission_key===c.permission_key);return {...c,view:g?.can_view===1,create:g?.can_create===1,edit:g?.can_edit===1,delete:g?.can_delete===1};});}
+  if(u.role==='staff'){const r=await this.read(this.userPath(u.user_id)+'/permissions');this.selectedUser=r.user;this.pendingStatus=r.user.status;this.grants=this.catalogue.map(c=>{const g=r.grants.find((x:any)=>x.permission_key===c.permission_key);return {...c,view:g?.can_view===1,create:g?.can_create===1,edit:g?.can_edit===1,delete:g?.can_delete===1};});}
  });this.focus('user-editor-title');}
  toggleGrant(g:any,flag:string,event:Event){g[flag]=(event.target as HTMLInputElement).checked;if(flag==='view'&&!g.view)g.create=g.edit=g.delete=false;if(flag!=='view'&&g[flag])g.view=true;this.render();}
- async savePermissions(){await this.task(async()=>{await this.mutation('PUT',`/api/admin/users/${this.selectedUser.user_id}/permissions`,{expectedVersion:this.selectedUser.auth_version,grants:this.grants.map(g=>({key:g.permission_key,view:g.view,create:g.create,edit:g.edit,delete:g.delete}))});await this.reloadUsers();},'Permissions saved. Changed permissions sign the staff user out.');}
- async saveStatus(){await this.task(async()=>{await this.mutation('PUT',`/api/admin/users/${this.selectedUser.user_id}/status`,{expectedVersion:this.selectedUser.auth_version,status:this.pendingStatus});await this.reloadUsers();},'User status saved.');}
+ private userPath(id:number):string {return this.root?`/api/admin/users/${id}`:`/api/account/staff/${id}`;}
+ async savePermissions(){await this.task(async()=>{await this.mutation('PUT',this.userPath(this.selectedUser.user_id)+'/permissions',{expectedVersion:this.selectedUser.auth_version,grants:this.grants.map(g=>({key:g.permission_key,view:g.view,create:g.create,edit:g.edit,delete:g.delete}))});await this.reloadUsers();},'Permissions saved. Changed permissions sign the staff user out.');}
+ async saveStatus(){await this.task(async()=>{await this.mutation('PUT',this.userPath(this.selectedUser.user_id)+'/status',{expectedVersion:this.selectedUser.auth_version,status:this.pendingStatus});await this.reloadUsers();},'User status saved.');}
  async resetPassword(){if(!this.validate([['replacement-password',this.validPassword(this.replacementPassword),'Use a new password of 15 to 128 characters.']]))return;
-  await this.task(async()=>{try{await this.mutation('POST',`/api/admin/users/${this.selectedUser.user_id}/password`,{expectedVersion:this.selectedUser.auth_version,password:this.replacementPassword});await this.reloadUsers();}finally{this.replacementPassword='';}},'Password changed. Existing sessions have ended.');}
+  await this.task(async()=>{try{await this.mutation('POST',this.userPath(this.selectedUser.user_id)+'/password',{expectedVersion:this.selectedUser.auth_version,password:this.replacementPassword});await this.reloadUsers();}finally{this.replacementPassword='';}},'Password changed. Existing sessions have ended.');}
  async more(kind:string){await this.task(async()=>{
   if(kind==='farms'){const r=await this.read('/api/admin/farms?before='+this.farms.at(-1).farm_id);this.farms.push(...r.farms);this.farmMore=r.farms.length===50;}
   if(kind==='users'){const r=await this.read((this.root?`/api/admin/farms/${this.selected.farm_id}/users`:'/api/account/staff')+'?before='+this.users.at(-1).user_id);this.users.push(...r.users);this.userMore=r.users.length===50;}
