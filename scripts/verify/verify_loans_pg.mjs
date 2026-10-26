@@ -174,7 +174,7 @@ const methods = {
 }
 
 // ── PostgreSQL bootstrap (replaces the sql.js one) ─────────
-const __pg = await createScratchDb('loans')
+const __pg = await createScratchDb('loans', {brokerCash:true})
 const svc = makeService(__pg.db, methods)
 
 const _run = (sql, params = []) => __pg.db.run(sql, params)

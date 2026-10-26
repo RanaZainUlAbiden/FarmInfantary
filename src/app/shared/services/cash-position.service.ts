@@ -384,11 +384,12 @@ export class CashPositionService {
 
     const broilerTerms: [string, string, string[]][] = [
       ['broiler_sales_in',
-       `SELECT COALESCE(SUM(s.total_amount), 0) AS amount
-        FROM sales s
+       `SELECT COALESCE(SUM(s.amount), 0) AS amount
+        FROM (SELECT s.flock_id,s.date,s.total_amount AS amount FROM sales s
+          WHERE COALESCE(s.module_type,'broiler')='broiler' AND ${paidInCash('s')}
+          UNION ALL SELECT p.flock_id,p.date,p.amount FROM broker_payments p WHERE p.method='cash' AND p.reversed=0) s
         JOIN flocks u ON u.flock_id = s.flock_id
-        WHERE u.farm_id = ? AND COALESCE(s.module_type,'broiler') = 'broiler'
-          AND ${paidInCash('s')} AND ${upTo('s.date')} AND ${inUnit}`, SCOPED],
+        WHERE u.farm_id = ? AND ${upTo('s.date')} AND ${inUnit}`, SCOPED],
 
       ['broiler_income_in',
        `SELECT COALESCE(SUM(i.amount), 0) AS amount
@@ -556,14 +557,15 @@ export class CashPositionService {
 
     const terms: [string, string, string[]][] = [
 
+
       // ── MONEY IN ──────────────────────────────────────────────────────────
 
       ['broiler_sales_in',
-       `SELECT COALESCE(SUM(s.total_amount), 0) AS amount
-        FROM sales s
-        JOIN flocks f ON f.flock_id = s.flock_id
-        WHERE f.farm_id = ? AND COALESCE(s.module_type,'broiler') = 'broiler'
-          AND ${paidInCash('s')} AND ${upTo('s.date')}`, DATED],
+       `SELECT COALESCE(SUM(s.amount), 0) AS amount
+        FROM (SELECT f.farm_id,s.date,s.total_amount AS amount FROM sales s JOIN flocks f ON f.flock_id=s.flock_id
+          WHERE COALESCE(s.module_type,'broiler')='broiler' AND ${paidInCash('s')}
+          UNION ALL SELECT p.farm_id,p.date,p.amount FROM broker_payments p WHERE p.method='cash' AND p.reversed=0) s
+        WHERE s.farm_id = ? AND ${upTo('s.date')}`, DATED],
 
       ['egg_sales_in',
        `SELECT COALESCE(SUM(es.total_amount), 0) AS amount

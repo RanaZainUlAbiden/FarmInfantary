@@ -30,9 +30,9 @@ export class SaleResolver implements Resolve<any> {
 
       const brokersResult = await this.db.get(
         `SELECT * FROM brokers
-         WHERE flock_id = ?
+         WHERE merged_into IS NULL
          ORDER BY broker_name ASC`,
-        [flock.flock_id]
+        []
       );
 
       return {

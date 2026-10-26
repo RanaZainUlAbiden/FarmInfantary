@@ -18,6 +18,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { alignHeadFootWithColumnStyles } from '../shared/utils/pdf-table.util';
 import { PaginationComponent } from '../shared/components/pagination/pagination.component';
+import {BrokersComponent} from '../brokers/brokers.component';
 
 import { toLocalDateString } from '../shared/utils/date.util';
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
@@ -25,11 +26,13 @@ import { printPdfBase64 } from '../shared/utils/browser-print.util';
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-sale',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, DateOnlyPipe, PaginationComponent, BankPickerComponent],
+  imports: [CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, DateOnlyPipe, PaginationComponent, BankPickerComponent, BrokersComponent],
   templateUrl: './sale.component.html',
   styleUrl: './sale.component.scss'
 })
 export class SaleComponent implements OnInit, OnDestroy {
+  showLegacyHistory=false;
+  async toggleHistory(){this.showLegacyHistory=!this.showLegacyHistory;if(this.showLegacyHistory)await this.loadData();}
   currentFlock: any = null;
   logoUrl: string | null = null;
   sales: any[] = [];
@@ -103,8 +106,6 @@ export class SaleComponent implements OnInit, OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   handleKeyboard(event: KeyboardEvent) {
-    if (event.ctrlKey && event.key === 'a') { event.preventDefault(); if (this.brokers.length > 0) this.addPendingRow(); }
-    if (event.ctrlKey && event.key === 's') { event.preventDefault(); if (this.hasPendingRows) this.saveAllRows(); }
     if (event.key === 'Escape' && this.viewingImage) { this.closeImage(); }
   }
 
@@ -130,6 +131,7 @@ export class SaleComponent implements OnInit, OnDestroy {
         .then(() => this.cdr.detectChanges());
     }
     this.subs.add(this.flockService.currentFlock$.pipe(skip(1)).subscribe(flock => {
+      if(!flock){this.currentFlock=null;this.sales=[];this.groupedSales=[];this.pendingRows=[];this.editingId=null;this.cdr.detectChanges();return;}
       if (flock) {
         this.currentFlock = flock; this.sales = []; this.groupedSales = []; this.pendingRows = [];
         this.editingId = null; this.selectedBrokerFilter = 'all'; this.isSaving = false;
@@ -146,7 +148,7 @@ export class SaleComponent implements OnInit, OnDestroy {
   async loadData() {
     if (!this.currentFlock) { this.sales = []; this.groupedSales = []; this.cdr.detectChanges(); return; }
     const sr = await this.db.get(`SELECT * FROM sales WHERE flock_id = ? AND COALESCE(module_type,'broiler') = 'broiler' ORDER BY date DESC, sale_id ASC`, [this.currentFlock.flock_id]);
-    const br = await this.db.get('SELECT * FROM brokers WHERE flock_id = ? ORDER BY broker_name ASC', [this.currentFlock.flock_id]);
+    const br = await this.db.get('SELECT * FROM brokers WHERE merged_into IS NULL ORDER BY broker_name ASC', []);
     this.sales = sr.success ? sr.data : []; this.brokers = br.success ? br.data : [];
     if (sr.success) this.groupSales(); else this.groupedSales = [];
     await this.loadBanks();
@@ -477,7 +479,7 @@ export class SaleComponent implements OnInit, OnDestroy {
   }
   cancelAllRows() { this.pendingRows = []; }
 
-  startEdit(sale: any) { if (this.isSaving) return; this.pendingRows = []; this.editingId = sale.sale_id; const broker = this.brokers.find(b => b.broker_name === sale.broker); this.editForm = { date: sale.date, vehicle_number: sale.vehicle_number, driver_name: sale.driver_name || '', driver_phone: sale.driver_phone || '', broker_id: broker ? broker.broker_id : null, empty_weight: sale.empty_weight, load_weight: sale.load_weight, rate: sale.rate, payment_type: sale.payment_type || 'cash', bank_id: sale.bank_id ?? null, receipt_image: sale.receipt_image || null }; }
+  startEdit(sale: any) { if (this.isSaving) return; this.pendingRows = []; this.editingId = sale.sale_id; const broker = this.brokers.find(b => b.broker_id === sale.broker_id) || this.brokers.find(b => b.broker_name === sale.broker); this.editForm = { date: sale.date, vehicle_number: sale.vehicle_number, driver_name: sale.driver_name || '', driver_phone: sale.driver_phone || '', broker_id: broker ? broker.broker_id : null, empty_weight: sale.empty_weight, load_weight: sale.load_weight, rate: sale.rate, payment_type: sale.payment_type || 'cash', bank_id: sale.bank_id ?? null, receipt_image: sale.receipt_image || null }; }
   cancelEdit() { if (!this.isSaving) { this.editingId = null; this.editForm = {}; } }
   async saveEdit(saleId: number, oldDate: string) {
     if (this.isSaving) return;
@@ -613,7 +615,7 @@ export class SaleComponent implements OnInit, OnDestroy {
     doc.setDrawColor(...B); doc.line(14, y, pw - 14, y); y += 6;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...B); doc.text('SUMMARY', 14, y); y += 6;
     doc.setFont('helvetica', 'normal'); doc.setTextColor(...G); doc.text('Total Vehicles: ' + group.sales.length, 14, y); doc.setTextColor(...B); doc.text(group.totalWeight.toFixed(0) + ' kg  |  Rs. ' + group.totalAmount.toLocaleString(), 70, y); y += 10;
-    const body = group.sales.map((s: any) => [s.vehicle_number || '—', s.driver_name || '—', s.broker || '—', (s.bird_weight || 0).toFixed(0) + ' kg', 'Rs. ' + (s.rate || 0).toLocaleString(), 'Rs. ' + (s.total_amount || 0).toLocaleString(), s.payment_type || 'cash']);
+    const body = group.sales.map((s: any) => [s.vehicle_number || '—', s.driver_name || '—', s.broker || '—', (s.bird_weight || 0).toFixed(0) + ' kg', 'Rs. ' + (s.rate || 0).toLocaleString(), 'Rs. ' + (s.total_amount || 0).toLocaleString(), s.broker_managed ? 'See broker ledger' : (s.payment_type || 'cash')]);
     autoTable(doc, { startY: y, head: [['Vehicle', 'Driver', 'Broker', 'Weight', 'Rate', 'Amount', 'Payment']], body, foot: [['', '', 'Total', group.totalWeight.toFixed(0) + ' kg', '', 'Rs. ' + group.totalAmount.toLocaleString(), '']], theme: 'plain', headStyles: { fontStyle: 'bold', fontSize: 9, textColor: B, fillColor: false as any, lineWidth: { bottom: 0.3 }, lineColor: B }, bodyStyles: { fontSize: 9, textColor: B, fillColor: false as any, lineWidth: { bottom: 0.15 }, lineColor: LG }, footStyles: { fontStyle: 'bold', fontSize: 9, textColor: B, fillColor: false as any, lineWidth: { top: 0.3 }, lineColor: B }, columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } }, didParseCell: alignHeadFootWithColumnStyles, margin: { left: 14, right: 14 } });
     // Print receipt photos
     const photos = group.sales.filter((s: any) => s.receipt_image);
@@ -649,7 +651,7 @@ export class SaleComponent implements OnInit, OnDestroy {
     doc.setDrawColor(...B); doc.line(14, y, pw - 14, y); y += 6;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...B); doc.text('SUMMARY', 14, y); y += 6;
     doc.setFont('helvetica', 'normal'); doc.setTextColor(...G); doc.text('Total Vehicles: ' + allBrokerSales.length, 14, y); doc.setTextColor(...B); doc.text(tw.toFixed(0) + ' kg  |  Rs. ' + ta.toLocaleString(), 70, y); y += 10;
-    const body = allBrokerSales.map((s: any) => [String(s.date).split('T')[0], s.vehicle_number || '—', s.driver_name || '—', (s.bird_weight || 0).toFixed(0) + ' kg', 'Rs. ' + (s.rate || 0).toLocaleString(), 'Rs. ' + (s.total_amount || 0).toLocaleString(), s.payment_type || 'cash']);
+    const body = allBrokerSales.map((s: any) => [String(s.date).split('T')[0], s.vehicle_number || '—', s.driver_name || '—', (s.bird_weight || 0).toFixed(0) + ' kg', 'Rs. ' + (s.rate || 0).toLocaleString(), 'Rs. ' + (s.total_amount || 0).toLocaleString(), s.broker_managed ? 'See broker ledger' : (s.payment_type || 'cash')]);
     autoTable(doc, { startY: y, head: [['Date', 'Vehicle', 'Driver', 'Weight', 'Rate', 'Amount', 'Payment']], body, foot: [['', '', 'Total', tw.toFixed(0) + ' kg', '', 'Rs. ' + ta.toLocaleString(), '']], theme: 'plain', headStyles: { fontStyle: 'bold', fontSize: 9, textColor: B, fillColor: false as any, lineWidth: { bottom: 0.3 }, lineColor: B }, bodyStyles: { fontSize: 9, textColor: B, fillColor: false as any, lineWidth: { bottom: 0.15 }, lineColor: LG }, footStyles: { fontStyle: 'bold', fontSize: 9, textColor: B, fillColor: false as any, lineWidth: { top: 0.3 }, lineColor: B }, columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } }, didParseCell: alignHeadFootWithColumnStyles, margin: { left: 14, right: 14 } });
     // Print receipt photos
     const photos = allBrokerSales.filter((s: any) => s.receipt_image);
@@ -681,7 +683,7 @@ export class SaleComponent implements OnInit, OnDestroy {
     const rate = row.rate || 0;
     const emptyWeight = row.empty_weight || 0;
     const loadWeight = row.load_weight || 0;
-    const paymentType = row.payment_type || 'cash';
+    const paymentType = row.broker_managed ? 'See broker ledger' : (row.payment_type || 'cash');
     const date = row.date ? String(row.date).split('T')[0] : '—';
 
     const doc = new jsPDF();

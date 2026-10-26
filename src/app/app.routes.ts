@@ -41,6 +41,7 @@ export const routes: Routes = [
       import('./layout/layout.component')
         .then(m => m.LayoutComponent),
     children: [
+      {path:'brokers',loadComponent:()=>import('./brokers/brokers.component').then(m=>m.BrokersComponent)},
       {
         path: '',
         redirectTo: 'flock-health',

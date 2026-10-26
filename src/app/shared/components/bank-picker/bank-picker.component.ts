@@ -40,6 +40,7 @@ import { BankSourceRow, isBankLabelled, bankNameOf, bankOptionLabel } from '../.
         <span class="bank-missing" *ngIf="!banks?.length">No bank accounts</span>
 
         <select class="inline-input bank-select"
+                [class.receipt-form]="variant==='receipt-form'"
                 *ngIf="banks?.length"
                 [(ngModel)]="row.bank_id"
                 [class.unset]="!row.bank_id"
@@ -51,6 +52,8 @@ import { BankSourceRow, isBankLabelled, bankNameOf, bankOptionLabel } from '../.
     </ng-container>
   `,
   styles: [`
+    .bank-select.receipt-form { box-sizing:border-box;max-width:100%;width:100%;padding:10px;border:1px solid var(--fi-border,#d5dedb);border-radius:8px;background:white;color:var(--fi-text,#1a1a1a);font:inherit; }
+    .bank-select.receipt-form:focus-visible {outline:3px solid var(--fi-primary,#1a5c38);outline-offset:2px;}
     .bank-select { min-width: 8rem; }
     /* An account still to be chosen is the one state that blocks the save, so
        it is marked rather than looking like any other untouched dropdown. */
@@ -67,6 +70,7 @@ import { BankSourceRow, isBankLabelled, bankNameOf, bankOptionLabel } from '../.
   `]
 })
 export class BankPickerComponent {
+  @Input() variant:'inline'|'receipt-form'='inline';
   /** The pending / edit / saved row. Mutated in place — see the class note. */
   @Input() row: BankSourceRow = {};
 

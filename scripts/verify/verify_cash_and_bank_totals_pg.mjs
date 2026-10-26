@@ -1,3 +1,4 @@
+import {verifyBrokerCash} from './lib/broker-cash-checks.mjs'
 // [Codex] PostgreSQL port of verify_cash_and_bank_totals.js.
 // Application method bodies come from src/, not the frozen desktop tree.
 // Original fixture values and assertions are retained; SQL helpers now await
@@ -160,7 +161,7 @@ const checkText = (label, actual, expected) => {
   console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${label}:\n        got      ${actual}\n        expected ${expected}`)
 }
 
-const scratch = await createScratchDb('cash_and_bank_totals')
+const scratch = await createScratchDb('cash_and_bank_totals', {brokerCash:true})
 db = scratch.db
 try {
 
@@ -969,6 +970,8 @@ try {
     check('the other account sees only its own cash', other.cashInHand, 111111 - 222222 + 333333)
     check('the other account sees only its own bank', other.totalBankBalance, 444444)
   }
+
+  await verifyBrokerCash(service,db)
 
   console.log(failures === 0
     ? '\nAll cash-and-bank checks passed.'

@@ -32,6 +32,7 @@ import { createSqlGuard, loadGuardCatalog } from './guard/sql-guard.js';
 import { registerAdminRoutes } from './admin/routes.js';
 import { createDeleteAuthorization } from './auth/delete-auth.js';
 import { registerOwnerData } from './routes/owner-data.js';
+import { registerBrokerRoutes } from './brokers/routes.js';
 import { attestAuthRole } from '../../db/auth-role.mjs';
 import { productionApproved } from './release.js';
 import { isIP } from 'node:net';
@@ -120,6 +121,7 @@ export async function buildServer({ env = process.env, logger = false, pool: sup
       session.register(app);
       deleteAuthorization=createDeleteAuthorization(pool,session,{clock:authOptions?.clock});deleteAuthorization.register(app);
       registerOwnerData(app,{session,runtime,schema:env.DATABASE_SCHEMA??'public'});
+      registerBrokerRoutes(app,{session,runtime,deleteAuthorization});
       registerAdminRoutes(app,{pool,session,onRevokeUser:async id=>{await sessionDb?.revokeUser(id);await authOptions?.onRevokeUser?.(id);}});
       app.decorateRequest('farmActor',null);
       app.addHook('preHandler',async(req,reply)=>{

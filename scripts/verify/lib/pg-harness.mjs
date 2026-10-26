@@ -115,7 +115,7 @@ function tablesDdl() {
  * method bodies — which issue unqualified SQL, exactly as the app does — land
  * in the scratch schema without being rewritten.
  */
-export async function createScratchDb(label = 'v', { farmContext = null } = {}) {
+export async function createScratchDb(label = 'v', { farmContext = null, brokerCash = false } = {}) {
   const url = process.env.DATABASE_URL
   if (!url) throw new Error('DATABASE_URL is not set')
 
@@ -147,6 +147,12 @@ export async function createScratchDb(label = 'v', { farmContext = null } = {}) 
     // places. Without it those statements fail outright.
     await admin.query(collationsDdl())
     await admin.query(tablesDdl())
+    // Cash verifiers retain the inherited schema/assertions and opt into the
+    // actual additional receipt table DDL. Full security tests use migrations.
+    if(brokerCash){const {splitStatements}=await import('../../../server/src/db/scan.js');
+      const ddl=splitStatements(readFileSync(join(ROOT,'db/migrations/008_broker_ledgers.sql'),'utf8')).find(s=>/^\s*CREATE TABLE broker_payments\s*\(/.test(s));
+      if(!ddl)throw new Error('Broker receipt DDL not found');await admin.query(ddl);
+    }
     // DDL intentionally used the scratch schema alone. Restore public for
     // unqualified COLLATE NOCASE before this client is returned to the pool.
     await admin.query(`SET search_path TO ${schema}, public`)

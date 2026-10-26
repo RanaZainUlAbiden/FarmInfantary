@@ -1,10 +1,10 @@
 {
   "profile": "product-admin",
-  "sourceRoots": ["src/app/auth", "src/app/admin", "src/app/shared/components/password-field", "src/app/shared/components/delete-code-dialog"],
+  "sourceRoots": ["src/app/auth", "src/app/admin", "src/app/brokers", "src/app/shared/components/password-field", "src/app/shared/components/delete-code-dialog"],
   "locale": "en-PK",
   "canonicalMap": "UX-CONTRACT.md",
   "requiredCapabilities": ["Form", "Scrollbar", "Toast", "CRUD", "Select/Listbox"],
-  "ownership": {"Select/Listbox":"native"},
+  "ownership": {"Select/Listbox":"native","Date":"native"},
   "requiredCommands": ["session", "build", "http"],
   "commands": {
     "session": "node scripts/verify/verify_browser_sessions.mjs",

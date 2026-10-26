@@ -119,6 +119,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   ];
 
   distributionMenu: any[] = [
+    { label: 'Brokers',       icon: '🤝', route: 'brokers'              },
     { label: 'Inventory',     icon: '📦', route: 'inventory'            },
     { label: 'Purchase',      icon: '📥', route: 'purchase-orders'      },
     { label: 'Purchase Returns', icon: '↪', route: 'purchase-returns'   },

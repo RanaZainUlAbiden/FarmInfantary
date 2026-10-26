@@ -82,7 +82,7 @@ try {
   const byType = Object.fromEntries(types.map((r) => [r.data_type, r.n]))
 
   check(`money columns are double precision — ${byType['double precision'] ?? 0}`,
-    (byType['double precision'] ?? 0) === 86, `got ${byType['double precision'] ?? 0}, expected 86`)
+    (byType['double precision'] ?? 0) === 88, `got ${byType['double precision'] ?? 0}, expected 88 (including broker receipt and legacy paid amounts)`)
   check('no numeric columns exist anywhere',
     !byType['numeric'], `found ${byType['numeric'] ?? 0} numeric column(s)`)
   check('no foreign key constraints (D6)',

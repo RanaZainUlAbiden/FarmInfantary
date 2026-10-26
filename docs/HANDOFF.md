@@ -1,5 +1,24 @@
 # Handoff
 
+## Broker accounts and flock receipts — 2026-10-27
+
+[Codex] Distribution → Brokers now manages farm-wide broker identities and
+balances; Broiler → farm/flock → Sale searches and opens a broker in that flock.
+Sales support unpaid/partial/full receipts, later cash/bank/other collections,
+outstanding balances and protected reversals. Legacy histories are preserved.
+Migrations 008–010 add FORCE-RLS receipt storage and trusted workflow protection;
+owners cannot bypass managed accounting through the raw SQL client. Read
+`BROKER_LEDGERS.md` for business decisions, security review and rollout sequence.
+
+Verified: 87/87 scripts (~9,913 reported checks), 83 backend tests, 13 dedicated
+broker PG/API scenarios, all 25 inherited business assertion sets unchanged,
+production build and 501 static SQL statements prepared. Fresh disposable browser
+flow confirms 50,000 sales / 35,000 received / 15,000 pending after reload, mobile
+390px containment, bank selection, validation recovery and native correction
+confirmation with Cancel focus/Escape. The source catalogue now has 51 keys.
+Staff access remains disabled; PR #2 and `codex/staff-access` are separate work
+and will need the new catalogue/migration state when continued.
+
 ## Screen reliability fixes — 2026-10-26
 
 [Codex] The three audit findings have local repairs: bounded session-aware HTTP

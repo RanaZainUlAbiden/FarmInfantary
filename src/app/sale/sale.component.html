@@ -1,63 +1,7 @@
-<div class="module-container">
-
-  <div class="module-header">
-    <div>
-      <h3>Sale</h3>
-      <p class="subtitle" *ngIf="currentFlock">
-        {{ currentFlock.flock_name }}
-      </p>
-    </div>
-    <div class="header-actions">
-      <button class="btn-print" [disabled]="isSaving"
-        (click)="printBrokerSale()"
-        *ngIf="currentFlock && sales.length > 0 && selectedBrokerFilter !== 'all'"
-        title="Print broker sale summary">
-        🖨️ Print Broker Sale
-      </button>
-      <button class="btn-secondary" [disabled]="isSaving"
-        (click)="openBrokerForm()"
-        *ngIf="currentFlock && !showBrokerForm && !hasPendingRows">
-        + Manage Brokers
-      </button>
-      
-      <div class="default-rate-box" *ngIf="currentFlock" style="display:inline-flex; align-items:center; gap: 6px; margin-right: 10px; background: white; padding: 4px 8px; border-radius: 6px; border: 1px solid #e0e0e0;">
-        <label style="font-size: 12px; font-weight: 500; color: #666; margin: 0;">Default Rate:</label>
-        <input type="number" [(ngModel)]="defaultRate" class="inline-input" style="width: 70px; padding: 4px; margin: 0;" placeholder="Rs."/>
-        <button class="btn-secondary" style="padding: 4px 8px; font-size: 11px;" *ngIf="hasPendingRows" (click)="applyDefaultRateToAll()" title="Apply to all pending rows">Apply All</button>
-      </div>
-
-      <ng-container *ngIf="hasPendingRows">
-        <button class="btn-secondary" (click)="cancelAllRows()">Cancel</button>
-        <button class="btn-primary" (click)="saveAllRows()" [disabled]="isSavingAll">{{ isSavingAll ? 'Saving...' : 'Save All' }}</button>
-      </ng-container>
-      <button class="btn-add" (click)="addPendingRow()"
-        *ngIf="currentFlock && brokers.length > 0" title="Add row (Ctrl+A)">+</button>
-    </div>
-  </div>
-
-  <div class="shortcuts-hint" *ngIf="hasPendingRows">
-    <span>Ctrl+A — new row</span><span>Ctrl+S — save all</span>
-  </div>
-
-  <div class="warning-card" *ngIf="currentFlock && brokers.length === 0 && !showBrokerForm">
-    <span>⚠️</span><p>No brokers found. Please add brokers first.</p>
-  </div>
-
-  <div class="form-card" *ngIf="showBrokerForm">
-    <h4>Manage Brokers</h4>
-    <div class="broker-form-row">
-      <input type="text" [(ngModel)]="brokerForm.broker_name" placeholder="Broker name e.g. Ali Broker" (keyup.enter)="saveBroker()"/>
-      <button class="btn-primary" [disabled]="isSaving" (click)="saveBroker()">{{ isSaving ? 'Saving...' : 'Add' }}</button>
-      <button class="btn-secondary" [disabled]="isSaving" (click)="showBrokerForm = false">Done</button>
-    </div>
-    <div class="broker-list" *ngIf="brokers.length > 0">
-      <div class="broker-item" *ngFor="let broker of brokers">
-        <span>{{ broker.broker_name }}</span>
-        <button class="btn-delete-small" [disabled]="isSaving" (click)="confirmDeleteBroker(broker.broker_id)">✕</button>
-      </div>
-    </div>
-  </div>
-
+<app-brokers [flock]="currentFlock" [flockMode]="true" />
+<button type="button" class="btn-secondary" (click)="toggleHistory()">{{showLegacyHistory ? 'Hide flock sale history' : 'Show flock sale history'}}</button>
+<div class="module-container" *ngIf="showLegacyHistory">
+<p>Flock sale history. Broker balances and new sales are managed above.</p>
   <div class="filter-bar" *ngIf="sales.length > 0">
     <div class="filter-group">
       <label>Filter by Broker</label>
@@ -81,7 +25,7 @@
 
   <div class="empty-state" *ngIf="!currentFlock"><p>Please select a flock first.</p></div>
   <div class="empty-state" *ngIf="currentFlock && sales.length === 0 && pendingRows.length === 0 && brokers.length > 0">
-    <p>No sales yet. Click + or Ctrl+A to record sales.</p>
+    <p>No sales yet. Select a broker above to record a sale.</p>
   </div>
 
   <!-- AUTO-SETTLE THE OWN-FARM DEBT.
@@ -164,12 +108,12 @@
               <td class="highlight">{{ sale.bird_weight | number:'1.0-0' }}</td>
               <td>{{ sale.rate | number:'1.0-0' }}</td>
               <td class="amount">Rs. {{ sale.total_amount | number:'1.0-0' }}</td>
-              <td><span class="payment-badge" [class.cash]="sale.payment_type==='cash'" [class.bank]="sale.payment_type==='bank'" [class.credit]="sale.payment_type==='credit'">{{ sale.payment_type || 'cash' }}</span>
+              <td><span class="payment-badge" [class.cash]="sale.payment_type==='cash'" [class.bank]="sale.payment_type==='bank'" [class.credit]="sale.payment_type==='credit'">{{ sale.broker_managed ? 'See broker ledger' : (sale.payment_type || 'cash') }}</span>
                 <app-bank-picker [row]="sale" [banks]="houseBanks" readonly></app-bank-picker></td>
               <td class="actions">
                 <button class="btn-print-small" [disabled]="isSaving" (click)="printDriverReceipt(sale)" title="Print driver receipt">🖨️</button>
-                <button class="btn-edit" [disabled]="isSaving" (click)="startEdit(sale)">Edit</button>
-                <button class="btn-delete" [disabled]="isSaving" (click)="confirmDelete(sale.sale_id)">Delete</button>
+                <button *ngIf="!sale.broker_managed" class="btn-edit" [disabled]="isSaving" (click)="startEdit(sale)">Edit</button>
+                <button *ngIf="!sale.broker_managed" class="btn-delete" [disabled]="isSaving" (click)="confirmDelete(sale.sale_id)">Delete</button>
               </td>
             </ng-container>
 
@@ -178,7 +122,7 @@
               <td><input class="inline-input" type="text" [(ngModel)]="editForm.vehicle_number"/></td>
               <td><input class="inline-input" type="text" [(ngModel)]="editForm.driver_name" placeholder="Driver name"/></td>
               <td><input class="inline-input" type="text" [(ngModel)]="editForm.driver_phone" placeholder="Driver phone"/></td>
-              <td><select class="inline-input" [(ngModel)]="editForm.broker_id"><option [ngValue]="null">Select Broker</option><option *ngFor="let broker of brokers" [ngValue]="broker.broker_id">{{ broker.broker_name }}</option></select></td>
+              <td><select class="inline-input" [(ngModel)]="editForm.broker_id" disabled aria-label="Broker (fixed for historical sale)"><option [ngValue]="null">Select Broker</option><option *ngFor="let broker of brokers" [ngValue]="broker.broker_id">{{ broker.broker_name }}</option></select></td>
               <td><input class="inline-input" type="number" [(ngModel)]="editForm.empty_weight"/></td>
               <td><input class="inline-input" type="number" [(ngModel)]="editForm.load_weight"/></td>
               <td class="highlight">{{ getEditBirdWeight() | number:'1.0-0' }}</td>
