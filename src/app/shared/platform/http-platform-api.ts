@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 
 import {
   PlatformApi, DbOp, DbGetResult, DbRunResult, DbBatchResult, DbTxResult,
@@ -26,6 +26,8 @@ export class HttpPlatformApi implements PlatformApi {
 
   /** The open transaction's token, if any. Mirrors the desktop's one-at-a-time rule. */
   private txToken: string | null = null;
+  private sessionGeneration = 0;
+  resetSession(): void { this.txToken = null; this.sessionGeneration++; }
 
   constructor(private http: HttpClient) {}
 
@@ -64,9 +66,11 @@ export class HttpPlatformApi implements PlatformApi {
   }
 
   async dbBeginTransaction(): Promise<DbTxResult> {
+    const generation = this.sessionGeneration;
     const res = await this.post<DbTxResult>(
       'db/tx/begin', {}, (error) => ({ success: false, error })
     );
+    if (generation !== this.sessionGeneration) return { success: false, error: 'Your sign-in changed. Start again.' };
     if (res.success && res.token) this.txToken = res.token;
     return res;
   }
@@ -118,7 +122,13 @@ export class HttpPlatformApi implements PlatformApi {
   // a shared server would destroy every other account's data (D10).
 
   async backupDatabase(): Promise<any> {
-    return { success: false, error: 'Backup is not available yet.' };
+    try {
+      const response=await firstValueFrom(this.http.get(`${this.base}/account/export`,{responseType:'blob',observe:'response'}).pipe(timeout(90_000)));
+      const filename=/filename="([a-zA-Z0-9._-]+)"/.exec(response.headers.get('Content-Disposition')||'')?.[1]||'farminfantary-export.json';
+      const url=URL.createObjectURL(response.body!),link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      return {success:true,filename};
+    }catch(error:any){let message=error?.error?.error;if(error?.error instanceof Blob){try{message=JSON.parse(await error.error.text()).error;}catch{}}
+      return {success:false,error:message||'Could not download farm data. Check your connection and try again.'};}
   }
 
   async restoreDatabase(): Promise<any> {

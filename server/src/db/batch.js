@@ -22,6 +22,7 @@
  * refuses the batch and the whole thing rolls back.
  */
 
+import { readPrepared } from './prepared.js';
 /** @typedef {{ sql: string, params?: unknown[] }} BatchOp */
 
 /** True for the `{ $lastId: n }` marker shape. */
@@ -93,7 +94,7 @@ export function validateBatch(ops) {
     if (!op || typeof op !== 'object') {
       throw new Error(`Statement ${i + 1} is not an object.`);
     }
-    if (!op.sql || typeof op.sql !== 'string') {
+    if (!op.sql || (typeof op.sql !== 'string' && !readPrepared(op.sql))) {
       throw new Error(`Statement ${i + 1} is missing its SQL.`);
     }
     if (op.params !== undefined && !Array.isArray(op.params)) {

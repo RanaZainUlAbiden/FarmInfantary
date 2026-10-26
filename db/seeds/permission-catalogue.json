@@ -1,0 +1,659 @@
+{
+  "schemaVersion": 1,
+  "authority": "catalogue-only; no table access is implied",
+  "sourceDigest": "12a34b8198c29477147e1b939a243c88ed88e697ab5b43fcc1e8416862d90f97",
+  "entries": [
+    {
+      "key": "broiler.chicks",
+      "module": "broiler",
+      "route": "chicks",
+      "label": "Chicks",
+      "component": "./chicks/chicks.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 88
+      }
+    },
+    {
+      "key": "broiler.expenses",
+      "module": "broiler",
+      "route": "expenses",
+      "label": "Expenses",
+      "component": "./expenses/expenses.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 84
+      }
+    },
+    {
+      "key": "broiler.farm-report",
+      "module": "broiler",
+      "route": "farm-report",
+      "label": "Farm Report",
+      "component": "./farm-report/farm-report.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 94
+      }
+    },
+    {
+      "key": "broiler.farm-units",
+      "module": "broiler",
+      "route": "farm-units",
+      "label": "Farms",
+      "component": "./farm-units/farm-units.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 99
+      }
+    },
+    {
+      "key": "broiler.feed",
+      "module": "broiler",
+      "route": "feed",
+      "label": "Feed",
+      "component": "./feed/feed.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 87
+      }
+    },
+    {
+      "key": "broiler.flock-health",
+      "module": "broiler",
+      "route": "flock-health",
+      "label": "Flock Health",
+      "component": "./flock-health/flock-health.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 83
+      }
+    },
+    {
+      "key": "broiler.flock-management",
+      "module": "broiler",
+      "route": "flock-management",
+      "label": "Flocks",
+      "component": "./flock-management/flock-management.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 95
+      }
+    },
+    {
+      "key": "broiler.income",
+      "module": "broiler",
+      "route": "income",
+      "label": "Income",
+      "component": "./income/income.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 92
+      }
+    },
+    {
+      "key": "broiler.labour",
+      "module": "broiler",
+      "route": "labour",
+      "label": "Labour",
+      "component": "./labour/labour.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 89
+      }
+    },
+    {
+      "key": "broiler.ledger",
+      "module": "broiler",
+      "route": "ledger",
+      "label": "Ledger",
+      "component": "./ledger/ledger.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 85
+      }
+    },
+    {
+      "key": "broiler.medicine",
+      "module": "broiler",
+      "route": "medicine",
+      "label": "Medicine",
+      "component": "./medicine/medicine.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 86
+      }
+    },
+    {
+      "key": "broiler.report",
+      "module": "broiler",
+      "route": "report",
+      "label": "Report",
+      "component": "./report/report.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 93
+      }
+    },
+    {
+      "key": "broiler.sale",
+      "module": "broiler",
+      "route": "sale",
+      "label": "Sale",
+      "component": "./sale/sale.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 91
+      }
+    },
+    {
+      "key": "broiler.vaccination",
+      "module": "broiler",
+      "route": "vaccination",
+      "label": "Vaccination",
+      "component": "./vaccination/vaccination.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "broilerMenu",
+        "line": 90
+      }
+    },
+    {
+      "key": "distribution.account-ledger",
+      "module": "distribution",
+      "route": "account-ledger",
+      "label": "Account Ledger",
+      "component": "./account-ledger/account-ledger.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 130
+      }
+    },
+    {
+      "key": "distribution.customer-management",
+      "module": "distribution",
+      "route": "customer-management",
+      "label": "Customers",
+      "component": "./customer-management/customer-management.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 127
+      }
+    },
+    {
+      "key": "distribution.distribution-report",
+      "module": "distribution",
+      "route": "distribution-report",
+      "label": "Report",
+      "component": "./distribution-report/distribution-report.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 136
+      }
+    },
+    {
+      "key": "distribution.expense-ledger",
+      "module": "distribution",
+      "route": "expense-ledger",
+      "label": "Expense Ledger",
+      "component": "./account-ledger/expense-ledger/expense-ledger.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 135
+      }
+    },
+    {
+      "key": "distribution.internal-settlement",
+      "module": "distribution",
+      "route": "internal-settlement",
+      "label": "Internal Settlement",
+      "component": "./internal-settlement/internal-settlement.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 139
+      }
+    },
+    {
+      "key": "distribution.inventory",
+      "module": "distribution",
+      "route": "inventory",
+      "label": "Inventory",
+      "component": "./inventory/inventory.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 122
+      }
+    },
+    {
+      "key": "distribution.labour-management",
+      "module": "distribution",
+      "route": "labour-management",
+      "label": "Labour",
+      "component": "./labour-management/labour-management.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 129
+      }
+    },
+    {
+      "key": "distribution.payment-voucher",
+      "module": "distribution",
+      "route": "payment-voucher",
+      "label": "Payment Voucher",
+      "component": "./payment-voucher/payment-voucher.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 138
+      }
+    },
+    {
+      "key": "distribution.purchase-orders",
+      "module": "distribution",
+      "route": "purchase-orders",
+      "label": "Purchase",
+      "component": "./purchase-orders/purchase-orders.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 123
+      }
+    },
+    {
+      "key": "distribution.purchase-returns",
+      "module": "distribution",
+      "route": "purchase-returns",
+      "label": "Purchase Returns",
+      "component": "./purchase-returns/purchase-returns.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 124
+      }
+    },
+    {
+      "key": "distribution.receive-voucher",
+      "module": "distribution",
+      "route": "receive-voucher",
+      "label": "Receive Voucher",
+      "component": "./receive-voucher/receive-voucher.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 137
+      }
+    },
+    {
+      "key": "distribution.sales-orders",
+      "module": "distribution",
+      "route": "sales-orders",
+      "label": "Sales Orders",
+      "component": "./sales-orders/sales-orders.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 125
+      }
+    },
+    {
+      "key": "distribution.sales-returns",
+      "module": "distribution",
+      "route": "sales-returns",
+      "label": "Returns",
+      "component": "./sales-returns/sales-returns.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 126
+      }
+    },
+    {
+      "key": "distribution.supplier-accounts",
+      "module": "distribution",
+      "route": "supplier-accounts",
+      "label": "Supplier Accounts",
+      "component": "./account-ledger/supplier-accounts/supplier-accounts.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 134
+      }
+    },
+    {
+      "key": "distribution.supplier-management",
+      "module": "distribution",
+      "route": "supplier-management",
+      "label": "Suppliers",
+      "component": "./supplier-management/supplier-management.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 128
+      }
+    },
+    {
+      "key": "layer.batch-management",
+      "module": "layer",
+      "route": "batch-management",
+      "label": "Batches",
+      "component": "./batch-management/batch-management.component",
+      "shortcuts": [
+        "Add Batch"
+      ],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 103
+      }
+    },
+    {
+      "key": "layer.egg-collection",
+      "module": "layer",
+      "route": "egg-collection",
+      "label": "Egg Collection",
+      "component": "./egg-collection/egg-collection.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 105
+      }
+    },
+    {
+      "key": "layer.egg-sales",
+      "module": "layer",
+      "route": "egg-sales",
+      "label": "Egg Sales",
+      "component": "./egg-sales/egg-sales.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 106
+      }
+    },
+    {
+      "key": "layer.farm-report",
+      "module": "layer",
+      "route": "farm-report",
+      "label": "Farm Report",
+      "component": "./farm-report/farm-report.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 117
+      }
+    },
+    {
+      "key": "layer.farm-units",
+      "module": "layer",
+      "route": "farm-units",
+      "label": "Farms",
+      "component": "./farm-units/farm-units.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 118
+      }
+    },
+    {
+      "key": "layer.feed",
+      "module": "layer",
+      "route": "feed",
+      "label": "Feed",
+      "component": "./feed/feed.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 109
+      }
+    },
+    {
+      "key": "layer.hen-sales",
+      "module": "layer",
+      "route": "hen-sales",
+      "label": "Hen Sales",
+      "component": "./hen-sales/hen-sales.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 107
+      }
+    },
+    {
+      "key": "layer.income",
+      "module": "layer",
+      "route": "income",
+      "label": "Income",
+      "component": "./income/income.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 115
+      }
+    },
+    {
+      "key": "layer.labour",
+      "module": "layer",
+      "route": "labour",
+      "label": "Labour",
+      "component": "./labour/labour.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 111
+      }
+    },
+    {
+      "key": "layer.layer-expenses",
+      "module": "layer",
+      "route": "layer-expenses",
+      "label": "Expenses",
+      "component": "./layer-expenses/layer-expenses.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 113
+      }
+    },
+    {
+      "key": "layer.layer-flock-health",
+      "module": "layer",
+      "route": "layer-flock-health",
+      "label": "Flock Health",
+      "component": "./layer-flock-health/layer-flock-health.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 112
+      }
+    },
+    {
+      "key": "layer.layer-ledger",
+      "module": "layer",
+      "route": "layer-ledger",
+      "label": "Ledger",
+      "component": "./layer-ledger/layer-ledger.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 114
+      }
+    },
+    {
+      "key": "layer.layer-report",
+      "module": "layer",
+      "route": "layer-report",
+      "label": "Report",
+      "component": "./layer-report/layer-report.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 116
+      }
+    },
+    {
+      "key": "layer.medicine",
+      "module": "layer",
+      "route": "medicine",
+      "label": "Medicine",
+      "component": "./medicine/medicine.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 108
+      }
+    },
+    {
+      "key": "layer.vaccination",
+      "module": "layer",
+      "route": "vaccination",
+      "label": "Vaccination",
+      "component": "./vaccination/vaccination.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "layerMenu",
+        "line": 110
+      }
+    },
+    {
+      "key": "owner.assets",
+      "module": "owner",
+      "route": "assets",
+      "label": "Assets",
+      "component": "./assets/assets.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "overviewMenu",
+        "line": 151
+      }
+    },
+    {
+      "key": "owner.debt-payment",
+      "module": "owner",
+      "route": "debt-payment",
+      "label": "Debt Payment",
+      "component": "./debt-payment/debt-payment.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "overviewMenu",
+        "line": 156
+      }
+    },
+    {
+      "key": "owner.loans",
+      "module": "owner",
+      "route": "loans",
+      "label": "Loans",
+      "component": "./loans/loans.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "overviewMenu",
+        "line": 153
+      }
+    },
+    {
+      "key": "owner.overview",
+      "module": "owner",
+      "route": "overview",
+      "label": "Dashboard",
+      "component": "./overview/overview.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "overviewMenu",
+        "line": 150
+      }
+    },
+    {
+      "key": "owner.overview-bank-ledger",
+      "module": "owner",
+      "route": "overview-bank-ledger",
+      "label": "Bank",
+      "component": "./account-ledger/bank-ledger/bank-ledger.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "overviewMenu",
+        "line": 157
+      }
+    },
+    {
+      "key": "owner.personal-expenses",
+      "module": "owner",
+      "route": "personal-expenses",
+      "label": "Personal Expenses",
+      "component": "./personal-expenses/personal-expenses.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "overviewMenu",
+        "line": 152
+      }
+    }
+  ]
+}

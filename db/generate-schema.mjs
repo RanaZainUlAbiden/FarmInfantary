@@ -118,6 +118,11 @@ for (const sql of alterStatements) {
 try { migrateVaccinations(db); } catch (err) {
   console.error(`! vaccinations migration skipped: ${err.message}`);
 }
+// This index is installed by initializeDatabase after the createTables/ALTER
+// phase. A fresh schema has no rows to deduplicate, but still needs its constraint.
+const categoryUnique = DB_SRC.match(/CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_farm_type_name[^`]+/);
+if (!categoryUnique) throw new Error('Missing category uniqueness definition');
+db.run(categoryUnique[0]);
 
 const q = (sql) => {
   const out = [];
@@ -213,13 +218,19 @@ for (const t of tables) {
     // origin 'c' = created by CREATE INDEX. 'pk'/'u' come from the table
     // definition and PostgreSQL creates those itself.
     if (idx.origin !== 'c') continue;
-    const parts = q(`PRAGMA index_info(${idx.name})`)
+    const parts = q(`PRAGMA index_xinfo(${idx.name})`)
+      .filter((p) => p.key === 1)
       .sort((a, b) => a.seqno - b.seqno)
-      .map((p) => id(p.name));
+      .map((p) => {
+        if (p.name == null) throw new Error(`Expression index needs explicit translation: ${idx.name}`);
+        if (!['BINARY', 'NOCASE'].includes(p.coll)) throw new Error(`Unsupported index collation ${p.coll}`);
+        return id(p.name) + (p.coll === 'NOCASE' ? ' COLLATE public.nocase' : '');
+      });
     if (parts.length === 0) continue;
-    indexSql.push(
-      `CREATE INDEX IF NOT EXISTS ${id(idx.name)} ON ${id(t.name)} (${parts.join(', ')});`
-    );
+    const original = q(`SELECT sql FROM sqlite_master WHERE type='index' AND name='${idx.name.replaceAll("'", "''")}'`)[0]?.sql;
+    const predicate = idx.partial ? original?.match(/\bWHERE\b[\s\S]*?(?=;?$)/i)?.[0] : null;
+    if (idx.partial && !predicate) throw new Error(`Missing partial-index predicate: ${idx.name}`);
+    indexSql.push(`CREATE ${idx.unique ? 'UNIQUE ' : ''}INDEX IF NOT EXISTS ${id(idx.name)} ON ${id(t.name)} (${parts.join(', ')})${predicate ? ' '+predicate : ''};`);
   }
 }
 

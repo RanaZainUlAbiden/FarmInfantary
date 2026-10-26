@@ -1,158 +1,137 @@
 import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs';
-import { DatabaseService } from './database.service';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { Subject, firstValueFrom, timeout } from 'rxjs';
+import { FlockService } from './flock.service';
+import { FarmUnitService } from './farm-unit.service';
+import { PendingStateService } from './pending-state.service';
+import { HttpPlatformApi } from '../platform/http-platform-api';
 
-@Injectable({
-  providedIn: 'root'
-})
+export interface SessionUser {
+  userId: number; username: string; role: 'super_admin' | 'farm_admin' | 'staff'; farmId: number | null;
+  farm: { farm_id: number; farm_name: string; business_type: string } | null;
+}
+const businessTypes = ['broiler', 'layer', 'distribution', 'all'];
+export function safeReturnUrl(value: unknown): string {
+  return typeof value === 'string' && /^(?:\/app(?:\/|\?|$)|\/team(?:\?|$))/.test(value) && !/[\\\u0000-\u001f]/.test(value) ? value : '/app';
+}
+
+/** Only server cookie responses establish identity. Storage is UI cache only. */
+@Injectable({ providedIn: 'root' })
 export class AuthService {
-
-  private currentFarm: any = null;
-
-  // Emits whenever the logged-in account's business_type changes, so
-  // layout.component.ts can refresh its tabs/menu without a re-login.
+  private user: SessionUser | null = null;
+  private epoch = 0;
+  private initialized = false;
+  private restoring: Promise<void> | null = null;
+  private signingOut: Promise<{ success: boolean; error?: string }> | null = null;
+  private signingIn = false;
+  message = '';
   private businessTypeChangedSubject = new Subject<string>();
   businessTypeChanged$ = this.businessTypeChangedSubject.asObservable();
+  get sessionEpoch(): number { return this.epoch; }
+  get logoutPending(): boolean { return sessionStorage.getItem('fi_logout_pending') === '1'; }
 
-  constructor(
-    private db: DatabaseService,
-    private router: Router
-  ) {}
-
-  async login(farmName: string, password: string): Promise<boolean> {
-    const result = await this.db.get(
-      `SELECT * FROM farms
-       WHERE LOWER(farm_name) = LOWER(?)
-       AND password_hash = ?`,
-      [farmName.trim(), this.hashPassword(password)]
-    );
-
-    if (result.success && result.data.length > 0) {
-      this.currentFarm = result.data[0];
-      localStorage.setItem('currentFarm',
-        JSON.stringify(this.currentFarm));
-      // Save business type for sidebar
-      localStorage.setItem('businessType', this.currentFarm.business_type || 'broiler');
-      return true;
-    }
-    return false;
+  constructor(private http: HttpClient, private router: Router, private flocks: FlockService,
+    private units: FarmUnitService, private pending: PendingStateService, private platform: HttpPlatformApi) {
+    localStorage.removeItem('currentFarm'); localStorage.removeItem('businessType');
+    window.addEventListener('storage', event => {
+      if (event.key === 'fi_auth_event') this.invalidate('Your sign-in changed in another tab. Sign in again.');
+    });
   }
-
-  async registerFarm(farmName: string, password: string, businessType: string = 'broiler'): Promise<any> {
-    const exists = await this.db.get(
-      `SELECT * FROM farms WHERE LOWER(farm_name) = LOWER(?)`,
-      [farmName.trim()]
-    );
-
-    if (exists.success && exists.data.length > 0) {
-      return { success: false, error: 'Username already exists' };
-    }
-
-    const result = await this.db.run(
-      `INSERT INTO farms (farm_name, password_hash, business_type) VALUES (?, ?, ?)`,
-      [farmName.trim(), this.hashPassword(password), businessType]
-    );
-    return result;
+  private validUser(value: any): value is SessionUser {
+    if (!value || !Number.isSafeInteger(value.userId) || value.userId < 1 || typeof value.username !== 'string') return false;
+    if (value.role === 'super_admin') return value.farmId === null && value.farm === null;
+    return ['farm_admin', 'staff'].includes(value.role) && Number.isSafeInteger(value.farmId) && value.farmId > 0 &&
+      value.farm?.farm_id === value.farmId && typeof value.farm.farm_name === 'string' && businessTypes.includes(value.farm.business_type);
   }
-
-  async getAllFarms(): Promise<any[]> {
-    const result = await this.db.get(
-      `SELECT farm_id, farm_name, business_type, created_at FROM farms ORDER BY farm_id ASC`,
-      []
-    );
-    return result.success ? result.data : [];
+  private resetAccountState() {
+    this.platform.resetSession(); this.flocks.reset(); this.units.reset(); this.pending.clearAll();
+    for (const key of ['currentFarm', 'businessType', 'currentFlock', 'currentUnit', 'lastBroilerFlockId',
+      'lastLayerBatchId', 'lastBroilerUnitId', 'lastLayerUnitId', 'activeBusinessTab', 'lastRouteByTab']) localStorage.removeItem(key);
   }
-
-  async updateFarm(farmId: number, farmName: string,
-    password?: string): Promise<any> {
-    if (password) {
-      return await this.db.run(
-        `UPDATE farms SET farm_name = ?, password_hash = ?
-         WHERE farm_id = ?`,
-        [farmName.trim(), this.hashPassword(password), farmId]
-      );
-    } else {
-      return await this.db.run(
-        `UPDATE farms SET farm_name = ? WHERE farm_id = ?`,
-        [farmName.trim(), farmId]
-      );
-    }
+  private adopt(value: SessionUser) {
+    const owner = `${value.userId}:${value.farmId ?? 'platform'}:${value.role}`;
+    // This cache owner can discard preferences; it can never establish identity.
+    if (sessionStorage.getItem('fi_ui_owner') !== owner || this.user !== null && this.user.userId !== value.userId) this.resetAccountState();
+    sessionStorage.setItem('fi_ui_owner', owner);
+    this.user = { userId: value.userId, username: value.username, role: value.role, farmId: value.farmId, farm: value.farm ? { ...value.farm } : null };
+    this.epoch++; this.initialized = true; this.message = '';
   }
-
-  async deleteFarm(farmId: number): Promise<any> {
-    return await this.db.run(
-      `DELETE FROM farms WHERE farm_id = ?`,
-      [farmId]
-    );
+  private clearIdentity(message = '') {
+    this.user = null; this.epoch++; this.initialized = true; this.message = message;
+    this.resetAccountState(); sessionStorage.removeItem('fi_ui_owner');
   }
+  private broadcast() { localStorage.setItem('fi_auth_event', crypto.randomUUID()); }
 
-  async updateBusinessType(farmId: number, businessType: string): Promise<any> {
-    const result = await this.db.run(
-      `UPDATE farms SET business_type = ? WHERE farm_id = ?`,
-      [businessType, farmId]
-    );
-
-    if (result.success) {
-      if (this.currentFarm && this.currentFarm.farm_id === farmId) {
-        this.currentFarm = { ...this.currentFarm, business_type: businessType };
-        localStorage.setItem('currentFarm', JSON.stringify(this.currentFarm));
+  async initialize(force = false): Promise<void> {
+    if (this.restoring) return this.restoring;
+    if (!force && this.initialized && !this.logoutPending) return;
+    const work = async () => {
+      if (this.logoutPending) { await this.logout(false); return; }
+      const epoch = this.epoch;
+      try {
+        const result = await firstValueFrom(this.http.get<{ success: boolean; user: SessionUser }>('/api/auth/me').pipe(timeout(10_000)));
+        if (epoch !== this.epoch) return;
+        if (result.success && this.validUser(result.user)) this.adopt(result.user);
+        else this.clearIdentity('Your account details could not be loaded. Try again.');
+      } catch (error: any) {
+        if (epoch !== this.epoch) return;
+        this.clearIdentity(error?.status === 401 ? '' : 'Could not check your sign-in. Check your connection and try again.');
       }
-      localStorage.setItem('businessType', businessType);
-      this.businessTypeChangedSubject.next(businessType);
+    };
+    this.restoring = work().finally(() => { this.restoring = null; }); return this.restoring;
+  }
+  async login(username: string, password: string): Promise<boolean> {
+    if (this.signingIn || this.signingOut || this.logoutPending) return false;
+    this.signingIn = true; this.clearIdentity(); const epoch = this.epoch;
+    try {
+      const result = await firstValueFrom(this.http.post<{ success: boolean; user: SessionUser }>('/api/auth/login',
+        { username: username.trim(), password }).pipe(timeout(15_000)));
+      if (epoch !== this.epoch) return false;
+      if (!result.success || !this.validUser(result.user)) { this.message = 'Your account details could not be loaded. Try again.'; return false; }
+      this.adopt(result.user); this.broadcast(); return true;
+    } catch (error: any) {
+      if (epoch === this.epoch) this.message = error?.status === 401 ? 'Invalid username or password.' : error?.status === 429
+        ? 'Too many sign-in attempts. Try again later.' : 'Could not sign in. Check your connection and try again.';
+      return false;
+    } finally { this.signingIn = false; }
+  }
+  logout(navigate = true): Promise<{ success: boolean; error?: string }> {
+    if (this.signingOut) return this.signingOut;
+    sessionStorage.setItem('fi_logout_pending', '1'); this.clearIdentity(); this.broadcast();
+    const work = async () => {
+      try {
+        const response=firstValueFrom(this.http.post('/api/auth/logout', {}).pipe(timeout(10_000)));
+        if(navigate)void this.router.navigate(['/login'],{replaceUrl:true});
+        await response;
+        sessionStorage.removeItem('fi_logout_pending'); return { success: true };
+      } catch {
+        this.message = 'Sign-out could not be confirmed. Check your connection and retry sign-out.';
+        return { success: false, error: this.message };
+      }
+    };
+    this.signingOut = work().finally(() => { this.signingOut = null; }); return this.signingOut;
+  }
+  invalidate(message = 'Your session ended. Sign in again.', expectedEpoch = this.epoch) {
+    if (expectedEpoch !== this.epoch) return;
+    const returnUrl = safeReturnUrl(this.router.url); this.clearIdentity(message);
+    if (/^\/(app|access|admin|team)(?:\/|\?|$)/.test(this.router.url)) {
+      void this.router.navigate(['/login'], { replaceUrl: true, queryParams: { returnUrl } });
     }
-
-    return result;
   }
-
-  getCurrentFarm(): any {
-    if (this.currentFarm) return this.currentFarm;
-    const stored = localStorage.getItem('currentFarm');
-    return stored ? JSON.parse(stored) : null;
+  async updateBusinessType(_farmId: number, businessType: string): Promise<any> {
+    const epoch = this.epoch;
+    try {
+      const result = await firstValueFrom(this.http.patch<{ success: boolean; user: SessionUser; error?: string }>(
+        '/api/account/business-type', { businessType }).pipe(timeout(10_000)));
+      if (epoch !== this.epoch) return { success: false, error: 'Your sign-in changed. Try again.' };
+      if (result.success && this.validUser(result.user)) { this.adopt(result.user); this.businessTypeChangedSubject.next(result.user.farm!.business_type); }
+      return result;
+    } catch (error: any) { return { success: false, error: error?.error?.error ?? 'Could not update your business type. Try again.' }; }
   }
-
-  /**
-   * Clears every trace of the account from the renderer.
-   *
-   * The localStorage half is only half the job: FlockService and
-   * FarmUnitService are root providers and navigating to /login does not
-   * destroy them, so their in-memory BehaviorSubjects survive a logout and
-   * the next account would inherit this one's selection. LayoutComponent
-   * calls reset() on both before calling this — keep the two in step.
-   */
-  logout(): void {
-    this.currentFarm = null;
-    localStorage.removeItem('currentFarm');
-    localStorage.removeItem('currentFlock');
-    localStorage.removeItem('currentUnit');
-    localStorage.removeItem('businessType');
-    // The remembered per-module selections. These are ids, and ids here are
-    // database-wide rather than per account, so leaving them behind points the
-    // next account's restore at rows it does not own.
-    localStorage.removeItem('lastBroilerFlockId');
-    localStorage.removeItem('lastLayerBatchId');
-    localStorage.removeItem('lastBroilerUnitId');
-    localStorage.removeItem('lastLayerUnitId');
-    // Both are plain route-name strings, not ids scoped to a farm, so a name
-    // that happens to exist in the next account's menu too (e.g.
-    // 'distribution-report') would otherwise silently carry over and land
-    // that account on a screen it never actually visited.
-    localStorage.removeItem('activeBusinessTab');
-    localStorage.removeItem('lastRouteByTab');
-    this.router.navigate(['/login']);
-  }
-
-  private hashPassword(password: string): string {
-    let hash = 0;
-    for (let i = 0; i < password.length; i++) {
-      const char = password.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return Math.abs(hash).toString(16);
-  }
-
-  isLoggedIn(): boolean {
-    return this.getCurrentFarm() !== null;
-  }
+  getCurrentUser(): SessionUser | null { return this.user ? { ...this.user, farm: this.user.farm ? { ...this.user.farm } : null } : null; }
+  getCurrentFarm(): any { return this.user?.farm ? { ...this.user.farm } : null; }
+  isLoggedIn(): boolean { return this.user !== null; }
+  canUseBusinessApp(): boolean { return this.user?.role === 'farm_admin' && this.user.farm !== null; }
+  landingUrl(returnUrl: unknown = '/app'): string { return this.user?.role==='super_admin'?'/admin':this.canUseBusinessApp() ? safeReturnUrl(returnUrl) : '/access'; }
 }

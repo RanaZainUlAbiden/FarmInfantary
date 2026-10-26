@@ -1,0 +1,8 @@
+<main class="auth-screen">
+  <section class="auth-card" aria-labelledby="access-title">
+    <h1 id="access-title">Your account is signed in</h1>
+    <p class="auth-help">{{ auth.getCurrentUser()?.username }}</p>
+    <p class="auth-guidance">Access for your role is being configured. Contact your administrator for help.</p>
+    <button type="button" class="auth-primary" [disabled]="busy" (click)="logout()">{{ busy ? 'Signing out…' : 'Sign out' }}</button>
+  </section>
+</main>

@@ -86,6 +86,9 @@ function findScalarMaxMin(src) {
 }
 
 const PATTERNS = [
+  // A negative start is end-relative in SQLite, unlike PostgreSQL. All three
+  // app uses pad generated bank, layer-bill and internal-settlement numbers.
+  { key: 'negative substr', re: /\bsubstr\([^\n]+,\s*-\s*[1-9]\d*\s*\)/gi, fix: 'RIGHT(text, n)' },
   // Found by the Phase 1 gate, not by inspection: SQLite ships a built-in
   // NOCASE collation and PostgreSQL does not, so these statements fail
   // outright until db/schema/000_collations.sql defines one.
@@ -115,6 +118,7 @@ const PATTERNS = [
 // The measured inventory. Change a number here ONLY with the matching SQL
 // change, and say why in the commit.
 const EXPECTED = {
+  'negative substr': 3,
   // MEASURED, not estimated. The first hand-counted list had four of these
   // wrong: two-arg MAX/MIN at 11 (it is 22, and some are nested MIN(MAX(..)),
   // julianday at 11 (that was LINES, not occurrences), CAST at 19 (that

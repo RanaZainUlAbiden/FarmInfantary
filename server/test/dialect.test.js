@@ -166,11 +166,16 @@ test('CAST(x AS INTEGER) truncates, because SQLite truncates and PG rounds', () 
   assert.equal(text, `SELECT trunc((months / 30.44)::numeric)::bigint FROM t`);
 });
 
-test('CAST(text AS INTEGER) works — PostgreSQL has no trunc(text)', () => {
-  // Found by the Phase 1 gate: addLoan casts a text column, and trunc(text)
-  // does not exist. Going through numeric covers text, numeric and double.
+test('CAST(text AS INTEGER) accepts SQLite integer prefixes without changing placeholder order', () => {
+  // The gate first found text ids, then a hand-entered IS-HAND number. SQLite
+  // accepts a numeric prefix (or zero); PostgreSQL's numeric cast is stricter.
   const { text } = translate(`SELECT CAST(reference_id AS INTEGER) FROM bank_ledger`);
-  assert.equal(text, `SELECT trunc((reference_id)::numeric)::bigint FROM bank_ledger`);
+  assert.match(text, /regexp_replace\(\(reference_id\)::text/);
+  const suffix = translateStrict('SELECT CAST(substr(?, 1) AS INTEGER)');
+  assert.match(suffix, /regexp_replace/);
+  assert.equal(prepare(suffix, ['HAND']).values.length, 1);
+  assert.match(translateStrict("SELECT CAST('1e-8' AS INTEGER)"), /regexp_replace/);
+  assert.equal(translateStrict('SELECT CAST(1e-8 AS INTEGER)'), 'SELECT trunc((1e-8)::numeric)::bigint');
 });
 
 test('CAST to a non-integer type is left alone', () => {
@@ -218,6 +223,22 @@ test('untranslatable SQLite constructs are refused, not passed through', () => {
 test('a clean statement passes translateStrict unchanged', () => {
   const sql = `SELECT COALESCE(SUM(amount),0) AS v FROM expenses WHERE flock_id = ?`;
   assert.equal(translateStrict(sql), sql);
+});
+
+test('negative SQLite substr starts preserve padded bank and bill suffixes', () => {
+  assert.equal(translateStrict("SELECT substr('0000' || CAST(n AS TEXT), -4) FROM t"),
+    "SELECT RIGHT('0000' || CAST(n AS TEXT), 4) FROM t");
+  assert.equal(translateStrict("SELECT substr('000' || CAST(n AS TEXT), -3) FROM t"),
+    "SELECT RIGHT('000' || CAST(n AS TEXT), 3) FROM t");
+  assert.equal(translateStrict("SELECT substr('x', -10)"), "SELECT RIGHT('x', 10)");
+  assert.equal(translateStrict("SELECT substr('abc', -0)"), "SELECT substr('abc', -0)");
+});
+
+test('substr translation handles nesting and preserves literals and positive starts', () => {
+  assert.equal(translateStrict("SELECT substr(substr(x, -4), -2)"), "SELECT RIGHT(RIGHT(x, 4), 2)");
+  const sql = "SELECT substr(x, 4), 'substr(x, -4)' -- substr(y, -3)";
+  assert.equal(translateStrict(sql), sql);
+  assert.throws(() => translateStrict("SELECT substr(x, -4, 2)"), /negative start and a length/);
 });
 
 test('translation is idempotent — translating twice changes nothing', () => {

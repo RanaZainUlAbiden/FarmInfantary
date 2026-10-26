@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily FarmInfantary backup schedule
+[Timer]
+OnCalendar=*-*-* 02:00:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+Unit=farminfantary-backup.service
+[Install]
+WantedBy=timers.target

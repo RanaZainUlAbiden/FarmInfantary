@@ -1,195 +1,50 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../shared/services/auth.service';
-import { DatabaseService } from '../../shared/services/database.service';
-import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
-import { friendlySqlError } from '../../shared/utils/sql-error.util';
+import { PasswordFieldComponent } from '../../shared/components/password-field/password-field.component';
 
-@Component({
-  selector: 'app-login',
-  standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent],
-  templateUrl: './login.component.html',
-  styleUrl: './login.component.scss'
-})
-export class LoginComponent implements OnInit {
-  farmName: string = '';
-  password: string = '';
-  errorMessage: string = '';
-  isLoading: boolean = false;
-  
-  showSetup: boolean = false;
-  showRegister: boolean = false;
-  
-  newFarmName: string = '';
-  newPassword: string = '';
-  confirmPassword: string = '';
-  setupError: string = '';
-  businessType: string = 'all';
-  
-  farms: any[] = [];
-  farmsExist: boolean = false;
-
-  showValidationDialog: boolean = false;
-  validationMessage: string = '';
-
-  constructor(
-    private authService: AuthService,
-    private db: DatabaseService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
-  ) {}
-
-  async ngOnInit() {
-    await this.loadFarms();
-    await this.checkFirstTime();
+@Component({ selector: 'app-login', standalone: true, imports: [CommonModule, FormsModule, PasswordFieldComponent],
+  templateUrl: './login.component.html', styleUrl: './login.component.scss' })
+export class LoginComponent implements OnInit, OnDestroy {
+  username = ''; password = ''; errorMessage = ''; checking = true; busy = false; submitted = false;
+  private destroyed = false;
+  private render() { if (!this.destroyed) this.cdr.detectChanges(); }
+  ngOnDestroy() { this.destroyed = true; this.password = ''; }
+  @ViewChild('usernameInput') usernameInput?: ElementRef<HTMLInputElement>;
+  @ViewChild(PasswordFieldComponent) passwordInput?: PasswordFieldComponent;
+  constructor(public auth: AuthService, private router: Router, private route: ActivatedRoute, private cdr: ChangeDetectorRef) {}
+  get usernameInvalid() { return this.submitted && !/^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$/.test(this.username.trim()); }
+  get passwordInvalid() { return this.submitted && !this.password; }
+  async ngOnInit() { await this.restore(); }
+  async restore(force = false) {
+    if (this.busy) return;
+    this.checking = true; this.render();
+    await this.auth.initialize(force);
+    this.checking = false; this.errorMessage = this.auth.message;
+    if (this.auth.isLoggedIn()) await this.router.navigateByUrl(this.auth.landingUrl(this.route.snapshot.queryParamMap.get('returnUrl')), { replaceUrl: true });
+    this.render();
   }
-
-  async loadFarms() {
-    const result = await this.db.get(
-      `SELECT farm_id, farm_name FROM farms ORDER BY created_at DESC`,
-      []
-    );
-    if (result.success) {
-      this.farms = result.data;
-      this.farmsExist = this.farms.length > 0;
-    }
-  }
-
-  async checkFirstTime() {
-    if (this.farms.length === 0) {
-      this.showSetup = true;
-      this.showRegister = false;
-    }
-  }
-
   async onLogin() {
-    if (!this.farmName || !this.password) {
-      this.errorMessage = 'Please enter Username and Password';
+    if (this.busy || this.checking || this.auth.logoutPending) return;
+    this.submitted = true;
+    if (this.usernameInvalid || this.passwordInvalid) {
+      this.errorMessage = 'Enter your username and password.';
+      if (this.usernameInvalid) this.usernameInput?.nativeElement.focus(); else this.passwordInput?.focus();
+      this.render();
       return;
     }
-    this.isLoading = true;
-    this.errorMessage = '';
-    this.cdr.detectChanges();
-
-    const success = await this.authService.login(this.farmName, this.password);
-
-    if (success) {
-      this.router.navigate(['/app']);
-    } else {
-      this.errorMessage = 'Invalid Username or Password';
-    }
-    this.isLoading = false;
-    this.cdr.detectChanges();
+    this.busy = true; this.errorMessage = ''; this.render();
+    try {
+      if (await this.auth.login(this.username, this.password)) {
+        await this.router.navigateByUrl(this.auth.landingUrl(this.route.snapshot.queryParamMap.get('returnUrl')), { replaceUrl: true });
+      } else { this.errorMessage = this.auth.message || 'Could not sign in. Try again.'; }
+    } finally { this.password = ''; this.busy = false; this.submitted = false; this.render(); }
   }
-
-  openRegister() {
-    this.showSetup = false;
-    this.showRegister = true;
-    this.newFarmName = '';
-    this.newPassword = '';
-    this.confirmPassword = '';
-    this.setupError = '';
+  async retryLogout() {
+    if (this.busy) return; this.busy = true; this.render();
+    await this.auth.logout(false); this.errorMessage = this.auth.message; this.busy = false; this.render();
   }
-
-  cancelRegister() {
-    this.showRegister = false;
-    this.showSetup = false;
-    this.farmName = '';
-    this.password = '';
-    this.errorMessage = '';
-  }
-
-  cancelSetup() {
-    this.showSetup = false;
-    this.showRegister = false;
-    this.farmName = '';
-    this.password = '';
-    this.errorMessage = '';
-  }
-
-  async onSetup() {
-    await this.doRegistration();
-    if (!this.setupError) {
-      this.showSetup = false;
-    }
-  }
-
-  async onRegister() {
-    await this.doRegistration();
-    if (!this.setupError) {
-      this.showRegister = false;
-      this.farmName = this.newFarmName;
-      this.password = this.newPassword;
-    }
-  }
-
-  async doRegistration() {
-    if (!this.newFarmName || !this.newPassword) {
-      this.setupError = 'Please fill all fields';
-      return;
-    }
-    if (this.newPassword.length < 4) {
-      this.setupError = 'Password must be at least 4 characters';
-      return;
-    }
-    if (this.newPassword !== this.confirmPassword) {
-      this.setupError = 'Passwords do not match';
-      return;
-    }
-
-    const existing = await this.db.get(
-      `SELECT farm_id FROM farms WHERE farm_name = ?`,
-      [this.newFarmName]
-    );
-    if (existing.success && existing.data.length > 0) {
-      this.setupError = 'Username already exists. Please choose another one.';
-      return;
-    }
-
-    this.isLoading = true;
-    this.setupError = '';
-    this.cdr.detectChanges();
-
-    const result = await this.authService.registerFarm(
-      this.newFarmName,
-      this.newPassword,
-      this.businessType
-    );
-
-    if (result.success) {
-      await this.loadFarms();
-      this.newFarmName = '';
-      this.newPassword = '';
-      this.confirmPassword = '';
-      this.setupError = '';
-      
-      if (this.farms.length === 1) {
-        setTimeout(async () => {
-          this.farmName = this.farms[0].farm_name;
-          this.password = this.newPassword;
-        }, 100);
-      }
-    } else {
-      this.setupError = friendlySqlError(result.error, 'Registration failed. Please try again.');
-    }
-    
-    this.isLoading = false;
-    this.cdr.detectChanges();
-  }
-
-  quickFillFarm(name: string) {
-    this.farmName = name;
-    const passwordInput = document.querySelector('input[type="password"]') as HTMLInputElement;
-    if (passwordInput) {
-      passwordInput.focus();
-    }
-  }
-
-  showAllFarms() {
-    this.validationMessage = 'All Registered Farms:\n' + this.farms.map(f => f.farm_name).join('\n');
-    this.showValidationDialog = true;
-  }
+  onEnter(event: Event) { if ((event as KeyboardEvent).isComposing) event.preventDefault(); }
 }

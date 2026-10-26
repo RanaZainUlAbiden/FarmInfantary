@@ -1,0 +1,18 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["src/app/auth", "src/app/admin", "src/app/shared/components/password-field", "src/app/shared/components/delete-code-dialog"],
+  "locale": "en-PK",
+  "canonicalMap": "UX-CONTRACT.md",
+  "requiredCapabilities": ["Form", "Scrollbar", "Toast", "CRUD", "Select/Listbox"],
+  "ownership": {"Select/Listbox":"native"},
+  "requiredCommands": ["session", "build", "http"],
+  "commands": {
+    "session": "node scripts/verify/verify_browser_sessions.mjs",
+    "build": "npm run build",
+    "http": "node scripts/verify/verify_guard_http_pg.mjs"
+  },
+  "evidence": {
+    "failurePaths": "scripts/verify/verify_browser_sessions.mjs",
+    "crudFullFlow": "scripts/verify/verify_admin_pg.mjs"
+  }
+}

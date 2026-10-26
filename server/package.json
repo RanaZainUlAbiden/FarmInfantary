@@ -10,10 +10,15 @@
   "scripts": {
     "dev": "node src/server.js",
     "start": "node src/server.js",
+    "db:migrate": "node ../db/migrate.mjs",
+    "db:provision-runtime": "node ../db/provision-runtime.mjs",
+    "auth:bootstrap": "node bootstrap-admin.mjs",
     "test": "node --test \"test/**/*.test.js\""
   },
   "dependencies": {
+    "argon2": "^0.45.1",
     "fastify": "^5.12.7",
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "pgsql-parser": "16.1.1"
   }
 }

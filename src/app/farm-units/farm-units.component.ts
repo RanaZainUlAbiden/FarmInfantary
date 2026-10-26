@@ -75,7 +75,7 @@ export class FarmUnitsComponent implements OnInit, OnDestroy {
   // accounts read the tab the sidebar last had active, everyone else just
   // uses their fixed business_type.
   private resolveModuleType(): 'broiler' | 'layer' {
-    const savedBusinessType = localStorage.getItem('businessType') || 'broiler';
+    const savedBusinessType = this.authService.getCurrentFarm()?.business_type || 'broiler';
     const activeTab = savedBusinessType === 'all'
       ? (localStorage.getItem('activeBusinessTab') || 'broiler')
       : savedBusinessType;

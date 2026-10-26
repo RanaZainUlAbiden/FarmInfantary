@@ -1,0 +1,19 @@
+.git
+Talha Farm
+node_modules
+server/node_modules
+.angular
+dist
+qa-results
+backups
+**/*.fibak
+**/*.partial
+**/.env
+**/.env.*
+**/*.env
+!.env.example
+!ops/*.env.example
+**/*.pem
+**/*.key
+**/*.pfx
+**/*.log
