@@ -1,5 +1,14 @@
 # Codex release self-review — 2026-10-26
 
+Branding/CSP follow-up: reviewed source digest
+`52d248cec5dade12ae4707109a3323e29643acfe2369077e374d072ab466d303`.
+The production CSS loader incompatibility is resolved by the Angular build setting,
+not by relaxing CSP. Supplied image bytes, versioned cache behavior and report
+PNG/header changes were reviewed; receipt handling, auth and SQL are unchanged.
+Production output checks plus the full suite and public HTTPS/browser checks pass.
+See `BRANDING_FIX.md` and current `HANDOFF.md` evidence; the earlier release digest
+below is historical.
+
 The user explicitly assigned the final review to Codex after being informed of
 the repository's second-reviewer rule. This is a self-review of Codex-authored
 work, not an independent security review. See decision D17 and PR #1.

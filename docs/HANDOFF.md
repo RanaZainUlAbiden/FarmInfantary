@@ -1,5 +1,28 @@
 # Handoff
 
+## FarmInfantary branding / production CSS fix — 2026-10-26
+
+Commit `352be8965f0ed97bc8588e4e9b7cb424b949d2f3` deployed successfully through
+GitHub main. Current reviewed source digest:
+`52d248cec5dade12ae4707109a3323e29643acfe2369077e374d072ab466d303`.
+The user-reported unstyled login was reproduced: Angular's inline stylesheet
+onload handler was blocked by CSP. Critical-CSS inlining is now disabled, without
+weakening CSP, and a production-output gate is part of the local/Docker builds.
+
+FarmInfantary and supplied logo/favicon replace the old product/report identity,
+including PWA and splash. Public logo/favicon bytes match the supplied originals.
+Versioned asset URLs avoid stale old-logo cache hits. The Railway project display
+name is FarmInfantary. Historical desktop reference/source paths stay unchanged.
+
+Validation: 85/85 scripts (~9,894 checks), 83 backend tests, production build/gate,
+nine live auth/HTTPS cases and four live branding/CSS checks pass. Browser evidence
+shows public sign-in layout `flex`, card width 420px, green action and loaded
+1254px supplied logo. The local production-CSP fixture also passes at 390px with
+358px card/no horizontal overflow. Disposable QA was cleaned up. Read
+`BRANDING_FIX.md`; screenshots/logs are in `qa-results/branding-*` and
+`qa-results/farminfantary-live-*`. The current approval is the user-authorized
+Codex self-review under D17, not an independent review.
+
 ## Deployed owner-only release — 2026-10-26
 
 Live: https://farminfantary-web-production-c687.up.railway.app
