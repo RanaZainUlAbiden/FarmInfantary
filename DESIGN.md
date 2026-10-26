@@ -114,6 +114,12 @@ Tables scroll within their card at narrow widths; actions remain outside scroll
 regions. Audit times explicitly use PKT. Other business screens remain outside
 this design certification.
 
+The farm-owner Team view reuses the root staff editor for status, password and
+the 50-row View/Create/Edit/Delete matrix. Each checkbox names its action, module
+and screen. Mutation choices require View; clearing View clears mutations. The
+caption and notice identify prepared grants while staff business access is pending.
+Saving changed grants signs the staff member out; stale edits require a reload.
+
 Canonical owners and behavior are in `UX-CONTRACT.md`. Scrollbar tokens live
 globally in `src/styles.scss`: thumb #93a8a0, track #eef2f1, hover #657f72 and
 active #466351, with standards properties and WebKit fallbacks. Existing scroll

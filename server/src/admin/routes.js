@@ -60,11 +60,20 @@ export function registerAdminRoutes(app,{pool,session,onRevokeUser}) {
  });
  app.get('/api/admin/permissions',root,async req=>({success:true,permissions:await store.catalogue(req.adminActor)}));
  app.get('/api/admin/users/:userId/permissions',root,async req=>({success:true,...await store.permissions(req.adminActor,id(req.params.userId))}));
- app.put('/api/admin/users/:userId/permissions',root,async req=>{
+ const savePermissions=async req=>{
   const b=body(req.body,['expectedVersion','grants']);if(!Array.isArray(b.grants)||b.grants.length>100)bad('Invalid permission list.');
   for(const g of b.grants) {body(g,['key','view','create','edit','delete']);if(typeof g.key!=='string'||!['view','create','edit','delete'].every(k=>typeof g[k]==='boolean')||(!g.view&&(g.create||g.edit||g.delete)))bad('Mutation access requires view access.');}
   if(new Set(b.grants.map(g=>g.key)).size!==b.grants.length)bad('Duplicate permission key.');
   return {success:true,...await store.setPermissions(req.adminActor,id(req.params.userId),{expectedVersion:id(b.expectedVersion),grants:b.grants})};
+ };
+ app.put('/api/admin/users/:userId/permissions',root,savePermissions);
+ app.get('/api/account/permissions',owner,async req=>({success:true,permissions:await store.catalogue(req.adminActor)}));
+ app.get('/api/account/staff/:userId/permissions',owner,async req=>({success:true,...await store.permissions(req.adminActor,id(req.params.userId))}));
+ app.put('/api/account/staff/:userId/permissions',owner,savePermissions);
+ app.put('/api/account/staff/:userId/status',owner,async req=>{const b=body(req.body,['status','expectedVersion']);return {success:true,...await store.setStatus(req.adminActor,id(req.params.userId),{status:status(b.status),expectedVersion:id(b.expectedVersion)})};});
+ app.post('/api/account/staff/:userId/password',owner,async(req,reply)=>{
+  const b=body(req.body,['password','expectedVersion']);if(!validNewPassword(b.password))bad('Use a password of 15 to 128 characters.');b.expectedVersion=id(b.expectedVersion);
+  return withPassword(b,input=>store.resetPassword(req.adminActor,id(req.params.userId),input),reply);
  });
  app.get('/api/admin/audit',root,async req=>{const p=page(req);return {success:true,events:await store.audit(req.adminActor,p.before,p.limit)};});
  return store;

@@ -24,10 +24,12 @@ export function createAdminStore(pool,{onRevokeUser=async()=>{}}={}) {
   if(!r.rowCount)refuse(404,'Farm not found.');return r.rows[0];
  }
  async function target(c,actor,id,version) {
-  admin(actor);const info=(await c.query('SELECT farm_id,role FROM users WHERE user_id=$1',[id])).rows[0];
-  if(!info||!['farm_admin','staff'].includes(info.role))refuse(404,'User not found.');
+  const info=(await c.query('SELECT farm_id,role FROM users WHERE user_id=$1',[id])).rows[0];
+  if(!info||!['farm_admin','staff'].includes(info.role)||
+    (actor.role!=='super_admin'&&(info.role!=='staff'||info.farm_id!==actor.farmId)))refuse(404,'User not found.');
   await farm(c,info.farm_id);
-  const r=await c.query(`SELECT ${fields} FROM users WHERE user_id=$1 AND farm_id=$2 AND role IN ('farm_admin','staff') FOR UPDATE`,[id,info.farm_id]);
+  // Recheck the initially authorized role after acquiring the farm/user locks.
+  const r=await c.query(`SELECT ${fields} FROM users WHERE user_id=$1 AND farm_id=$2 AND role=$3 FOR UPDATE`,[id,info.farm_id,info.role]);
   if(!r.rowCount)refuse(409,'User changed. Reload and try again.');
   if(r.rows[0].auth_version!==version)refuse(409,'User changed. Reload and try again.');return r.rows[0];
  }
@@ -57,10 +59,11 @@ export function createAdminStore(pool,{onRevokeUser=async()=>{}}={}) {
    const metadata=(await pool.query('SELECT * FROM admin_farm_metadata($1)',[actor.farmId])).rows[0];
    return {farm:metadata,users:await this.listUsers(actor,actor.farmId,before,limit)};
   },
-  async catalogue(actor) {admin(actor);await checkActor(pool,actor);return (await pool.query('SELECT permission_key,module,route,label FROM permission_catalogue ORDER BY permission_key')).rows;},
+  async catalogue(actor) {await checkActor(pool,actor);return (await pool.query('SELECT permission_key,module,route,label FROM permission_catalogue ORDER BY permission_key')).rows;},
   async permissions(actor,id) {
-   admin(actor);await checkActor(pool,actor);
-   const u=(await pool.query(`SELECT ${fields} FROM users WHERE user_id=$1 AND role='staff'`,[id])).rows[0];
+   await checkActor(pool,actor);
+   const u=(await pool.query(`SELECT ${fields} FROM users WHERE user_id=$1 AND role='staff'
+    AND ($2::text='super_admin' OR farm_id=$3)`,[id,actor.role,actor.farmId])).rows[0];
    if(!u)refuse(404,'Staff user not found.');
    return {user:u,grants:(await pool.query('SELECT permission_key,can_view,can_create,can_edit,can_delete FROM user_permissions WHERE user_id=$1 AND farm_id=$2 ORDER BY permission_key',[id,u.farm_id])).rows};
   },
