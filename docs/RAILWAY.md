@@ -1,14 +1,22 @@
 # Railway — FarmInfantary (Talha Farm)
 
+**Live and healthy, 2026-10-26.** PR #1 merged into main; Railway's app deployment
+`211e035c-3ac9-4998-bfe7-153d7cad1397` was automatically triggered by merge commit
+`3519ff33141e825b9dd9eef3a77c493d6b8b2a1e` and succeeded. Nine live HTTPS smoke
+scenarios pass, including cookie flags, restoration, origin refusal, admin access,
+platform business-SQL denial, logout, deep links and install assets. The in-app
+browser confirms real administrator login. Credentials are held locally in ignored
+`ops/railway-admin-credentials.env`; they are never part of Git or the app image.
+
 Project: `ccd772bc-d2d0-49b4-85d8-bb7bff288fb8`.
 Environment: `production` (`4db55201-561f-4a89-b482-a899ef97c561`).
 App: `farminfantary-web` (`eb538aaa-64cc-469c-86cf-025319e48be3`).
 Database: `Postgres` (`e6caf336-ea25-49a8-8635-acb87d5f58bd`).
-Reserved URL: https://farminfantary-web-production-c687.up.railway.app
+Live URL: https://farminfantary-web-production-c687.up.railway.app
 
 The app's GitHub source is `RanaZainUlAbiden/FarmInfantary`, branch `main`.
 Committed changes pushed/merged to main trigger Railway deployments; local file
-edits alone do not. PR #1 contains the owner-only release branch. Build settings
+edits alone do not. PR #1 merged the owner-only release branch. Build settings
 are stored in Railway and mirrored by `ops/railway-service-settings.json`.
 Railway's deprecated Config as Code files are deliberately not used.
 

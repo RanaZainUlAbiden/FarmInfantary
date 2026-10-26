@@ -1,5 +1,35 @@
 # Handoff
 
+## Deployed owner-only release — 2026-10-26
+
+Live: https://farminfantary-web-production-c687.up.railway.app
+
+PR #1 is merged into main (`3519ff33141e825b9dd9eef3a77c493d6b8b2a1e`).
+Railway automatically built/deployed that exact commit; app and database are
+healthy. **85/85 scripts (~9,894 checks), 83/83 backend tests, production build,
+clean production dependency audits and nine live HTTPS smoke scenarios pass.**
+The in-app browser confirms administrator sign-in and restoration after deploy.
+The reviewed source digest is
+`27eec29ef6a87a75a13adb02bad4b1e4b57991ada8ddc794f8f2aa40b59bac42`.
+Review was Codex self-review at the user's explicit request (D17), not independent.
+
+The private backup cron runs daily at 07:00 PKT and retains seven encrypted
+archives on its own volume. A real run verified the mount and found an earlier
+archive after a new container/image started (`previousArchives=1`,
+`archivesAfter=2`). Native Railway backup schedules were refused by the current
+plan; no plan upgrade was performed. External archive copies remain an operator
+responsibility. One-off setup/bootstrap services and privileged variables are gone.
+
+Administrator credentials are in ignored `ops/railway-admin-credentials.env`.
+Full operator/recovery material is separately in ignored `ops/railway-secrets.env`.
+No farms/business data were invented in production; the administrator can create
+the first farm in the live Administration screen. Staff business SQL and per-farm
+import remain deferred. See `RAILWAY.md` for operations, review gates and recovery.
+
+Evidence: `qa-results/live-railway-smoke.log`, `verify-railway-approved.log`,
+`backend-railway-final.log`, `angular-railway-final.log`, live/admin screenshots
+and `railway-backup-persistence.log`. Earlier blocks below describe prior states.
+
 ## Railway deployment update — 2026-10-26
 
 The user selected Railway, requested a new **FarmInfantary (Talha Farm)** project

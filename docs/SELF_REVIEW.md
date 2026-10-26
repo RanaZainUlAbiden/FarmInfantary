@@ -39,3 +39,10 @@ per-farm import are deferred. No external independent review is claimed.
 Release approval must record the actual reviewed source digest with reviewer
 label `Codex self-review (user-authorized D17)`. Later covered source changes
 invalidate it. Railway build/runtime/HTTPS evidence is recorded separately.
+
+Final evidence: 85/85 verification scripts (~9,894 checks), 83/83 backend tests,
+production build, both production dependency audits clean and nine live HTTPS
+scenarios. Railway built/deployed main successfully. Backup cron runs verified
+the actual mounted volume and persistence across separate containers. The
+approved source digest is
+`27eec29ef6a87a75a13adb02bad4b1e4b57991ada8ddc794f8f2aa40b59bac42`.

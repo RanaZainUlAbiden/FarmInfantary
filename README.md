@@ -14,7 +14,7 @@ and every business rule carry over unchanged.
 
 ## Status
 
-The owner-only release is prepared for Railway. Numbered migrations are applied
+The owner-only release is deployed on Railway. Numbered migrations are applied
 locally through version 007. All 29 inherited verification gates pass on the web
 target (28 PostgreSQL, one source-only). The full suite is **85/85 green
 (~9,894 reported checks)**; backend tests are **83/83**. The patched Angular
