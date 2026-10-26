@@ -5,6 +5,7 @@ RUN npm ci --no-audit
 COPY angular.json tsconfig*.json ./
 COPY src ./src
 COPY public ./public
+COPY scripts/check-production-shell.mjs ./scripts/check-production-shell.mjs
 RUN npm run build -- --progress=false
 
 FROM caddy:2-alpine

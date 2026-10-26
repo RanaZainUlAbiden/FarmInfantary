@@ -6,6 +6,7 @@ export const PROJECT_ROOT=fileURLToPath(new URL('../../',import.meta.url));
 export function releaseDigest(root=PROJECT_ROOT){
  const files=[];const walk=dir=>{if(!existsSync(dir))return;for(const e of readdirSync(dir,{withFileTypes:true})){const path=join(dir,e.name);if(e.isDirectory())walk(path);else if(/\.(ts|js|mjs|html|scss|css|json|sql|yaml|yml|webmanifest|svg|png|ico)$/.test(e.name))files.push(path);}};
  for(const dir of ['src','public','server/src','db','scripts/ops','ops'])walk(join(root,dir));
+ files.push(join(root,'scripts/check-production-shell.mjs'));
  for(const name of ['package.json','package-lock.json','server/package.json','server/package-lock.json','Dockerfile','.dockerignore','angular.json','tsconfig.json','tsconfig.app.json','ops/Dockerfile.web','ops/Caddyfile','ops/Dockerfile.railway','ops/Dockerfile.backup','ops/Caddyfile.railway','ops/farminfantary-backup.service','ops/farminfantary-backup.timer'])if(existsSync(join(root,name)))files.push(join(root,name));
  const hash=createHash('sha256');for(const file of [...new Set(files)].sort((a,b)=>relative(root,a).replaceAll('\\','/')<relative(root,b).replaceAll('\\','/')?-1:1)){hash.update(relative(root,file).replaceAll('\\','/')+'\0');hash.update(/\.(png|ico)$/.test(file)?readFileSync(file):readFileSync(file,'utf8').replaceAll('\r\n','\n'));hash.update('\0');}return hash.digest('hex');
 }

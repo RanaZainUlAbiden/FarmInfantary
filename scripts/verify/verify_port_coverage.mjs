@@ -10,7 +10,7 @@ for(const name of names){
  const stem=name.slice(0,-3);
  const target=name==='verify_change_announcements.js'?'verify_change_announcements_web.mjs':name==='verify_migrations.js'?'verify_legacy_migrations_pg.mjs':stem+'_pg.mjs';
  const file=new URL(target,import.meta.url);assert.ok(existsSync(file),`Missing web/PostgreSQL coverage: ${name}`);
- if(name==='verify_change_announcements.js')assert.ok(readFileSync(file,'utf8').endsWith(readFileSync(new URL(name,reference),'utf8')),'Source-only scanner must retain its original checks');
+ if(name==='verify_change_announcements.js')assert.ok(readFileSync(file,'utf8').replaceAll('\r\n','\n').endsWith(readFileSync(new URL(name,reference),'utf8').replaceAll('\r\n','\n')),'Source-only scanner must retain its original checks');
  console.log(`  PASS  ${name} -> ${target}`);
 }
 console.log('ALL CHECKS PASSED — all 29 inherited gates mapped (28 PostgreSQL, 1 source-only)');

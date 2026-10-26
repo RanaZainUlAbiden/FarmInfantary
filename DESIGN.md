@@ -34,11 +34,19 @@ components:
 
 ## Overview
 
-This is an existing product migration, not a rebrand. Farm owners and employees
+The user selected FarmInfantary branding and supplied replacement logo/favicon
+assets on 2026-10-26. These replace the prior farm's name and imagery on sign-in,
+admin, splash, install identity and printed reports. Farm owners and employees
 use dense poultry, stock and account screens. The established sign-in gateway
 uses the farm logo, dark green primary actions, a pale blue-grey canvas and one
 white rounded card. Keep that recognizable entry point; do not add marketing
 claims, stock photography, gradients or a new font identity to authentication.
+
+`public/logo.png` and `public/favicon.png` are the supplied originals. Reuse their
+pixels without replacement artwork. Branded asset URLs are versioned to avoid
+an older service worker retaining the previous logo. Production styles use a
+normal external stylesheet: Angular critical-CSS inlining is disabled because
+its inline onload handler is incompatible with the deployed script CSP.
 
 Product register, English interface, local daily dates under the existing PKT
 business contract. There is no evidence of Japan-market scope. Primary workflow

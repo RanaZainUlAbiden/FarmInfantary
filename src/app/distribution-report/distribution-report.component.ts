@@ -1111,7 +1111,7 @@ export class DistributionReportComponent implements OnInit {
       let bgImgData: string | null = null;
       let bgW = 0; let bgH = 0;
       try {
-        bgImgData = await this.loadImageAsBase64('reportimage.png');
+        bgImgData = await this.loadImageAsBase64('/logo.png?v=20261026');
         const bgProps = doc.getImageProperties(bgImgData);
         bgW = 140;
         bgH = (bgProps.height * bgW) / bgProps.width;
@@ -1133,22 +1133,22 @@ export class DistributionReportComponent implements OnInit {
       // ── COVER PAGE ─────────────────────────────────────────
 
       try {
-        const id = await this.loadImageAsBase64('Report-Distribution.jpeg');
+        const id = await this.loadImageAsBase64('/logo.png?v=20261026');
         const ip = doc.getImageProperties(id);
         const lh = 35;
         const lw = (ip.width * lh) / ip.height;
         const tx = margin + lw + 10;
-        doc.addImage(id, 'JPEG', margin, y, lw, lh);
+        doc.addImage(id, 'PNG', margin, y, lw, lh);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(18);
         doc.setTextColor(...B);
-        doc.text('TALHA POULTRY FEEDS AND CHICKS', tx, y + 8);
+        doc.text('FarmInfantary', tx, y + 8);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(...G);
-        doc.text('Shop # 33 Jinnah Market Akal Wala Road, Toba Tek Singh', tx, y + 14);
-        doc.text('Proprietor: Muhammad Tariq 0321-7546630', tx, y + 19);
-        doc.text('Managing Director: Ghulam Abbas 0322-7778826', tx, y + 24);
+        doc.text('', tx, y + 14);
+        doc.text('', tx, y + 19);
+        doc.text('', tx, y + 24);
         doc.setFontSize(10);
         doc.text('Generated: ' + today, tx, y + 30);
         y += lh + 10;
@@ -1156,16 +1156,16 @@ export class DistributionReportComponent implements OnInit {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(18);
         doc.setTextColor(...B);
-        doc.text('TALHA POULTRY FEEDS AND CHICKS', pw / 2, y, { align: 'center' });
+        doc.text('FarmInfantary', pw / 2, y, { align: 'center' });
         y += 7;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(...G);
-        doc.text('Shop # 33 Jinnah Market Akal Wala Road, Toba Tek Singh', pw / 2, y, { align: 'center' });
+        doc.text('', pw / 2, y, { align: 'center' });
         y += 5;
-        doc.text('Proprietor: Muhammad Tariq — 0321-7546630', pw / 2, y, { align: 'center' });
+        doc.text('', pw / 2, y, { align: 'center' });
         y += 4.5;
-        doc.text('Managing Director: Ghulam Abbas — 0322-7778826', pw / 2, y, { align: 'center' });
+        doc.text('', pw / 2, y, { align: 'center' });
         y += 6;
         doc.setFontSize(10);
         doc.text('Generated: ' + today, pw / 2, y, { align: 'center' });
@@ -1828,7 +1828,7 @@ export class DistributionReportComponent implements OnInit {
 
     doc.setFontSize(8);
     doc.setTextColor(...G);
-    doc.text('Talha Poultry Feeds and Chicks', 14, 9);
+    doc.text('FarmInfantary', 14, 9);
     doc.text(date, pw - 14, 9, { align: 'right' });
 
     doc.setFont('helvetica', 'bold');
@@ -1852,7 +1852,7 @@ export class DistributionReportComponent implements OnInit {
         c.width = img.width;
         c.height = img.height;
         c.getContext('2d')!.drawImage(img, 0, 0);
-        resolve(c.toDataURL('image/jpeg'));
+        resolve(c.toDataURL('image/png'));
       };
       img.onerror = () => reject(new Error('Logo load failed'));
       img.src = url;

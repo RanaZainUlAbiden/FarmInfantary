@@ -63,10 +63,10 @@ export class SaleComponent implements OnInit, OnDestroy {
 
   brokerForm = { broker_name: '' };
 
-  private readonly farmDisplayName = 'TALHA PROTEIN FARMS';
-  private readonly farmAddress = 'Chak No 392 JB, Chatala, Toba Tek Singh';
-  private readonly farmPhone1 = 'Muhammad Tariq: 0321-7546630';
-  private readonly farmPhone2 = 'Ghulam Abbas: 0322-7778826';
+  private readonly farmDisplayName = 'FarmInfantary';
+  private readonly farmAddress = '';
+  private readonly farmPhone1 = '';
+  private readonly farmPhone2 = '';
   get hasPendingRows(): boolean { return this.pendingRows.length > 0; }
   getRowBirdWeight(row: any): number { return (row.load_weight || 0) - (row.empty_weight || 0); }
   getRowTotal(row: any): number { return this.getRowBirdWeight(row) * (row.rate || 0); }
@@ -116,7 +116,7 @@ export class SaleComponent implements OnInit, OnDestroy {
   ngOnInit() {
     const resolved = this.route.snapshot.data['data'];
     if (resolved) {
-      this.currentFlock = resolved.flock; this.logoUrl = resolved.logoUrl || 'report-boiler.jpeg';
+      this.currentFlock = resolved.flock; this.logoUrl = resolved.logoUrl || '/logo.png?v=20261026';
       this.sales = resolved.sales || []; this.brokers = resolved.brokers || []; this.groupSales();
       const cached = this.pendingState.getState('SaleComponent');
       if (cached && cached.flockId === this.currentFlock?.flock_id) {
@@ -599,7 +599,7 @@ export class SaleComponent implements OnInit, OnDestroy {
     this.selectedDateFilter = '';
     this.filteredByDate = false;
   }
-  private loadImageAsBase64(url: string): Promise<string> { return new Promise((resolve, reject) => { const img = new Image(); img.crossOrigin = 'anonymous'; img.onload = () => { const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height; canvas.getContext('2d')!.drawImage(img, 0, 0); resolve(canvas.toDataURL('image/jpeg')); }; img.onerror = () => reject(new Error('Logo load failed')); img.src = url; }); }
+  private loadImageAsBase64(url: string): Promise<string> { return new Promise((resolve, reject) => { const img = new Image(); img.crossOrigin = 'anonymous'; img.onload = () => { const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height; canvas.getContext('2d')!.drawImage(img, 0, 0); resolve(canvas.toDataURL('image/png')); }; img.onerror = () => reject(new Error('Logo load failed')); img.src = url; }); }
 
   // PRINT: Daily Sale
 
@@ -609,7 +609,7 @@ export class SaleComponent implements OnInit, OnDestroy {
     const footer = 'Software By: www.devinfantary.com  |  Contact: 0302 6938217';
     const B: [number, number, number] = [0, 0, 0]; const G: [number, number, number] = [120, 120, 120]; const LG: [number, number, number] = [200, 200, 200];
     let y = 20;
-    try { const id = await this.loadImageAsBase64('report-boiler.jpeg'); const ip = doc.getImageProperties(id); const lh = 35; const lw = (ip.width * lh) / ip.height; const tx = 14 + lw + 10; doc.addImage(id, 'JPEG', 14, y, lw, lh); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(...B); doc.text(this.farmDisplayName, tx, y + 7); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...G); doc.text(this.farmAddress, tx, y + 12); doc.text(this.farmPhone1, tx, y + 17); doc.text(this.farmPhone2, tx, y + 22); doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...B); doc.text('DAILY SALE REPORT', tx, y + 28); doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...G); doc.text('Date: ' + String(group.date).split('T')[0], tx, y + 33); doc.text('Vehicles: ' + group.sales.length, tx, y + 38); y += lh + 8; } catch { }
+    try { const id = await this.loadImageAsBase64('/logo.png?v=20261026'); const ip = doc.getImageProperties(id); const lh = 35; const lw = (ip.width * lh) / ip.height; const tx = 14 + lw + 10; doc.addImage(id, 'PNG', 14, y, lw, lh); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(...B); doc.text(this.farmDisplayName, tx, y + 7); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...G); doc.text(this.farmAddress, tx, y + 12); doc.text(this.farmPhone1, tx, y + 17); doc.text(this.farmPhone2, tx, y + 22); doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...B); doc.text('DAILY SALE REPORT', tx, y + 28); doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...G); doc.text('Date: ' + String(group.date).split('T')[0], tx, y + 33); doc.text('Vehicles: ' + group.sales.length, tx, y + 38); y += lh + 8; } catch { }
     doc.setDrawColor(...B); doc.line(14, y, pw - 14, y); y += 6;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...B); doc.text('SUMMARY', 14, y); y += 6;
     doc.setFont('helvetica', 'normal'); doc.setTextColor(...G); doc.text('Total Vehicles: ' + group.sales.length, 14, y); doc.setTextColor(...B); doc.text(group.totalWeight.toFixed(0) + ' kg  |  Rs. ' + group.totalAmount.toLocaleString(), 70, y); y += 10;
@@ -645,7 +645,7 @@ export class SaleComponent implements OnInit, OnDestroy {
     const footer = 'Software By: www.devinfantary.com  |  Contact: 0302 6938217';
     const B: [number, number, number] = [0, 0, 0]; const G: [number, number, number] = [120, 120, 120]; const LG: [number, number, number] = [200, 200, 200];
     let y = 20;
-    try { const id = await this.loadImageAsBase64('report-boiler.jpeg'); const ip = doc.getImageProperties(id); const lh = 35; const lw = (ip.width * lh) / ip.height; const tx = 14 + lw + 10; doc.addImage(id, 'JPEG', 14, y, lw, lh); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(...B); doc.text(this.farmDisplayName, tx, y + 7); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...G); doc.text(this.farmAddress, tx, y + 12); doc.text(this.farmPhone1, tx, y + 17); doc.text(this.farmPhone2, tx, y + 22); doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...B); doc.text('BROKER SALE REPORT', tx, y + 28); doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...G); doc.text('Broker: ' + brokerName, tx, y + 33); doc.text('Vehicles: ' + allBrokerSales.length, tx, y + 38); y += lh + 8; } catch { }
+    try { const id = await this.loadImageAsBase64('/logo.png?v=20261026'); const ip = doc.getImageProperties(id); const lh = 35; const lw = (ip.width * lh) / ip.height; const tx = 14 + lw + 10; doc.addImage(id, 'PNG', 14, y, lw, lh); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(...B); doc.text(this.farmDisplayName, tx, y + 7); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...G); doc.text(this.farmAddress, tx, y + 12); doc.text(this.farmPhone1, tx, y + 17); doc.text(this.farmPhone2, tx, y + 22); doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...B); doc.text('BROKER SALE REPORT', tx, y + 28); doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...G); doc.text('Broker: ' + brokerName, tx, y + 33); doc.text('Vehicles: ' + allBrokerSales.length, tx, y + 38); y += lh + 8; } catch { }
     doc.setDrawColor(...B); doc.line(14, y, pw - 14, y); y += 6;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...B); doc.text('SUMMARY', 14, y); y += 6;
     doc.setFont('helvetica', 'normal'); doc.setTextColor(...G); doc.text('Total Vehicles: ' + allBrokerSales.length, 14, y); doc.setTextColor(...B); doc.text(tw.toFixed(0) + ' kg  |  Rs. ' + ta.toLocaleString(), 70, y); y += 10;
@@ -695,7 +695,7 @@ export class SaleComponent implements OnInit, OnDestroy {
     let logoData: string | null = null;
     let logoW = 0, logoH = 0;
     try {
-      logoData = await this.loadImageAsBase64('report-boiler.jpeg');
+      logoData = await this.loadImageAsBase64('/logo.png?v=20261026');
       const ip = doc.getImageProperties(logoData);
       logoH = 16;
       logoW = (ip.width * logoH) / ip.height;
@@ -711,7 +711,7 @@ export class SaleComponent implements OnInit, OnDestroy {
 
       // Header row: logo + farm name (left), copy label (right)
       if (logoData) {
-        doc.addImage(logoData, 'JPEG', marginX, top + 3, logoW, logoH);
+        doc.addImage(logoData, 'PNG', marginX, top + 3, logoW, logoH);
       }
       const textX = marginX + (logoData ? logoW + 6 : 0);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...B);

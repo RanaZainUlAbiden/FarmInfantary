@@ -12,6 +12,7 @@ COPY --chown=node:node db ./db
 COPY --chown=node:node src ./src
 COPY --chown=node:node public ./public
 COPY --chown=node:node scripts/ops ./scripts/ops
+COPY --chown=node:node scripts/check-production-shell.mjs ./scripts/check-production-shell.mjs
 COPY --chown=node:node ops ./ops
 COPY --chown=node:node package.json package-lock.json angular.json tsconfig.json tsconfig.app.json Dockerfile .dockerignore ./
 USER node

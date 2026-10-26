@@ -5,7 +5,7 @@
   "description": "FarmInfantary — web poultry farm management",
   "scripts": {
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build && node scripts/check-production-shell.mjs",
     "watch": "ng build --watch --configuration development",
     "verify": "node scripts/verify/run-all.mjs",
     "db:migrate": "node db/migrate.mjs",

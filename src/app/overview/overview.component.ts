@@ -138,13 +138,13 @@ export class OverviewComponent implements OnInit {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(17);
       doc.setTextColor(...BLACK);
-      doc.text('TALHA PROTEIN FARMS', 14, y);
+      doc.text('FarmInfantary', 14, y);
       y += 6;
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(...GRAY);
-      doc.text('Chak No 392 JB, Chatala, Toba Tek Singh', 14, y);
+      doc.text('', 14, y);
       y += 8;
 
       doc.setFontSize(10);

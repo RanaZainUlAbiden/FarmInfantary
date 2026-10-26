@@ -6,7 +6,8 @@ RUN npm ci --no-audit
 COPY angular.json tsconfig*.json ./
 COPY src ./src
 COPY public ./public
-RUN node --trace-uncaught node_modules/@angular/cli/bin/ng.js build --progress=false || (find /tmp -name angular-errors.log -exec cat {} \; ; exit 1)
+COPY scripts/check-production-shell.mjs ./scripts/check-production-shell.mjs
+RUN node --trace-uncaught node_modules/@angular/cli/bin/ng.js build --progress=false && node scripts/check-production-shell.mjs || (find /tmp -name angular-errors.log -exec cat {} \; ; exit 1)
 
 FROM node:24-bookworm-slim AS dependencies
 WORKDIR /app/server
@@ -25,6 +26,7 @@ COPY --chown=node:node db ./db
 COPY --chown=node:node src ./src
 COPY --chown=node:node public ./public
 COPY --chown=node:node scripts/ops ./scripts/ops
+COPY --chown=node:node scripts/check-production-shell.mjs ./scripts/check-production-shell.mjs
 COPY --chown=node:node ops ./ops
 COPY --chown=node:node package.json package-lock.json angular.json tsconfig.json tsconfig.app.json Dockerfile .dockerignore ./
 RUN caddy validate --config /app/ops/Caddyfile.railway --adapter caddyfile

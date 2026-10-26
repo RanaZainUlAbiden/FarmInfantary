@@ -1,4 +1,4 @@
-# Railway — FarmInfantary (Talha Farm)
+# Railway — FarmInfantary
 
 **Live and healthy, 2026-10-26.** PR #1 merged into main; Railway's app deployment
 `211e035c-3ac9-4998-bfe7-153d7cad1397` was automatically triggered by merge commit
@@ -9,6 +9,7 @@ browser confirms real administrator login. Credentials are held locally in ignor
 `ops/railway-admin-credentials.env`; they are never part of Git or the app image.
 
 Project: `ccd772bc-d2d0-49b4-85d8-bb7bff288fb8`.
+The project display name is now **FarmInfantary**, matching the product branding.
 Environment: `production` (`4db55201-561f-4a89-b482-a899ef97c561`).
 App: `farminfantary-web` (`eb538aaa-64cc-469c-86cf-025319e48be3`).
 Database: `Postgres` (`e6caf336-ea25-49a8-8635-acb87d5f58bd`).

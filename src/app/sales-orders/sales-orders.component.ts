@@ -1888,7 +1888,7 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
     let y = 20;
 
     try {
-      const bgData = await this.loadImageAsBase64('reportimage.png');
+      const bgData = await this.loadImageAsBase64('/logo.png?v=20261026');
       const bgProps = doc.getImageProperties(bgData);
       const bgW = 120;
       const bgH = (bgProps.height * bgW) / bgProps.width;
@@ -1899,41 +1899,41 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
     } catch {}
 
     try {
-      const logoData = await this.loadImageAsBase64('report-boiler.jpeg');
+      const logoData = await this.loadImageAsBase64('/logo.png?v=20261026');
       const logoProps = doc.getImageProperties(logoData);
       const logoHeight = 30;
       const logoWidth = (logoProps.width * logoHeight) / logoProps.height;
       const textX = 14 + logoWidth + 10;
 
-      doc.addImage(logoData, 'JPEG', 14, y, logoWidth, logoHeight);
+      doc.addImage(logoData, 'PNG', 14, y, logoWidth, logoHeight);
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(15);
       doc.setTextColor(...B);
-      doc.text('TALHA POULTRY FEEDS AND CHICKS', textX, y + 7);
+      doc.text('FarmInfantary', textX, y + 7);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(100, 100, 100);
-      doc.text('Shop # 33 Jinnah Market Akal Wala Road, Toba Tek Singh', textX, y + 13);
-      doc.text('Proprietor: Muhammad Tariq 0321-7546630', textX, y + 18);
-      doc.text('Managing Director: Ghulam Abbas 0322-7778826', textX, y + 23);
+      doc.text('', textX, y + 13);
+      doc.text('', textX, y + 18);
+      doc.text('', textX, y + 23);
 
       y += logoHeight + 6;
     } catch {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(15);
       doc.setTextColor(...B);
-      doc.text('TALHA POULTRY FEEDS AND CHICKS', pw / 2, y, { align: 'center' });
+      doc.text('FarmInfantary', pw / 2, y, { align: 'center' });
       y += 6;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(100, 100, 100);
-      doc.text('Shop # 33 Jinnah Market Akal Wala Road, Toba Tek Singh', pw / 2, y, { align: 'center' });
+      doc.text('', pw / 2, y, { align: 'center' });
       y += 5;
-      doc.text('Proprietor: Muhammad Tariq — 0321-7546630', pw / 2, y, { align: 'center' });
+      doc.text('', pw / 2, y, { align: 'center' });
       y += 4.5;
-      doc.text('Managing Director: Ghulam Abbas — 0322-7778826', pw / 2, y, { align: 'center' });
+      doc.text('', pw / 2, y, { align: 'center' });
       y += 8;
     }
 
@@ -2010,7 +2010,7 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
         canvas.width = img.width;
         canvas.height = img.height;
         canvas.getContext('2d')!.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/jpeg'));
+        resolve(canvas.toDataURL('image/png'));
       };
       img.onerror = () => reject(new Error('Logo load failed'));
       img.src = url;

@@ -883,7 +883,7 @@ export class HenSalesComponent implements OnInit, OnDestroy {
     ];
   }
 
-  private loadImageAsBase64(url: string): Promise<string> { return new Promise((resolve, reject) => { const img = new Image(); img.crossOrigin = 'anonymous'; img.onload = () => { const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height; canvas.getContext('2d')!.drawImage(img, 0, 0); resolve(canvas.toDataURL('image/jpeg')); }; img.onerror = () => reject(new Error('Logo load failed')); img.src = url; }); }
+  private loadImageAsBase64(url: string): Promise<string> { return new Promise((resolve, reject) => { const img = new Image(); img.crossOrigin = 'anonymous'; img.onload = () => { const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height; canvas.getContext('2d')!.drawImage(img, 0, 0); resolve(canvas.toDataURL('image/png')); }; img.onerror = () => reject(new Error('Logo load failed')); img.src = url; }); }
 
   private async printPdf(doc: jsPDF, filename: string) {
     try {
@@ -925,7 +925,7 @@ export class HenSalesComponent implements OnInit, OnDestroy {
     let logoData: string | null = null;
     let logoW = 0, logoH = 0;
     try {
-      logoData = await this.loadImageAsBase64('report-boiler.jpeg');
+      logoData = await this.loadImageAsBase64('/logo.png?v=20261026');
       const ip = doc.getImageProperties(logoData);
       logoH = 16;
       logoW = (ip.width * logoH) / ip.height;
@@ -940,7 +940,7 @@ export class HenSalesComponent implements OnInit, OnDestroy {
       let y = top + 8;
 
       if (logoData) {
-        doc.addImage(logoData, 'JPEG', marginX, top + 3, logoW, logoH);
+        doc.addImage(logoData, 'PNG', marginX, top + 3, logoW, logoH);
       }
       const textX = marginX + (logoData ? logoW + 6 : 0);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...B);

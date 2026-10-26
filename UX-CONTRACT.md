@@ -73,6 +73,12 @@ return URL is navigation convenience and never authorization.
 
 ## Rollout and verification
 
+Production build verification must inspect the actual generated HTML: screen
+stylesheets cannot require inline event handlers blocked by the deployed CSP.
+Verify computed card/field/button styles on the public HTTPS sign-in route,
+including a narrow view. Shared branding uses supplied logo/favicon assets and
+the name FarmInfantary; tenant-owned farm names remain data, not product branding.
+
 Owner data download has one canonical sidebar action. It disables during the
 request, reports preparation/success/failure in a persistent status region and
 does not replay. Browser restore is not exposed. Server-account entitlement owns

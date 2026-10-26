@@ -444,7 +444,7 @@ export class ReportComponent implements OnInit, OnDestroy {
       let bgImgData: string | null = null;
       let bgW = 0; let bgH = 0;
       try {
-        bgImgData = await this.loadImageAsBase64(this.logoUrl || 'report-boiler.jpeg');
+        bgImgData = await this.loadImageAsBase64(this.logoUrl || '/logo.png?v=20261026');
         const bgProps = doc.getImageProperties(bgImgData);
         bgW = 140; // a little large
         bgH = (bgProps.height * bgW) / bgProps.width;
@@ -454,7 +454,7 @@ export class ReportComponent implements OnInit, OnDestroy {
         if (bgImgData) {
           doc.saveGraphicsState();
           doc.setGState(new (doc as any).GState({ opacity: 0.1 }));
-          doc.addImage(bgImgData, 'JPEG', (pageWidth - bgW) / 2, (pageHeight - bgH) / 2, bgW, bgH);
+          doc.addImage(bgImgData, 'PNG', (pageWidth - bgW) / 2, (pageHeight - bgH) / 2, bgW, bgH);
           doc.restoreGraphicsState();
         }
       };
@@ -470,25 +470,25 @@ export class ReportComponent implements OnInit, OnDestroy {
       // Logo
   // Logo — left side, text on right
 try {
-  const imgData = await this.loadImageAsBase64(this.logoUrl || 'report-boiler.jpeg');
+  const imgData = await this.loadImageAsBase64(this.logoUrl || '/logo.png?v=20261026');
   const imgProps = doc.getImageProperties(imgData);
   const logoHeight = 35;
   const logoWidth = (imgProps.width * logoHeight) / imgProps.height;
   const textX = 14 + logoWidth + 10;
 
-  doc.addImage(imgData, 'JPEG', 14, coverY, logoWidth, logoHeight);
+  doc.addImage(imgData, 'PNG', 14, coverY, logoWidth, logoHeight);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(17);
   doc.setTextColor(...BLACK);
-  doc.text('TALHA PROTEIN FARMS', textX, coverY + 8);
+  doc.text('FarmInfantary', textX, coverY + 8);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...GRAY);
-  doc.text('Chak No 392 JB, Chatala, Toba Tek Singh', textX, coverY + 14);
-  doc.text('Muhammad Tariq: 0321-7546630', textX, coverY + 19);
-  doc.text('Ghulam Abbas: 0322-7778826', textX, coverY + 24);
+  doc.text('', textX, coverY + 14);
+  doc.text('', textX, coverY + 19);
+  doc.text('', textX, coverY + 24);
 
   doc.setFontSize(10);
   doc.text('Flock: ' + flockName, textX, coverY + 30);
@@ -559,7 +559,7 @@ coverY += 8;
           doc.setFontSize(8);
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(...GRAY);
-          doc.text('Talha Protein Farms', 14, 9);
+          doc.text('FarmInfantary', 14, 9);
           doc.text(flockName, pageWidth / 2, 9, { align: 'center' });
           doc.text(today, pageWidth - 14, 9, { align: 'right' });
 
@@ -874,7 +874,7 @@ coverY += 8;
         canvas.width  = img.width;
         canvas.height = img.height;
         canvas.getContext('2d')!.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/jpeg'));
+        resolve(canvas.toDataURL('image/png'));
       };
       img.onerror = () => reject(new Error('Logo load failed'));
       img.src = url;

@@ -1,5 +1,5 @@
 <main class="admin-shell" (input)="render()" (change)="render()" (keydown.enter)="onEnter($event)">
- <header class="admin-heading"><div class="admin-brand"><img src="logo.png" width="44" height="44" alt="" /><div><p class="auth-help">Talha Protein Farm</p><h1>{{ root ? 'Administration' : 'Your team' }}</h1></div></div>
+ <header class="admin-heading"><div class="admin-brand"><img src="/logo.png?v=20261026" width="44" height="44" alt="" /><div><p class="auth-help">FarmInfantary</p><h1>{{ root ? 'Administration' : 'Your team' }}</h1></div></div>
   <div class="admin-actions"><a *ngIf="!root" href="/app">Back to farm</a><button type="button" class="admin-button secondary" [disabled]="busy" (click)="logout()">Sign out</button></div></header>
  <nav *ngIf="root" aria-label="Administration"><button type="button" class="admin-button" [disabled]="busy" [attr.aria-current]="view==='farms'?'page':null" (click)="tab('farms')">Farms &amp; people</button><button type="button" class="admin-button secondary" [disabled]="busy" [attr.aria-current]="view==='audit'?'page':null" (click)="tab('audit')">Audit history</button></nav>
  <div class="admin-feedback"><p id="admin-error" class="admin-error" role="alert">{{ error }}</p><p role="status" aria-live="polite">{{ busy ? 'Working…' : message }}</p></div>
