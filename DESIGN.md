@@ -52,6 +52,12 @@ recipient names include supplier outstanding balances. No palette changes.
 
 ## Business navigation at narrow widths
 
+LayoutComponent owns section ordering across Broiler, Layers and Distribution.
+Each expanded row has a quiet six-dot grip before the existing icon/label. Pointer
+drag, arrow keys and explicit Move up/down controls share the same order/save path.
+Collapsed rails retain navigation alone. Existing green/white tokens and compact
+row geometry remain; drag starts only on the grip, preserving normal page scroll.
+
 The existing green sidebar is a compact 60px rail at widths up to 768px. Its
 native, named expand/collapse button opens a 240px drawer over content; selecting
 a screen closes it. This preserves form width without changing tenant/module

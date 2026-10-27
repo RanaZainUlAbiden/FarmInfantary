@@ -33,6 +33,7 @@ import { registerAdminRoutes } from './admin/routes.js';
 import { createDeleteAuthorization } from './auth/delete-auth.js';
 import { registerOwnerData } from './routes/owner-data.js';
 import { registerBrokerRoutes } from './brokers/routes.js';
+import {registerSidebarOrder} from './auth/sidebar-order.js';
 import { attestAuthRole } from '../../db/auth-role.mjs';
 import { productionApproved } from './release.js';
 import { isIP } from 'node:net';
@@ -119,6 +120,7 @@ export async function buildServer({ env = process.env, logger = false, pool: sup
     }) : developmentSession;
     if (!session.stub) {
       session.register(app);
+      registerSidebarOrder(app,{session,pool});
       deleteAuthorization=createDeleteAuthorization(pool,session,{clock:authOptions?.clock});deleteAuthorization.register(app);
       registerOwnerData(app,{session,runtime,schema:env.DATABASE_SCHEMA??'public'});
       registerBrokerRoutes(app,{session,runtime,deleteAuthorization});

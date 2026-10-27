@@ -1,6 +1,6 @@
 import {
   Component, OnInit, OnDestroy,
-  HostListener, ViewEncapsulation, ChangeDetectorRef, inject
+  HostListener, ViewEncapsulation, ChangeDetectorRef, ElementRef, inject
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -14,6 +14,8 @@ import { DatabaseService } from '../shared/services/database.service';
 import { LicenseService } from '../shared/services/license.service';
 import { Subscription } from 'rxjs';
 import { PendingStateService } from '../shared/services/pending-state.service';
+import {AdminApi} from '../admin/admin-api.service';
+import {orderedSidebarItems,sidebarItemKey} from '../shared/utils/sidebar-order';
 
 @Component({
   selector: 'app-layout',
@@ -38,6 +40,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private activatedRoute = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
   private pendingState = inject(PendingStateService);
+  private menuApi=inject(AdminApi);
+  private host=inject<ElementRef<HTMLElement>>(ElementRef);
   public licenseService = inject(LicenseService); // public for template access
 
   currentFarm: any = null;
@@ -174,6 +178,69 @@ export class LayoutComponent implements OnInit, OnDestroy {
     }
   }
 
+  menuOrderReady=false;menuOrderSaving=false;menuOrderError='';menuOrderStatus='';reorderControlsId='';
+  private pendingMenuOrder:{module:string;order:string[]}|null=null;
+  private menuDrag:any=null;private suppressHandleClick=false;private dragFrame=0;
+  get menuModule(){return this.savedBusinessType==='all'?this.activeBusinessTab:this.savedBusinessType;}
+  get reorderableModule(){return ['broiler','layer','distribution'].includes(this.menuModule);}
+  get canReorderMenu(){return this.menuOrderReady&&!this.menuOrderSaving&&!this.menuOrderError&&this.reorderableModule;}
+  menuItemKey=sidebarItemKey;
+  trackMenuItem(_index:number,item:any){return sidebarItemKey(item);}
+  private moduleMenu(module:string):any[]{return module==='layer'?this.layerMenu:module==='distribution'?this.distributionMenu:this.broilerMenu;}
+  private setModuleMenu(module:string,items:any[]){if(module==='layer')this.layerMenu=items;else if(module==='distribution')this.distributionMenu=items;else this.broilerMenu=items;}
+  private menuSession(epoch:number){return !this.destroyed&&this.authService.sessionEpoch===epoch;}
+  async loadMenuOrder(){
+    const epoch=this.authService.sessionEpoch;this.menuOrderReady=false;this.menuOrderError='';this.menuOrderStatus='Loading sidebar order…';
+    const r=await this.menuApi.request('GET','/api/account/sidebar-order');if(!this.menuSession(epoch))return;
+    if(r.success){for(const module of ['broiler','layer','distribution'])this.setModuleMenu(module,orderedSidebarItems(this.moduleMenu(module),r.orders?.[module]));this.menuOrderReady=true;this.menuOrderStatus='';}
+    else{this.menuOrderError='Could not load your saved sidebar order. Retry loading before rearranging.';this.menuOrderStatus='';}this.cdr.detectChanges();
+  }
+  async saveMenuOrder(){
+    const pending=this.pendingMenuOrder;if(!pending||this.menuOrderSaving)return;
+    const epoch=this.authService.sessionEpoch;this.menuOrderSaving=true;this.menuOrderError='';this.menuOrderStatus='Saving sidebar order…';this.cdr.detectChanges();
+    const r=await this.menuApi.request('PUT','/api/account/sidebar-order/'+pending.module,{order:pending.order});if(!this.menuSession(epoch))return;
+    this.menuOrderSaving=false;
+    if(r.success){this.pendingMenuOrder=null;this.menuOrderStatus='Sidebar order saved.';}
+    else{this.menuOrderError='Sidebar order was not confirmed. Your arrangement is still shown; retry saving it.';this.menuOrderStatus='';}this.cdr.detectChanges();
+  }
+  retryMenuOrder(){if(this.pendingMenuOrder)this.saveMenuOrder();else this.loadMenuOrder();}
+  private commitMenuOrder(module:string){this.pendingMenuOrder={module,order:this.moduleMenu(module).map(sidebarItemKey)};void this.saveMenuOrder();}
+  toggleMoveControls(item:any){if(this.suppressHandleClick){this.suppressHandleClick=false;return;}if(this.canReorderMenu)this.reorderControlsId=this.reorderControlsId===sidebarItemKey(item)?'':sidebarItemKey(item);}
+  moveMenuItem(item:any,direction:number){
+    if(!this.canReorderMenu)return;const list=[...this.menuItems],from=list.findIndex(x=>sidebarItemKey(x)===sidebarItemKey(item)),to=from+direction;
+    if(from<0||to<0||to>=list.length)return;list.splice(to,0,list.splice(from,1)[0]);this.setModuleMenu(this.menuModule,list);this.commitMenuOrder(this.menuModule);
+    this.focusMenuHandle(sidebarItemKey(item));
+  }
+  menuHandleKey(event:KeyboardEvent,item:any){if(event.key==='ArrowUp'||event.key==='ArrowDown'){event.preventDefault();this.moveMenuItem(item,event.key==='ArrowUp'?-1:1);}else if(event.key==='Escape'){event.preventDefault();this.cancelMenuDrag();this.reorderControlsId='';}}
+  private focusMenuHandle(key:string){setTimeout(()=>{if(!this.destroyed)this.host.nativeElement.querySelector<HTMLElement>('[data-menu-key="'+key+'"] .menu-drag-handle')?.focus();});}
+  beginMenuDrag(event:PointerEvent,item:any){
+    if(!this.canReorderMenu||event.button!==0)return;event.preventDefault();event.stopPropagation();
+    const handle=event.currentTarget as HTMLElement;handle.focus();handle.setPointerCapture(event.pointerId);this.suppressHandleClick=false;
+    this.menuDrag={key:sidebarItemKey(item),module:this.menuModule,items:[...this.menuItems],startX:event.clientX,startY:event.clientY,y:event.clientY,x:event.clientX,pointer:event.pointerId,active:false};
+  }
+  @HostListener('document:pointermove',['$event'])
+  moveMenuDrag(event:PointerEvent){const d=this.menuDrag;if(!d||d.pointer!==event.pointerId)return;d.x=event.clientX;d.y=event.clientY;
+    if(!d.active&&Math.hypot(d.x-d.startX,d.y-d.startY)<6)return;
+    event.preventDefault();d.active=true;this.reorderControlsId='';if(!this.dragFrame)this.dragMenuFrame();
+  }
+  private dragMenuFrame(){
+    const d=this.menuDrag;if(!d?.active)return;
+    const nav=this.host.nativeElement.querySelector<HTMLElement>('.sidebar-nav'),bounds=nav?.getBoundingClientRect();
+    if(nav&&bounds){if(d.y<bounds.top+35)nav.scrollTop-=8;else if(d.y>bounds.bottom-35)nav.scrollTop+=8;}
+    const row=document.elementFromPoint(d.x,d.y)?.closest<HTMLElement>('[data-menu-key]');
+    if(row&&this.host.nativeElement.contains(row)){const list=[...this.moduleMenu(d.module)],from=list.findIndex(x=>sidebarItemKey(x)===d.key),to=list.findIndex(x=>sidebarItemKey(x)===row.dataset['menuKey']);
+      if(from>=0&&to>=0&&from!==to){list.splice(to,0,list.splice(from,1)[0]);this.setModuleMenu(d.module,list);this.menuOrderStatus='Moving '+list[to].label+' to position '+(to+1)+' of '+list.length+'.';this.cdr.detectChanges();}}
+    this.dragFrame=requestAnimationFrame(()=>{this.dragFrame=0;this.dragMenuFrame();});
+  }
+  @HostListener('document:pointerup',['$event'])
+  endMenuDrag(event:PointerEvent){const d=this.menuDrag;if(!d||event.pointerId!==d.pointer)return;
+    const bounds=this.host.nativeElement.querySelector('.sidebar-nav')?.getBoundingClientRect();
+    if(d.active&&bounds&&(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)){this.cancelMenuDrag();return;}
+    cancelAnimationFrame(this.dragFrame);this.dragFrame=0;this.menuDrag=null;
+    if(d.active){this.suppressHandleClick=true;setTimeout(()=>this.suppressHandleClick=false);const changed=this.moduleMenu(d.module).some((item,i)=>sidebarItemKey(item)!==sidebarItemKey(d.items[i]));if(changed)this.commitMenuOrder(d.module);else this.menuOrderStatus='';this.focusMenuHandle(d.key);}}
+  @HostListener('document:pointercancel')
+  cancelMenuDrag(){const d=this.menuDrag;cancelAnimationFrame(this.dragFrame);this.dragFrame=0;this.menuDrag=null;if(d){this.setModuleMenu(d.module,d.items);this.menuOrderStatus='Move cancelled.';}}
+
   get showBusinessTabs(): boolean {
     return this.savedBusinessType === 'all';
   }
@@ -202,6 +269,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   async switchBusinessTab(tab: string) {
+    this.cancelMenuDrag();this.reorderControlsId='';
     this.activeBusinessTab = tab;
     localStorage.setItem('activeBusinessTab', tab);
 
@@ -232,6 +300,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   // forcing a re-login: mirrors what ngOnInit derives from localStorage, then
   // makes sure the active route still exists in the (possibly new) menu.
   private async onBusinessTypeChanged(newType: string) {
+    this.cancelMenuDrag();this.menuOrderSaving=false;this.pendingMenuOrder=null;await this.loadMenuOrder();
     this.currentFarm = this.authService.getCurrentFarm();
     this.savedBusinessType = newType;
     if (newType === 'all') {
@@ -269,7 +338,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
     }
 
     this.savedBusinessType = this.currentFarm.business_type || 'broiler';
-    const requestedRoute = this.activatedRoute.snapshot.firstChild?.url[0]?.path || '';
+    const requestedRoute = this.router.url.split(/[?#]/)[0].split('/')[2] || this.activatedRoute.snapshot.firstChild?.url[0]?.path || '';
+    await this.loadMenuOrder();if(this.destroyed)return;
     const routeOwner = ({ 'distribution-batch': 'inventory', 'customer-ledger': 'account-ledger',
       'supplier-ledger': 'account-ledger', 'bank-ledger': 'account-ledger' } as Record<string, string>)[requestedRoute] || requestedRoute;
 
@@ -338,6 +408,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.destroyed=true;
+    this.cancelMenuDrag();
     this.subs.unsubscribe();
     if (this.licenseCheckInterval) {
       clearInterval(this.licenseCheckInterval);
@@ -521,11 +592,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   toggleSidebar() {
+    this.cancelMenuDrag();this.reorderControlsId='';
     this.sidebarCollapsed = !this.sidebarCollapsed;
     this.cdr.detectChanges();
   }
 
   navigate(route: string, queryParams?: any) {
+    this.cancelMenuDrag();this.reorderControlsId='';
     if (window.innerWidth <= 768) this.sidebarCollapsed = true;
     this.activeRoute = route;
     if (route === 'inventory') {

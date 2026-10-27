@@ -64,7 +64,7 @@ try {
     assert.equal(original.filter(c=>c.column_name==='farm_id' && BUSINESS_TABLES.includes(c.table_name)).length,28);
   });
   await check('migration backfills all 30 missing tenant ownership columns atomically',async()=>{
-    const result=await migrate(f.pool,f.migrations); assert.deepEqual(result.applied,['004_tenant_isolation.sql','005_staff_permissions.sql','006_admin_seats_audit.sql','007_delete_authorization.sql','008_broker_ledgers.sql','009_broker_history_protection.sql','010_broker_workflow_boundary.sql','011_broker_payment_destinations.sql','012_broker_destination_history.sql']); assert.equal(result.version,12);
+    const result=await migrate(f.pool,f.migrations); assert.deepEqual(result.applied,['004_tenant_isolation.sql','005_staff_permissions.sql','006_admin_seats_audit.sql','007_delete_authorization.sql','008_broker_ledgers.sql','009_broker_history_protection.sql','010_broker_workflow_boundary.sql','011_broker_payment_destinations.sql','012_broker_destination_history.sql','013_sidebar_order.sql']); assert.equal(result.version,13);
     const n=Number((await f.pool.query(`SELECT count(*) FROM information_schema.columns WHERE table_schema=$1
       AND table_name=ANY($2) AND column_name='farm_id' AND is_nullable='NO'`,[f.schema,TENANT_TABLES])).rows[0].count);
     assert.equal(n,60);
