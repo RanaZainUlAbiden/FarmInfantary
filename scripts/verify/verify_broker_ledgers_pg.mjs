@@ -25,7 +25,8 @@ try{
  await q("INSERT INTO farms(farm_id,farm_name,password_hash,business_type,staff_seat_limit) VALUES(1,'Broker A','unused','all',3),(2,'Broker B','unused','all',3)");
  const hp=await hashPassword(password);for(const [name,farm,role] of [['owner',1,'farm_admin'],['other',2,'farm_admin'],['staff',1,'staff'],['root',null,'super_admin']])await q('INSERT INTO users(username,farm_id,role,password_hash) VALUES($1,$2,$3,$4)',[name,farm,role,hp]);
  await q("SELECT set_config('app.farm_id','1',false)");
- await q("INSERT INTO flocks(flock_id,farm_id,flock_name,start_date) VALUES(1,1,'Flock A','2026-10-01'),(2,1,'Flock B','2026-10-01')");
+ await q("INSERT INTO farm_units(unit_id,farm_id,unit_name,module_type) VALUES(1,1,'Farm A','broiler'),(2,1,'Farm B','broiler')");
+ await q("INSERT INTO flocks(flock_id,farm_id,flock_name,start_date,unit_id) VALUES(1,1,'Flock A','2026-10-01',1),(2,1,'Flock B','2026-10-01',2)");
  await q("SELECT set_config('app.farm_id','2',false)");await q("INSERT INTO flocks(flock_id,farm_id,flock_name,start_date) VALUES(3,2,'Other Flock','2026-10-01')");await q("SELECT set_config('app.farm_id','1',false)");
  await q("INSERT INTO brokers(flock_id,broker_name) VALUES(1,'Ali'),(2,' ali ')");
  await q("INSERT INTO sales(flock_id,date,broker,rate,bird_weight,total_amount,payment_type,module_type) VALUES(1,'2026-10-20','Ali',1,100,100,'cash','broiler'),(2,'2026-10-20','ali',1,200,200,'credit',NULL),(1,'2026-10-20','Ali',1,999,999,'cash','layer')");
@@ -49,6 +50,12 @@ try{
   const r=ok(await req('GET','/api/brokers/1'));assert.deepEqual(r.summary,{total:300,paid:100,pending:200});assert.equal(r.sales.length,2);
   assert.equal(ok(await req('GET','/api/brokers/1?flockId=1')).summary.total,100);assert.equal(ok(await req('GET','/api/brokers',undefined,other)).brokers.length,0);
  });
+ await check('Distribution broker totals and outstanding balances identify each physical farm and flock',async()=>{
+  const list=ok(await req('GET','/api/brokers'));assert.deepEqual(list.summary,{total:300,paid:100,pending:200});
+  const paged=ok(await req('GET','/api/brokers?offset=30'));assert.equal(paged.brokers.length,0);assert.deepEqual(paged.summary,list.summary);
+  const r=ok(await req('GET','/api/brokers/1'));assert.deepEqual(r.breakdown.map(b=>({farm:b.farm_name,flock:b.flock_name,pending:b.pending})),[{farm:'Farm A',flock:'Flock A',pending:0},{farm:'Farm B',flock:'Flock B',pending:200}]);
+  assert.deepEqual(ok(await req('GET','/api/brokers',undefined,other)).summary,{total:0,paid:0,pending:0});
+ });
  await check('farm-wide broker create/edit validates fields, duplicate names and revisions',async()=>{
   const b=ok(await req('POST','/api/brokers',{name:'New Broker',phone:'0300',notes:'QA'})).broker;brokerId=b.broker_id;
   assert.equal((await req('POST','/api/brokers',{name:' new broker '})).statusCode,409);
@@ -68,6 +75,7 @@ try{
   const base={saleId,...payment(30,'bank',1),requestId:randomUUID()};ok(await req('POST',`/api/brokers/${brokerId}/payments`,base));ok(await req('POST',`/api/brokers/${brokerId}/payments`,base));
   assert.equal((await q('SELECT current_balance FROM bank_accounts WHERE bank_id=1')).rows[0].current_balance,30);
   assert.equal((await q("SELECT count(*)::int AS n FROM bank_ledger WHERE reference_type='broker_payment'")).rows[0].n,1);
+  const detail=ok(await req('GET',`/api/brokers/${brokerId}`));assert.equal(detail.sales[0].farm_name,'Farm A');assert.equal(detail.payments[0].farm_name,'Farm A');assert.equal(detail.payments[0].flock_name,'Flock A');
   assert.deepEqual(ok(await req('GET',`/api/brokers/${brokerId}?flockId=2`)).summary,{total:0,paid:0,pending:0});
   assert.equal((await req('POST',`/api/brokers/${brokerId}/payments`,{...base,amount:1,bankId:2,requestId:randomUUID()})).statusCode,400);
  });

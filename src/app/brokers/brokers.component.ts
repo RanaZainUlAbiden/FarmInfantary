@@ -16,9 +16,11 @@ export class BrokersComponent implements OnInit,OnChanges,OnDestroy {
  @Input() flockMode=false;
  busy=false;loading=false;error='';message='';search='';brokers:any[]=[];more=false;offset=0;
  selected:any=null;summary:any={total:0,paid:0,pending:0};sales:any[]=[];payments:any[]=[];detailOffset=0;detailMore=false;
+ listSummary:any={total:0,paid:0,pending:0};breakdown:any[]=[];moreBreakdown=false;
  editing=false;newBroker=false;brokerForm:any={name:'',phone:'',notes:'',active:true};banks:any[]=[];
  saleForm:any=this.blankSale();paymentForm:any=null;showSale=false;deleteCode=false;confirm=false;
  private pendingDelete:any=null;private timer:any;private generation=0;private destroyed=false;private sub=new Subscription();
+ private started=false;
  get correctionTitle(){return this.pendingDelete?.kind==='payment'?'Reverse payment #'+this.pendingDelete.row.payment_id:'Delete unpaid sale #'+this.pendingDelete?.row.sale_id;}
  get correctionMessage(){return this.pendingDelete?.kind==='payment'?'Reverse this receipt of Rs. '+this.pendingDelete.row.amount+'? Its amount will become outstanding again. The reversed receipt stays in the ledger.':'Remove this unpaid sale from the flock’s sales and income total?';}
  get correctionAction(){return this.pendingDelete?.kind==='payment'?'Reverse payment':'Delete unpaid sale';}
@@ -29,10 +31,10 @@ export class BrokersComponent implements OnInit,OnChanges,OnDestroy {
  get saleTotal(){return Math.round(Math.max(0,Number(this.saleForm.loadWeight)-Number(this.saleForm.emptyWeight))*Number(this.saleForm.rate||0)*100)/100;}
  get salePending(){return Math.max(0,this.saleTotal-Number(this.saleForm.payment.amount||0));}
  get context(){return this.flockMode?this.flock?.flock_name:'All broiler flocks';}
- ngOnInit(){this.sub.add(this.route.queryParamMap.subscribe(params=>{this.search=params.get('brokerSearch')??'';const bid=Number(params.get('brokerId'));if(bid)this.open(bid);else{this.selected=null;this.loadList();}}));
+ ngOnInit(){this.started=true;this.sub.add(this.route.queryParamMap.subscribe(params=>{this.search=params.get('brokerSearch')??'';const bid=Number(params.get('brokerId'));if(bid)this.open(bid);else{this.selected=null;this.loadList();}}));
   this.db.getHouseBankAccounts(this.auth.getCurrentFarm()?.farm_id).then(r=>{if(!this.destroyed){this.banks=r.success?r.data:[];this.render();}});
  }
- ngOnChanges(){this.saleForm=this.blankSale();this.paymentForm=null;this.showSale=false;if(this.selected)this.open(this.selected.broker_id);}
+ ngOnChanges(){this.saleForm=this.blankSale();this.paymentForm=null;this.showSale=false;if(this.selected)this.open(this.selected.broker_id);else if(this.started)this.loadList();}
  ngOnDestroy(){this.destroyed=true;this.generation++;clearTimeout(this.timer);this.sub.unsubscribe();}
  render(){if(!this.destroyed)this.cdr.detectChanges();}
  private async read(path:string){const r=await this.api.request('GET',path);if(!r.success)throw new Error(r.error);return r;}
@@ -40,13 +42,13 @@ export class BrokersComponent implements OnInit,OnChanges,OnDestroy {
  async task(fn:()=>Promise<void>,message=''){if(this.busy)return;this.busy=true;this.error='';this.message='';this.render();try{await fn();this.message=message;}catch(e:any){this.error=e.message;this.focus('broker-error');}finally{this.busy=false;this.render();}}
  focus(id:string){setTimeout(()=>this.host.nativeElement.querySelector<HTMLElement>('#'+id)?.focus());}
  searchChanged(){clearTimeout(this.timer);this.timer=setTimeout(()=>this.router.navigate([],{relativeTo:this.route,queryParams:{brokerSearch:this.search||null,brokerId:null},queryParamsHandling:'merge',replaceUrl:true}),300);}
- async loadList(more=false){const epoch=++this.generation;this.loading=true;this.error='';this.render();try{const offset=more?this.offset+30:0,r=await this.read('/api/brokers?search='+encodeURIComponent(this.search)+'&offset='+offset);if(epoch!==this.generation||this.destroyed)return;this.offset=offset;this.brokers=more?[...this.brokers,...r.brokers]:r.brokers;this.more=r.more;}catch(e:any){if(epoch===this.generation)this.error=e.message;}finally{if(epoch===this.generation){this.loading=false;this.render();}}}
+ async loadList(more=false){const epoch=++this.generation;if(this.flockMode&&!this.flock){this.brokers=[];this.listSummary={total:0,paid:0,pending:0};this.more=false;this.loading=false;this.render();return;}this.loading=true;this.error='';this.render();try{const offset=more?this.offset+30:0,r=await this.read('/api/brokers?search='+encodeURIComponent(this.search)+'&offset='+offset+(this.flockMode?'&flockId='+this.flock.flock_id:''));if(epoch!==this.generation||this.destroyed)return;this.offset=offset;this.brokers=more?[...this.brokers,...r.brokers]:r.brokers;this.more=r.more;this.listSummary=r.summary;}catch(e:any){if(epoch===this.generation)this.error=e.message;}finally{if(epoch===this.generation){this.loading=false;this.render();}}}
  select(b:any){clearTimeout(this.timer);if(!this.busy)this.router.navigate([],{relativeTo:this.route,queryParams:{brokerId:b.broker_id,brokerSearch:this.search||null},queryParamsHandling:'merge'});}
  back(){if(this.busy)return;this.showSale=false;this.paymentForm=null;this.editing=false;this.router.navigate([],{relativeTo:this.route,queryParams:{brokerId:null},queryParamsHandling:'merge'});}
  async open(id:number,more=false){const epoch=++this.generation;if(this.selected?.broker_id!==id){this.selected=null;this.showSale=false;this.paymentForm=null;this.editing=false;}this.loading=true;this.error='';this.render();try{
   if(this.flockMode&&!this.flock){this.selected=null;return;}
   const offset=more?this.detailOffset+30:0,r=await this.read('/api/brokers/'+id+'?offset='+offset+(this.flockMode?'&flockId='+this.flock.flock_id:''));if(epoch!==this.generation||this.destroyed)return;
-  this.selected=r.broker;this.summary=r.summary;this.detailOffset=offset;this.sales=more?[...this.sales,...r.sales]:r.sales;this.payments=more?[...this.payments,...r.payments]:r.payments;this.detailMore=r.moreSales||r.morePayments;
+  this.selected=r.broker;this.summary=r.summary;this.breakdown=more?[...this.breakdown,...r.breakdown]:r.breakdown;this.moreBreakdown=r.moreBreakdown;this.detailOffset=offset;this.sales=more?[...this.sales,...r.sales]:r.sales;this.payments=more?[...this.payments,...r.payments]:r.payments;this.detailMore=r.moreSales||r.morePayments||r.moreBreakdown;
  }catch(e:any){if(epoch===this.generation)this.error=e.message;}finally{if(epoch===this.generation){this.loading=false;this.render();}}}
  editBroker(create=false){this.newBroker=create;this.editing=true;this.brokerForm=create?{name:'',phone:'',notes:'',active:true}:{name:this.selected.broker_name,phone:this.selected.phone,notes:this.selected.notes,active:this.selected.is_active===1};this.focus('broker-name');}
  async saveBroker(){if(!this.brokerForm.name.trim()){this.error='Enter the broker name.';this.focus('broker-name');return;}

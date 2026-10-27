@@ -198,19 +198,25 @@
 
           <!-- Internal Transfer targets -->
           <div *ngIf="customerType==='internal'" style="margin-top:8px">
-            <label style="font-size:12px;color:#888;display:block;margin-bottom:4px">Target Module</label>
-            <select class="inline-input" [(ngModel)]="internalTargetModule"
-                    (change)="loadInternalTargets(); onFormChange()" style="margin-bottom:8px">
+            <label for="transfer-module" style="font-size:12px;color:#59656b;display:block;margin-bottom:4px">Target module</label>
+            <select id="transfer-module" class="inline-input" [(ngModel)]="internalTargetModule" [disabled]="isSubmitting"
+                    (change)="onInternalModuleChange()" style="margin-bottom:8px">
               <option value="broiler">🐔 Broiler</option>
               <option value="layer">🥚 Layer</option>
             </select>
-            <label style="font-size:12px;color:#888;display:block;margin-bottom:4px">Target Flock/Batch</label>
-            <select class="inline-input" [(ngModel)]="internalTargetFlockId" (change)="errorMessage=''; onFormChange()">
-              <option [ngValue]="null">Select Flock/Batch</option>
+            <label for="transfer-farm" style="font-size:12px;color:#59656b;display:block;margin-bottom:4px">Target farm</label>
+            <select id="transfer-farm" class="inline-input" [(ngModel)]="internalTargetUnitId" (change)="onInternalFarmChange()" [disabled]="internalTargetsLoading || isSubmitting" style="margin-bottom:8px">
+              <option [ngValue]="null">Select farm first</option><option *ngFor="let farm of internalUnits" [ngValue]="farm.unit_id">{{farm.unit_name}}</option>
+            </select>
+            <label for="transfer-flock" style="font-size:12px;color:#59656b;display:block;margin-bottom:4px">Target {{internalTargetModule==='layer'?'batch':'flock'}}</label>
+            <select id="transfer-flock" class="inline-input" [(ngModel)]="internalTargetFlockId" [disabled]="internalTargetUnitId===null || internalTargetsLoading || isSubmitting" (change)="errorMessage=''; onFormChange()">
+              <option [ngValue]="null">{{internalTargetUnitId===null?'Select a farm first':(internalTargetModule==='layer'?'Select batch':'Select flock')}}</option>
               <option *ngFor="let f of internalFlocks" [ngValue]="f.flock_id || f.batch_id">
                 {{ f.flock_name || f.batch_name }}
               </option>
             </select>
+            <p role="status" *ngIf="internalTargetsLoading">Loading target farms and flocks…</p>
+            <p *ngIf="!internalTargetsLoading && internalTargetUnitId!==null && !internalFlocks.length">No active {{internalTargetModule==='layer'?'batches':'flocks'}} in this farm.</p>
             <div class="walkin-badge" style="margin-top:8px;background:#e8f5e9;color:#1a5c38;">
               🏠 Own-farm sale — cost booked to the farm, and the farm owes the amount
               left unpaid below

@@ -4,6 +4,18 @@ Distribution → Brokers is the farm-wide broker register. Add/edit a broker,
 record contact notes, deactivate/reactivate it, and see sales, received and
 pending totals. Broker identity is shared across flocks; balances remain within
 the signed-in farm. The register and account entries load in 30-row pages.
+The register's total sales/paid/outstanding figures cover the full matching set,
+independent of the current page. Each broker account breaks those figures down
+by physical farm and flock; sale and receipt rows carry both names. In Broiler
+Sales, both register figures and broker detail cover the selected flock.
+Distribution covers all farms and flocks within the signed-in account.
+
+Distribution Sales Orders → Own Farm now selects module, then physical farm,
+then only that farm's active flocks/batches. Changing farm/module clears the old
+target. Saved transfers restore the actual farm from their target; legacy
+unassigned targets have an explicit option. Stale responses cannot replace a
+new selection. Actual target ownership is rechecked before resolving the
+own-farm customer, so a mismatched selection cannot book another farm.
 
 Broiler → farm → flock → Sale now starts with broker search. Open a broker to
 record sales and receipts for **that flock only**. Bird weight is loaded minus
@@ -58,11 +70,14 @@ an older cascade. No metadata/auth role receives business access.
 
 ## Validation and release
 
-The dedicated restricted-role PostgreSQL/HTTP suite covers 13 broker scenarios:
+The dedicated restricted-role PostgreSQL/HTTP suite covers 14 broker scenarios:
 legacy mapping/module isolation, owner-only access, duplicate/stale names, credit,
 partial cash and later bank/other receipts, exact replay, overpayment, concurrent
 payments, foreign tenant references, inactive brokers, raw-workflow denial,
-flock history and device-authorized reversal/deletion. Cash service extension
+flock history, farm/flock aggregates and device-authorized reversal/deletion.
+Eight PostgreSQL scenarios execute the actual internal transfer selection methods,
+including filtering, restoration, legacy rows, late responses and failures.
+Cash service extension
 checks exercise actual drawer/farm/cut-off/module SQL while retaining all 25
 inherited port assertion sets unchanged. Full-schema tenancy has 26 scenarios.
 
@@ -81,10 +96,13 @@ browser checks, rather than the generic static report, verify these controls.
 Review is Codex self-review under the user's D17 direction, not independent
 approval. The unfinished staff-access PR is separate and is not included here.
 
-Release validation: **87/87 scripts, approximately 9,913 reported checks**,
-**83/83 backend tests**, production Angular/shell build and all 501 static app SQL
-statements prepared against PostgreSQL. The final targeted broker suite has 13
+Release validation: **88/88 scripts, approximately 9,927 reported checks**,
+**83/83 backend tests**, production Angular/shell build and all 506 static app SQL
+statements prepared against PostgreSQL. The final targeted broker suite has 14
 passing scenarios. All 25 inherited business assertion sets remain unchanged.
+The refined browser flow shows two farms with separate outstanding amounts
+(30,000 and 9,000; total 39,000), and an unpaid 550 transfer saved/reopened with
+the selected Farm B and its flock. No production business records were used.
 
 Before deployment, create/verify an encrypted persistent backup, apply 008–010
 through a private temporary operator job, attest both roles, remove that job's

@@ -63,11 +63,14 @@ export function registerBrokerRoutes(app,{session,runtime,deleteAuthorization}) 
   return r;
  }
  app.get('/api/brokers',scope,req=>tx(req,async c=>{
-  const search=text(String(req.query.search??''),100),offset=page(req);
+  const search=text(String(req.query.search??''),100),offset=page(req),flockId=req.query.flockId?id(req.query.flockId):null;if(flockId)await flock(c,flockId);
   const rows=(await c.query(`SELECT b.*,COALESCE(t.total,0) AS total,COALESCE(t.paid,0) AS paid,COALESCE(t.total-t.paid,0) AS pending
-   FROM brokers b LEFT JOIN LATERAL(SELECT SUM(s.total_amount) AS total,SUM(${paid}) AS paid FROM sales s WHERE s.broker_id=b.broker_id AND COALESCE(s.module_type,'broiler')='broiler') t ON true
-   WHERE b.merged_into IS NULL AND b.broker_name ILIKE '%'||$1||'%' ORDER BY b.broker_name,b.broker_id LIMIT 31 OFFSET $2`,[search,offset])).rows;
-  return {brokers:rows.slice(0,30),more:rows.length>30};
+   FROM brokers b LEFT JOIN LATERAL(SELECT SUM(s.total_amount) AS total,SUM(${paid}) AS paid FROM sales s WHERE s.broker_id=b.broker_id AND COALESCE(s.module_type,'broiler')='broiler' AND ($3::bigint IS NULL OR s.flock_id=$3)) t ON true
+   WHERE b.merged_into IS NULL AND b.broker_name ILIKE '%'||$1||'%' ORDER BY b.broker_name,b.broker_id LIMIT 31 OFFSET $2`,[search,offset,flockId])).rows;
+  const summary=(await c.query(`SELECT COALESCE(SUM(s.total_amount),0) AS total,COALESCE(SUM(${paid}),0) AS paid
+   FROM sales s JOIN brokers b ON b.broker_id=s.broker_id WHERE b.merged_into IS NULL
+   AND b.broker_name ILIKE '%'||$1||'%' AND COALESCE(s.module_type,'broiler')='broiler' AND ($2::bigint IS NULL OR s.flock_id=$2)`,[search,flockId])).rows[0];
+  return {brokers:rows.slice(0,30),more:rows.length>30,summary:{...summary,pending:summary.total-summary.paid}};
  }));
  app.post('/api/brokers',scope,req=>tx(req,async c=>{
   const b=body(req.body,['name','phone','notes']),name=text(b.name,120);if(!name)fail(400,'Enter the broker name.');
@@ -82,11 +85,16 @@ export function registerBrokerRoutes(app,{session,runtime,deleteAuthorization}) 
   const b=await broker(c,id(req.params.brokerId)),flockId=req.query.flockId?id(req.query.flockId):null,offset=page(req);if(flockId)await flock(c,flockId);
   const summary=(await c.query(`SELECT COALESCE(SUM(total_amount),0) AS total,COALESCE(SUM(${paid}),0) AS paid FROM sales s
    WHERE broker_id=$1 AND ($2::bigint IS NULL OR flock_id=$2) AND COALESCE(module_type,'broiler')='broiler'`,[b.broker_id,flockId])).rows[0];
-  const sales=(await c.query(`SELECT s.*,${paid} AS amount_paid,f.flock_name FROM sales s LEFT JOIN flocks f ON f.flock_id=s.flock_id
+  const breakdown=(await c.query(`SELECT f.unit_id,u.unit_name AS farm_name,s.flock_id,f.flock_name,
+    SUM(s.total_amount) AS total,SUM(${paid}) AS paid,SUM(s.total_amount)-SUM(${paid}) AS pending
+   FROM sales s LEFT JOIN flocks f ON f.flock_id=s.flock_id LEFT JOIN farm_units u ON u.unit_id=f.unit_id
+   WHERE s.broker_id=$1 AND ($2::bigint IS NULL OR s.flock_id=$2) AND COALESCE(s.module_type,'broiler')='broiler'
+   GROUP BY f.unit_id,u.unit_name,s.flock_id,f.flock_name ORDER BY u.unit_name NULLS LAST,f.flock_name,s.flock_id LIMIT 31 OFFSET $3`,[b.broker_id,flockId,offset])).rows;
+  const sales=(await c.query(`SELECT s.*,${paid} AS amount_paid,f.flock_name,u.unit_name AS farm_name FROM sales s LEFT JOIN flocks f ON f.flock_id=s.flock_id LEFT JOIN farm_units u ON u.unit_id=f.unit_id
    WHERE s.broker_id=$1 AND ($2::bigint IS NULL OR s.flock_id=$2) AND COALESCE(s.module_type,'broiler')='broiler' ORDER BY s.date DESC,s.sale_id DESC LIMIT 31 OFFSET $3`,[b.broker_id,flockId,offset])).rows;
-  const payments=(await c.query(`SELECT p.*,b.bank_name FROM broker_payments p LEFT JOIN bank_accounts b ON b.bank_id=p.bank_id
+  const payments=(await c.query(`SELECT p.*,b.bank_name,f.flock_name,u.unit_name AS farm_name FROM broker_payments p LEFT JOIN bank_accounts b ON b.bank_id=p.bank_id LEFT JOIN flocks f ON f.flock_id=p.flock_id LEFT JOIN farm_units u ON u.unit_id=f.unit_id
    WHERE p.broker_id=$1 AND ($2::bigint IS NULL OR p.flock_id=$2) ORDER BY p.date DESC,p.payment_id DESC LIMIT 31 OFFSET $3`,[b.broker_id,flockId,offset])).rows;
-  return {broker:b,summary:{...summary,pending:summary.total-summary.paid},sales:sales.slice(0,30),payments:payments.slice(0,30),moreSales:sales.length>30,morePayments:payments.length>30};
+  return {broker:b,summary:{...summary,pending:summary.total-summary.paid},breakdown:breakdown.slice(0,30),moreBreakdown:breakdown.length>30,sales:sales.slice(0,30),payments:payments.slice(0,30),moreSales:sales.length>30,morePayments:payments.length>30};
  }));
  app.post('/api/brokers/:brokerId/sales',scope,req=>tx(req,async c=>{
   const b=body(req.body,['flockId','date','vehicle','driver','phone','emptyWeight','loadWeight','rate','payment','requestId']),brokerId=id(req.params.brokerId),br=await broker(c,brokerId,true);

@@ -54,6 +54,17 @@ farm-wide brokers; Broiler Sale opens the same broker with a fixed selected
 flock scope. Server totals cover the full scope independently of 30-row pages.
 Search and broker selection use URL parameters; pending search is cancelled on
 selection and stale reads are ignored. Broker activation preserves history.
+The register totals cover all matching records, independently of page size;
+broker detail breaks balances down by physical farm and flock. Distribution
+shows the account-wide scope; Broiler Sales restricts both figures and detail
+to the current flock. Sale/receipt rows also identify the physical farm.
+
+SalesOrdersComponent owns Internal Transfer's native module → physical farm →
+flock/batch controls. Module/farm changes clear the old target and loading
+disables target selection; late responses are ignored. Edit restoration derives
+the real physical farm, preserving explicit legacy unassigned targets. The actual
+target owner is checked before the bill resolves its own-farm customer. Native
+labels name each selector; failures retain the bill and clear stale targets.
 
 Forms use native labeled dates/selects, the shared BankPicker receipt variant,
 novalidate and persistent live errors/status. Sales and payments stay in the

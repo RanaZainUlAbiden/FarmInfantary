@@ -10,14 +10,23 @@ Migrations 008–010 add FORCE-RLS receipt storage and trusted workflow protecti
 owners cannot bypass managed accounting through the raw SQL client. Read
 `BROKER_LEDGERS.md` for business decisions, security review and rollout sequence.
 
-Verified: 87/87 scripts (~9,913 reported checks), 83 backend tests, 13 dedicated
+Verified: 88/88 scripts (~9,927 reported checks), 83 backend tests, 14 dedicated
 broker PG/API scenarios, all 25 inherited business assertion sets unchanged,
-production build and 501 static SQL statements prepared. Fresh disposable browser
+production build and 506 static SQL statements prepared. Fresh disposable browser
 flow confirms 50,000 sales / 35,000 received / 15,000 pending after reload, mobile
 390px containment, bank selection, validation recovery and native correction
 confirmation with Cancel focus/Escape. The source catalogue now has 51 keys.
 Staff access remains disabled; PR #2 and `codex/staff-access` are separate work
 and will need the new catalogue/migration state when continued.
+
+User follow-ups are included: Distribution Brokers has total paid/outstanding
+and physical farm/flock breakdowns independently of pagination. Internal Transfer
+in Sales Orders requires physical farm first and offers only that farm's flocks
+or Layer batches. Eight actual-method PG scenarios pass. A browser transfer to
+Farm B saved/reopened correctly and farm/module changes cleared old selections.
+Migrations 008–010 and both database-role attestations succeeded in a private
+Railway operator job; that temporary service was removed afterwards. The public
+owner app remained healthy during the final UI refinements.
 
 ## Screen reliability fixes — 2026-10-26
 
