@@ -85,19 +85,34 @@
       </div>
     </div>
 
-    <nav class="sidebar-nav">
+    <div class="menu-order-feedback" *ngIf="!sidebarCollapsed && reorderableModule">
+      <p id="menu-reorder-help">Drag the six dots to reorder. Use ↑ / ↓ on a handle, or click it for move buttons.</p>
+      <p role="status" class="menu-order-status">{{menuOrderStatus}}</p>
+      <p role="alert" *ngIf="menuOrderError">{{menuOrderError}} <button type="button" (click)="retryMenuOrder()" [disabled]="menuOrderSaving">{{menuOrderReady?'Retry saving':'Retry loading'}}</button></p>
+    </div>
+    <nav class="sidebar-nav" aria-label="Module sections">
       <!-- An "Add ..." shortcut shares its route with the management item
            beside it, so only the plain item takes the active state. -->
-      <button type="button"
-        class="nav-item"
-        *ngFor="let item of menuItems"
-        [class.active]="activeRoute === item.route && !item.queryParams"
-        (click)="navigate(item.route, item.queryParams)"
-        [attr.aria-label]="item.label"
-        [title]="sidebarCollapsed ? item.label : ''">
-        <span class="nav-icon">{{ item.icon }}</span>
-        <span class="nav-label" *ngIf="!sidebarCollapsed">{{ item.label }}</span>
-      </button>
+      <div class="menu-row" *ngFor="let item of menuItems; let i=index; trackBy:trackMenuItem" [attr.data-menu-key]="menuItemKey(item)">
+        <div class="menu-row-main">
+          <button type="button" class="menu-drag-handle" *ngIf="!sidebarCollapsed && reorderableModule"
+            [attr.aria-label]="'Reorder '+item.label" [attr.aria-disabled]="!canReorderMenu"
+            [attr.aria-expanded]="reorderControlsId===menuItemKey(item)" aria-describedby="menu-reorder-help"
+            title="Drag to reorder, or click for move controls" (pointerdown)="beginMenuDrag($event,item)"
+            (click)="toggleMoveControls(item)" (keydown)="menuHandleKey($event,item)">
+            <span class="six-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </button>
+          <button type="button" class="nav-item" [class.active]="activeRoute === item.route && !item.queryParams"
+            (click)="navigate(item.route,item.queryParams)" [attr.aria-label]="item.label"
+            [attr.aria-current]="activeRoute===item.route && !item.queryParams?'page':null" [title]="sidebarCollapsed?item.label:''">
+            <span class="nav-icon">{{item.icon}}</span><span class="nav-label" *ngIf="!sidebarCollapsed">{{item.label}}</span>
+          </button>
+        </div>
+        <div class="menu-move-actions" *ngIf="!sidebarCollapsed && reorderControlsId===menuItemKey(item)">
+          <button type="button" [disabled]="!canReorderMenu || i===0" (click)="moveMenuItem(item,-1)" [attr.aria-label]="'Move '+item.label+' up'">↑ Move up</button>
+          <button type="button" [disabled]="!canReorderMenu || i===menuItems.length-1" (click)="moveMenuItem(item,1)" [attr.aria-label]="'Move '+item.label+' down'">↓ Move down</button>
+        </div>
+      </div>
 
       <button type="button" class="nav-item export-action" (click)="backupDatabase()" [disabled]="isExporting" aria-label="Download farm data" [title]="sidebarCollapsed?'Download farm data':''"><span class="nav-icon">💾</span><span class="nav-label" *ngIf="!sidebarCollapsed">{{isExporting?'Preparing export…':'Download farm data'}}</span></button>
     </nav>

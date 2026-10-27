@@ -28,7 +28,7 @@ try {
  await q(readFileSync(new URL('../../db/migrations/001_initial_schema.sql',import.meta.url),'utf8'));
  const installed=await migrate(f.pool,{schema:f.schema,historySchema:f.schema+'_meta',baseline:true});
  await check('migration 005 installs the exact generated 51-key catalogue without adding foreign keys',async()=>{
-  assert.equal(installed.version,12);
+  assert.equal(installed.version,13);
   const rows=(await q('SELECT permission_key AS key,module,route,label FROM permission_catalogue ORDER BY permission_key')).rows;
   assert.deepEqual(rows,currentCatalogue().entries.map(({key,module,route,label})=>({key,module,route,label})).sort((a,b)=>a.key.localeCompare(b.key)));
   assert.equal((await q("SELECT count(*)::int AS n FROM pg_constraint c JOIN pg_namespace n ON n.oid=c.connamespace WHERE n.nspname=$1 AND c.contype='f'",[f.schema])).rows[0].n,0);

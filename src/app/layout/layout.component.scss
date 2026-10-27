@@ -339,6 +339,26 @@ app-layout .sidebar.collapsed {
   font-size: 13px;
 }
 
+.app-layout .menu-row-main{display:flex;align-items:stretch;min-width:0}
+.app-layout .menu-row-main button.nav-item{flex:1;min-width:0;width:auto;padding:11px 8px;gap:8px}
+.app-layout .sidebar.collapsed .menu-row-main button.nav-item{padding:11px 18px}
+.app-layout .menu-row-main .nav-label{white-space:normal;overflow-wrap:anywhere}
+.app-layout .menu-drag-handle{display:flex;align-items:center;justify-content:center;flex:0 0 32px;margin-left:4px;min-height:40px;border:0;background:transparent;color:rgba(255,255,255,.8);cursor:grab;touch-action:none;border-radius:4px}
+.app-layout .menu-drag-handle:active{cursor:grabbing;background:rgba(255,255,255,.15)}
+.app-layout .menu-drag-handle:hover{background:rgba(255,255,255,.1)}
+.app-layout .menu-drag-handle:focus-visible,.app-layout .menu-move-actions button:focus-visible,.app-layout .menu-order-feedback button:focus-visible{outline:2px solid white;outline-offset:-2px}
+.app-layout .menu-drag-handle[aria-disabled=true]{opacity:.5;cursor:wait}
+.app-layout .six-dots{display:grid;grid-template-columns:repeat(2,3px);gap:3px;pointer-events:none}
+.app-layout .six-dots i{display:block;width:3px;height:3px;background:currentColor;border-radius:50%}
+.app-layout .menu-move-actions{display:flex;gap:4px;padding:4px 8px 8px 40px}
+.app-layout .menu-move-actions button,.app-layout .menu-order-feedback button{font:inherit;border:1px solid #ffffff80;background:transparent;color:white;border-radius:4px;padding:6px;cursor:pointer;min-height:32px}
+.app-layout .menu-move-actions button:disabled{opacity:.4;cursor:default}
+.app-layout .menu-order-feedback{padding:4px 12px;font:11px/1.35 'Segoe UI',system-ui,sans-serif;color:#fff}
+.app-layout .menu-order-feedback p{margin:3px 0}
+.app-layout .menu-order-status{min-height:15px}
+@media(pointer:coarse){.app-layout .menu-drag-handle{flex-basis:40px;min-height:44px}.app-layout .menu-move-actions button{min-height:44px}}
+@media(forced-colors:active){.app-layout .menu-drag-handle{color:ButtonText;border:1px solid ButtonText}}
+
 .sidebar-footer {
   border-top: 1px solid rgba(255,255,255,0.1);
   padding: 6px 0;

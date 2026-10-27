@@ -49,6 +49,20 @@ popup ownership; its confirmed mutation now goes through the dedicated API.
 
 ## Flow ledger
 
+Sidebar order belongs to the signed-in user, independently for Broiler, Layer and
+Distribution. LayoutComponent restores it from the private account API before
+enabling reordering. Only known current links are restored; new links append in
+their default order, and Layer Add Batch has a separate presentation key. The
+six-dot handle supports pointer dragging with scroll near list edges, arrow keys,
+and explicit Move up/down buttons. Escape/pointer cancellation or release outside
+the list restores the original order. Reordering keeps the current route open.
+Only the final drop writes; a pending save blocks another move. Status is live,
+and failed saves retain the arrangement with explicit Retry saving; failed reads
+retain navigation with Retry loading. Late identity responses are discarded.
+Order is server stored and survives logout/device changes. It grants no access,
+cannot create routes, and never changes another user's layout. Overview and fixed
+export/security/sign-out actions retain their established positions.
+
 Broker register and flock sale share `BrokersComponent`. Distribution lists
 farm-wide brokers; Broiler Sale opens the same broker with a fixed selected
 flock scope. Server totals cover the full scope independently of 30-row pages.
