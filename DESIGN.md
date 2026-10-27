@@ -52,9 +52,10 @@ recipient names include supplier outstanding balances. No palette changes.
 
 ## Business navigation at narrow widths
 
-Module selectors in platform administration and Farms share BUSINESS_BUNDLES in
-business-modules.ts: Broiler + Distribution, Layers + Distribution, All three
-modules. Native selects retain their existing field styles. The top module tabs
+Module selectors exist only in super-admin platform account creation/editing and
+use BUSINESS_BUNDLES in business-modules.ts: Broiler + Distribution, Layers +
+Distribution, All three modules. Owners have no module-assignment controls on
+Farms. The platform native selects retain their existing field styles. The top module tabs
 show enabled business workspaces plus the existing owner Overview. Shared-screen
 context follows the selected enabled tab, including in paired accounts.
 

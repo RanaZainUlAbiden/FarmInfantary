@@ -95,18 +95,5 @@ export function createAuthStore(pool, config, {
     await onRevokeUser(user.userId);
     return true;
   }
-  async function updateBusinessType(actor,businessType) {
-    const client=await pool.connect();
-    try {
-      await client.query('BEGIN');
-      await client.query("SELECT set_config('app.farm_id',$1,true)",[String(actor.farmId)]);
-      const changed=await client.query(`UPDATE farms f SET business_type=$1 WHERE f.farm_id=$2 AND f.status='active'
-        AND EXISTS(SELECT 1 FROM users u WHERE u.user_id=$3 AND u.farm_id=f.farm_id
-          AND u.auth_version=$4 AND u.status='active' AND u.role='farm_admin') RETURNING f.farm_id`,
-        [businessType,actor.farmId,actor.userId,actor.authVersion]);
-      await client.query('COMMIT');return changed.rowCount===1;
-    } catch(error) {await client.query('ROLLBACK');throw error;}
-    finally {client.release();}
-  }
-  return { throttle, findUser, issue, resolveToken, revoke, changePassword, updateBusinessType };
+  return { throttle, findUser, issue, resolveToken, revoke, changePassword };
 }

@@ -44,13 +44,15 @@ an explicit reload to discard edits. No write replays after failures; passwords
 clear after attempts/navigation and are not persisted. All operations have bounded
 requests, disabled mutation controls, persistent error/status regions and inline
 validation associated with the error region. First-invalid fields receive focus.
-Existing farm-units native business-type selection is retained without changing
-popup ownership; its confirmed mutation now goes through the dedicated API.
+Account module assignment belongs only to super-admin platform account forms.
+The owner Farms screen contains no module selector or save action. Retired owner
+mutation requests return 403; direct platform requests enforce the super-admin
+role. See docs/MODULE_COMBINATIONS.md for the assigned-bundle contract.
 
 ## Flow ledger
 
 Account module choices are exactly Broiler + Distribution, Layers + Distribution,
-and All three modules, shared between platform creation/editing and Farms.
+and All three modules, available only in super-admin platform creation/editing.
 Distribution and owner Overview are available in every combination. A removed
 core module cannot be selected through the tab controls; remembered tabs and
 deep links reconcile to an enabled workspace. Farm/batch/flock selections stay
@@ -115,7 +117,7 @@ suite, actual cash service checks, production build and in-app browser flows.
 | Restore | protected navigation/reload | checking status, no business mount | same allowed deep link | server-derived farm/user | sign-in with retry | form available after check | session /me |
 | Sign out | sign-out button | clear private UI immediately, revoke server cookie | sign-in | signed-out form | retry sign-out; block automatic restoration until confirmed | sign-in route | auth logout and D9 |
 | Session changed | 401, stale context or cross-tab event | invalidate epoch; no replay | sign-in with safe return route | persistent reason | explicit authentication | sign-in route | auth/session and tenancy |
-| Business type | existing Farms save | existing disabled saving action | same owner screen/menu | existing inline saved message | preserve selection and display error | existing form | dedicated account API |
+| Account modules | super-admin account create/edit | disabled platform save | same platform account | persistent saved message; affected farm sessions end | retain draft on failure; explicit reload on conflict | existing platform form | docs/MODULE_COMBINATIONS.md; admin API |
 
 ## Recovery and privacy
 

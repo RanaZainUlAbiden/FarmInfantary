@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Subject, firstValueFrom, timeout } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { FlockService } from './flock.service';
 import { FarmUnitService } from './farm-unit.service';
 import { PendingStateService } from './pending-state.service';
@@ -26,8 +26,6 @@ export class AuthService {
   private signingOut: Promise<{ success: boolean; error?: string }> | null = null;
   private signingIn = false;
   message = '';
-  private businessTypeChangedSubject = new Subject<string>();
-  businessTypeChanged$ = this.businessTypeChangedSubject.asObservable();
   get sessionEpoch(): number { return this.epoch; }
   get logoutPending(): boolean { return sessionStorage.getItem('fi_logout_pending') === '1'; }
 
@@ -119,15 +117,9 @@ export class AuthService {
       void this.router.navigate(['/login'], { replaceUrl: true, queryParams: { returnUrl } });
     }
   }
-  async updateBusinessType(_farmId: number, businessType: string): Promise<any> {
-    const epoch = this.epoch;
-    try {
-      const result = await firstValueFrom(this.http.patch<{ success: boolean; user: SessionUser; error?: string }>(
-        '/api/account/business-type', { businessType }).pipe(timeout(10_000)));
-      if (epoch !== this.epoch) return { success: false, error: 'Your sign-in changed. Try again.' };
-      if (result.success && this.validUser(result.user)) { this.adopt(result.user); this.businessTypeChangedSubject.next(result.user.farm!.business_type); }
-      return result;
-    } catch (error: any) { return { success: false, error: error?.error?.error ?? 'Could not update your business type. Try again.' }; }
+  // Compatibility for older callers; module assignment belongs to platform administration.
+  async updateBusinessType(_farmId: number, _businessType: string): Promise<any> {
+    return { success: false, error: 'Only a super administrator can assign account modules.' };
   }
   getCurrentUser(): SessionUser | null { return this.user ? { ...this.user, farm: this.user.farm ? { ...this.user.farm } : null } : null; }
   getCurrentFarm(): any { return this.user?.farm ? { ...this.user.farm } : null; }

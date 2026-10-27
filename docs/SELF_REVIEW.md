@@ -67,3 +67,22 @@ scenarios. Railway built/deployed main successfully. Backup cron runs verified
 the actual mounted volume and persistence across separate containers. The
 approved source digest is
 `27eec29ef6a87a75a13adb02bad4b1e4b57991ada8ddc794f8f2aa40b59bac42`.
+
+## Super-admin module assignment follow-up — 2026-10-27
+
+[Codex] Self-review under D17: remove the owner Account Modules card and its
+mutation UI/state; the retired owner PATCH route always refuses authenticated
+callers after origin/context checks, and its mutation store function is removed.
+Platform account create/edit still requires super_admin and validates the three
+canonical bundles. Raw SQL cannot write farms. Module changes revoke all tenant
+device sessions through the existing post-commit callbacks, including outstanding
+transaction cleanup; no-op/settings-only changes retain existing behavior.
+No schema/RLS/guard policy change or staff enablement is included. Physical-site
+management is distinct from platform account provisioning and is preserved.
+
+Reviewed direct and spoofed owner requests, platform-route refusal, SQL single
+and batch refusal, super-admin positive changes and fresh sign-in navigation.
+90/90 scripts (~9,965 checks), 83 backend tests and production build pass. The
+51-key catalogue is unchanged except source metadata; regenerated voucher
+observations remain inactive evidence. See MODULE_COMBINATIONS.md for browser
+checks and the static audit limitation. Live deployment is verified separately.

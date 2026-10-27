@@ -15,42 +15,6 @@ td.negative { color: #c62828; }
 .btn-cancel-edit { background: #f5f5f5; color: #666; border: 1px solid #e0e0e0; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
 .error-message { margin-bottom: 16px; padding: 10px 12px; border-radius: 8px; background: #fef2f2; color: #b91c1c; font-size: 13px; }
 
-.business-type-card {
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  padding: 16px 20px;
-  margin-bottom: 20px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-
-  h4 { font-size: 14px; font-weight: 600; margin: 0 0 2px; }
-  .subtitle { font-size: 12px; color: #888; margin: 0; }
-
-  .business-type-message {
-    flex-basis: 100%;
-    margin: 0;
-    font-size: 12px;
-    color: #1a5c38;
-  }
-}
-
-.business-type-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  .business-select {
-    padding: 8px 10px;
-    border: 1.5px solid #e0e0e0;
-    border-radius: 6px;
-    font-size: 13px;
-  }
-}
-
 .loading-state {
   text-align: center;
   padding: 40px;

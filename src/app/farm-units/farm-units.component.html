@@ -7,22 +7,6 @@
     <button class="btn-primary" (click)="addNewRow()" *ngIf="!showNewRow" [disabled]="isLoading">+ Add Farm</button>
   </div>
 
-  <div class="business-type-card">
-    <div>
-      <h4>Account Modules</h4>
-      <p class="subtitle">Choose which modules this account can access. Switching this does not require logging in again.</p>
-    </div>
-    <div class="business-type-controls">
-      <select aria-label="Account modules" [(ngModel)]="businessType" class="business-select" [disabled]="isSavingBusinessType">
-        <option *ngFor="let bundle of businessBundles" [value]="bundle.value">{{bundle.label}}</option>
-      </select>
-      <button class="btn-primary" (click)="saveBusinessType()" [disabled]="!businessTypeDirty || isSavingBusinessType">
-        {{ isSavingBusinessType ? 'Saving...' : 'Save' }}
-      </button>
-    </div>
-    <p class="business-type-message" *ngIf="businessTypeMessage">{{ businessTypeMessage }}</p>
-  </div>
-
   <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
 
   <div class="loading-state" *ngIf="isLoading">

@@ -98,7 +98,7 @@ Farm/staff provisioning and seat limits belong to the dedicated admin path.
 | `GET /api/auth/me` | Resolves the cookie against current user, version and farm status; no localStorage trust |
 | `POST /api/auth/logout` | Revokes the server session and clears the cookie |
 | `POST /api/auth/password` | Verifies `{currentPassword,newPassword}`, changes the hash, revokes every device session and requires sign-in |
-| `PATCH /api/account/business-type` | Farm-admin-only `{businessType}` enum; updates the cookie-owned farm and returns fresh safe metadata; body farm/user claims cannot select ownership |
+| `PATCH /api/account/business-type` | Retired: authenticated callers receive 403. Only super-admin `/api/admin/farms` create/edit assigns account modules. |
 
 Mutations require the exact configured Origin. Cross-site Fetch Metadata is
 refused. Responses use `Cache-Control: no-store`; bodies are capped at 4 KiB.
@@ -160,3 +160,10 @@ disposable; no real credentials were created. Evidence: `BROWSER_SESSION_QA.md`.
 Design references: [node-argon2](https://github.com/ranisalt/node-argon2),
 [OWASP password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
 and [session management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html).
+
+[Codex] Module assignment is super-admin-only (2026-10-27): the old owner
+`PATCH /api/account/business-type` is now an authenticated refusal endpoint (403),
+with no mutation store function. Only `/api/admin/farms` creation/editing can
+assign a bundle. A changed bundle revokes all farm device sessions; fresh sign-in
+restores it. Owner Farms contains only physical-site management, not platform
+account provisioning. See MODULE_COMBINATIONS.md.
