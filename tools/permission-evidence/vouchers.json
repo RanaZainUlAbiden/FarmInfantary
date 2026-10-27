@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "status": "observations-only; not authorized policy",
-  "sourceDigest": "10524b7a109e2bff52095fdd70a985c71e6a676f5158ac691c9fcb613eacc436",
+  "sourceDigest": "c5c1962aa741764b0769c03bb4ef864d5d2e282e3d25a3aaa8cf70531ea9215f",
   "catalogueDigest": "4d88ff53f5a5f0e468b1f2a2278bdb0a238172a40d8b0ea9a6826b4b2d5a9232",
   "producerDigest": "4f75426aab9f94d63bc0ab3d5e52441ee3e1dcf96326131da8f9065ac75be4b4",
   "scopes": [
