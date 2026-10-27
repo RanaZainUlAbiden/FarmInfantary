@@ -13,11 +13,8 @@
       <p class="subtitle">Choose which modules this account can access. Switching this does not require logging in again.</p>
     </div>
     <div class="business-type-controls">
-      <select [(ngModel)]="businessType" class="business-select" [disabled]="isSavingBusinessType">
-        <option value="all">🔄 All Modules (Broiler + Layer + Distribution)</option>
-        <option value="broiler">🐔 Broiler Only</option>
-        <option value="layer">🥚 Layer Only</option>
-        <option value="distribution">📦 Distribution Only</option>
+      <select aria-label="Account modules" [(ngModel)]="businessType" class="business-select" [disabled]="isSavingBusinessType">
+        <option *ngFor="let bundle of businessBundles" [value]="bundle.value">{{bundle.label}}</option>
       </select>
       <button class="btn-primary" (click)="saveBusinessType()" [disabled]="!businessTypeDirty || isSavingBusinessType">
         {{ isSavingBusinessType ? 'Saving...' : 'Save' }}

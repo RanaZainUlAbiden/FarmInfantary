@@ -49,6 +49,17 @@ popup ownership; its confirmed mutation now goes through the dedicated API.
 
 ## Flow ledger
 
+Account module choices are exactly Broiler + Distribution, Layers + Distribution,
+and All three modules, shared between platform creation/editing and Farms.
+Distribution and owner Overview are available in every combination. A removed
+core module cannot be selected through the tab controls; remembered tabs and
+deep links reconcile to an enabled workspace. Farm/batch/flock selections stay
+separate between core modules; vaccination and report context follows the same
+active-module helper. Existing standalone saved values remain readable without
+rewriting data: Broiler/Layer map to their matching pair and Distribution maps to
+All three. New mutations accept only the three canonical bundle values. These
+workspace choices do not replace role/tenant authorization or enable staff SQL.
+
 Sidebar order belongs to the signed-in user, independently for Broiler, Layer and
 Distribution. LayoutComponent restores it from the private account API before
 enabling reordering. Only known current links are restored; new links append in

@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
+import {BUSINESS_BUNDLES,businessBundle,activeBusinessModule} from '../shared/utils/business-modules';
 import { DatabaseService } from '../shared/services/database.service';
 import { AuthService } from '../shared/services/auth.service';
 import { FarmUnitService } from '../shared/services/farm-unit.service';
@@ -32,7 +33,8 @@ export class FarmUnitsComponent implements OnInit, OnDestroy {
   newRow: { unit_name: string; location: string; notes: string; opening_balance: number | null } =
     { unit_name: '', location: '', notes: '', opening_balance: null };
 
-  businessType = 'broiler';
+  businessType = 'broiler_distribution';
+  businessBundles=BUSINESS_BUNDLES;
   isSavingBusinessType = false;
   businessTypeMessage = '';
 
@@ -48,7 +50,7 @@ export class FarmUnitsComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.currentFarm = this.authService.getCurrentFarm();
-    this.businessType = this.currentFarm?.business_type || 'broiler';
+    this.businessType = businessBundle(this.currentFarm?.business_type);
     this.moduleType = this.resolveModuleType();
     this.loadUnits();
 
@@ -76,9 +78,7 @@ export class FarmUnitsComponent implements OnInit, OnDestroy {
   // uses their fixed business_type.
   private resolveModuleType(): 'broiler' | 'layer' {
     const savedBusinessType = this.authService.getCurrentFarm()?.business_type || 'broiler';
-    const activeTab = savedBusinessType === 'all'
-      ? (localStorage.getItem('activeBusinessTab') || 'broiler')
-      : savedBusinessType;
+    const activeTab=activeBusinessModule(savedBusinessType,localStorage.getItem('activeBusinessTab'));
     return activeTab === 'layer' ? 'layer' : 'broiler';
   }
 
@@ -204,7 +204,7 @@ export class FarmUnitsComponent implements OnInit, OnDestroy {
   }
 
   get businessTypeDirty(): boolean {
-    return this.businessType !== (this.currentFarm?.business_type || 'broiler');
+    return this.businessType !== businessBundle(this.currentFarm?.business_type);
   }
 
   async saveBusinessType() {

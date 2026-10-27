@@ -3,6 +3,7 @@ import {loadBrowserSource} from './lib/browser-source-harness.mjs';
 const core={Component:()=>x=>x,HostListener:()=>()=>{},ViewEncapsulation:{None:0},ChangeDetectorRef:class{},ElementRef:class{},inject:token=>values.get(token)};
 const values=new Map(),imports={'@angular/core':core,'@angular/common':{CommonModule:{}},'@angular/core/rxjs-interop':{toSignal:(_source,options)=>()=>options.initialValue},'@angular/router':{Router:class{},RouterOutlet:{},ActivatedRoute:class{}}};
 const utility=loadBrowserSource('src/app/shared/utils/sidebar-order.ts',{});imports['../shared/utils/sidebar-order']=utility;
+const business=loadBrowserSource('src/app/shared/utils/business-modules.ts',{});imports['../shared/utils/business-modules']=business;
 for(const [path,name] of [['../shared/services/auth.service','AuthService'],['../shared/services/flock.service','FlockService'],['../shared/services/farm-unit.service','FarmUnitService'],['../shared/services/data-change.service','DataChangeService'],['../shared/utils/sql-error.util','friendlySqlError'],['../shared/services/database.service','DatabaseService'],['../shared/services/license.service','LicenseService'],['../shared/services/pending-state.service','PendingStateService'],['../admin/admin-api.service','AdminApi']]){const token=class{};imports[path]={[name]:token};values.set(token,{});}
 const auth={sessionEpoch:1};values.set(imports['../shared/services/auth.service'].AuthService,auth);values.set(core.ChangeDetectorRef,{detectChanges(){}});
 let calls=[],response={success:true,orders:{}},selectedRow=null,nav={scrollTop:0,getBoundingClientRect:()=>({top:0,bottom:600})};
@@ -42,5 +43,19 @@ await check('pointer drag previews order, commits once on release and does not n
 });
 await check('cancelling an active drag restores the original order without writing',async()=>{
  const c=fresh(),before=keys(c.menuItems);selectedRow={dataset:{menuKey:utility.sidebarItemKey(c.menuItems[3])},closest(){return this;}};c.beginMenuDrag({button:0,pointerId:1,clientX:20,clientY:40,preventDefault(){},stopPropagation(){},currentTarget:{focus(){},setPointerCapture(){}}},c.menuItems[0]);c.moveMenuDrag({pointerId:1,clientX:20,clientY:160,preventDefault(){}});c.cancelMenuDrag();assert.deepEqual(keys(c.menuItems),before);assert.equal(calls.length,0);
+});
+await check('only three module bundles are offered and each always includes Distribution and account Overview',async()=>{
+ assert.deepEqual(Array.from(business.BUSINESS_BUNDLES,b=>b.value),['broiler_distribution','layer_distribution','all']);
+ for(const bundle of business.BUSINESS_BUNDLES){assert.ok(business.businessTabs(bundle.value).includes('distribution'));assert.ok(business.businessTabs(bundle.value).includes('overview'));}
+});
+await check('paired bundles show the correct core menu, hide the other core module and cannot switch to it',async()=>{
+ for(const [bundle,enabled,excluded] of [['broiler_distribution','broiler','layer'],['layer_distribution','layer','broiler']]){
+  const c=fresh();c.savedBusinessType=bundle;c.activeBusinessTab=excluded;assert.equal(c.menuModule,enabled);assert.equal(c.hasBusinessTab(excluded),false);assert.equal(c.hasBusinessTab('distribution'),true);
+  await c.switchBusinessTab(excluded);assert.equal(calls.length,0);c.activeBusinessTab='distribution';assert.equal(c.isDistributionMode,true);
+ }
+});
+await check('legacy saved modes open their matching combinations without changing stored farm data',async()=>{
+ assert.equal(business.businessBundle('broiler'),'broiler_distribution');assert.equal(business.businessBundle('layer'),'layer_distribution');assert.equal(business.businessBundle('distribution'),'all');
+ assert.equal(business.activeBusinessModule('layer_distribution','broiler'),'layer');assert.equal(business.activeBusinessModule('all','layer'),'layer');
 });
 console.log('ALL CHECKS PASSED — '+passed+' actual sidebar source scenarios');

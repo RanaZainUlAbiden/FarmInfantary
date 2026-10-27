@@ -136,10 +136,10 @@
 
   <main class="main-content">
     <div class="business-tabs" *ngIf="showBusinessTabs">
-      <button class="business-tab" [class.active]="activeBusinessTab === 'broiler'" (click)="switchBusinessTab('broiler')">🐔 Broiler</button>
-      <button class="business-tab" [class.active]="activeBusinessTab === 'layer'" (click)="switchBusinessTab('layer')">🥚 Layers</button>
-      <button class="business-tab" [class.active]="activeBusinessTab === 'distribution'" (click)="switchBusinessTab('distribution')">📦 Distribution</button>
-      <button class="business-tab" [class.active]="activeBusinessTab === 'overview'" (click)="switchBusinessTab('overview')">📊 Overview</button>
+      <button class="business-tab" *ngIf="hasBusinessTab('broiler')" [class.active]="activeBusinessTab === 'broiler'" (click)="switchBusinessTab('broiler')">🐔 Broiler</button>
+      <button class="business-tab" *ngIf="hasBusinessTab('layer')" [class.active]="activeBusinessTab === 'layer'" (click)="switchBusinessTab('layer')">🥚 Layers</button>
+      <button class="business-tab" *ngIf="hasBusinessTab('distribution')" [class.active]="activeBusinessTab === 'distribution'" (click)="switchBusinessTab('distribution')">📦 Distribution</button>
+      <button class="business-tab" *ngIf="hasBusinessTab('overview')" [class.active]="activeBusinessTab === 'overview'" (click)="switchBusinessTab('overview')">📊 Overview</button>
     </div>
     <div class="content-header">
       <div class="header-left">

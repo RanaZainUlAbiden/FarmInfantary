@@ -16,6 +16,7 @@ import { Subscription } from 'rxjs';
 import { PendingStateService } from '../shared/services/pending-state.service';
 import {AdminApi} from '../admin/admin-api.service';
 import {orderedSidebarItems,sidebarItemKey} from '../shared/utils/sidebar-order';
+import {businessTabs,activeBusinessModule} from '../shared/utils/business-modules';
 
 @Component({
   selector: 'app-layout',
@@ -163,25 +164,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
   ];
 
   get menuItems() {
-    if (this.savedBusinessType === 'all') {
-      switch (this.activeBusinessTab) {
-        case 'layer': return this.layerMenu;
-        case 'distribution': return this.distributionMenu;
-        case 'overview': return this.overviewMenu;
-        default: return this.broilerMenu;
-      }
-    }
-    switch (this.savedBusinessType) {
-      case 'layer': return this.layerMenu;
-      case 'distribution': return this.distributionMenu;
-      default: return this.broilerMenu;
-    }
+    switch(this.menuModule){case 'layer':return this.layerMenu;case 'distribution':return this.distributionMenu;case 'overview':return this.overviewMenu;default:return this.broilerMenu;}
   }
+  get availableBusinessTabs(){return businessTabs(this.savedBusinessType);}
+  hasBusinessTab(tab:string){return this.availableBusinessTabs.includes(tab as any);}
 
   menuOrderReady=false;menuOrderSaving=false;menuOrderError='';menuOrderStatus='';reorderControlsId='';
   private pendingMenuOrder:{module:string;order:string[]}|null=null;
   private menuDrag:any=null;private suppressHandleClick=false;private dragFrame=0;
-  get menuModule(){return this.savedBusinessType==='all'?this.activeBusinessTab:this.savedBusinessType;}
+  get menuModule(){return activeBusinessModule(this.savedBusinessType,this.activeBusinessTab);}
   get reorderableModule(){return ['broiler','layer','distribution'].includes(this.menuModule);}
   get canReorderMenu(){return this.menuOrderReady&&!this.menuOrderSaving&&!this.menuOrderError&&this.reorderableModule;}
   menuItemKey=sidebarItemKey;
@@ -241,34 +232,17 @@ export class LayoutComponent implements OnInit, OnDestroy {
   @HostListener('document:pointercancel')
   cancelMenuDrag(){const d=this.menuDrag;cancelAnimationFrame(this.dragFrame);this.dragFrame=0;this.menuDrag=null;if(d){this.setModuleMenu(d.module,d.items);this.menuOrderStatus='Move cancelled.';}}
 
-  get showBusinessTabs(): boolean {
-    return this.savedBusinessType === 'all';
-  }
-
-  get isLayerMode(): boolean {
-    if (this.savedBusinessType === 'layer') return true;
-    if (this.savedBusinessType === 'all' && this.activeBusinessTab === 'layer') return true;
-    return false;
-  }
-
-  get isDistributionMode(): boolean {
-    if (this.savedBusinessType === 'distribution') return true;
-    if (this.savedBusinessType === 'all' && this.activeBusinessTab === 'distribution') return true;
-    return false;
-  }
-
-  // Overview only ever exists as a tab within an 'all' account — there is no
-  // standalone 'overview' business_type — so unlike isLayerMode/isDistributionMode
-  // it doesn't need a top-level savedBusinessType branch.
-  get isOverviewMode(): boolean {
-    return this.savedBusinessType === 'all' && this.activeBusinessTab === 'overview';
-  }
+  get showBusinessTabs():boolean{return true;}
+  get isLayerMode():boolean{return this.menuModule==='layer';}
+  get isDistributionMode():boolean{return this.menuModule==='distribution';}
+  get isOverviewMode():boolean{return this.menuModule==='overview';}
 
   get dropdownItems(): any[] {
     return this.isLayerMode ? this.batches() : this.flocks();
   }
 
   async switchBusinessTab(tab: string) {
+    if(!this.hasBusinessTab(tab))return;
     this.cancelMenuDrag();this.reorderControlsId='';
     this.activeBusinessTab = tab;
     localStorage.setItem('activeBusinessTab', tab);
@@ -303,11 +277,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.cancelMenuDrag();this.menuOrderSaving=false;this.pendingMenuOrder=null;await this.loadMenuOrder();
     this.currentFarm = this.authService.getCurrentFarm();
     this.savedBusinessType = newType;
-    if (newType === 'all') {
-      this.activeBusinessTab = localStorage.getItem('activeBusinessTab') || 'broiler';
-    } else {
-      this.activeBusinessTab = newType;
-    }
+    this.activeBusinessTab=activeBusinessModule(newType,localStorage.getItem('activeBusinessTab'));
+    localStorage.setItem('activeBusinessTab',this.activeBusinessTab);
 
     // Same ordering fix as switchBusinessTab(): resolve the new module's
     // units/current-unit before anything (a route change, a child mount)
@@ -343,16 +314,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
     const routeOwner = ({ 'distribution-batch': 'inventory', 'customer-ledger': 'account-ledger',
       'supplier-ledger': 'account-ledger', 'bank-ledger': 'account-ledger' } as Record<string, string>)[requestedRoute] || requestedRoute;
 
-    if (this.savedBusinessType === 'all') {
-      this.activeBusinessTab = localStorage.getItem('activeBusinessTab') || 'broiler';
-      const menus: Record<string, any[]> = { broiler: this.broilerMenu, layer: this.layerMenu,
-        distribution: this.distributionMenu, overview: this.overviewMenu };
-      if (!menus[this.activeBusinessTab]?.some(m => m.route === routeOwner)) {
-        this.activeBusinessTab = Object.keys(menus).find(tab => menus[tab].some(m => m.route === routeOwner)) || 'broiler';
-      }
-    } else {
-      this.activeBusinessTab = this.savedBusinessType;
+    this.activeBusinessTab=activeBusinessModule(this.savedBusinessType,localStorage.getItem('activeBusinessTab'));
+    const menus:Record<string,any[]>={broiler:this.broilerMenu,layer:this.layerMenu,distribution:this.distributionMenu,overview:this.overviewMenu};
+    if(!menus[this.activeBusinessTab].some(m=>m.route===routeOwner)){
+      this.activeBusinessTab=this.availableBusinessTabs.find(tab=>menus[tab].some(m=>m.route===routeOwner))||this.availableBusinessTabs[0];
     }
+    localStorage.setItem('activeBusinessTab',this.activeBusinessTab);
 
     try {
       const storedRoutes = localStorage.getItem('lastRouteByTab');
@@ -608,7 +575,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     // Remember which screen was open within the current module, so
     // switching business tabs away and back restores it instead of
     // always landing on the first menu item.
-    const tabKey = this.savedBusinessType === 'all' ? this.activeBusinessTab : this.savedBusinessType;
+    const tabKey = this.menuModule;
     this.lastRouteByTab[tabKey] = route;
     localStorage.setItem('lastRouteByTab', JSON.stringify(this.lastRouteByTab));
 

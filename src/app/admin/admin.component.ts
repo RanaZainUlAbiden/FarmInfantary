@@ -4,12 +4,14 @@ import {FormsModule} from '@angular/forms';
 import {AuthService} from '../shared/services/auth.service';
 import {PasswordFieldComponent} from '../shared/components/password-field/password-field.component';
 import {AdminApi} from './admin-api.service';
+import {BUSINESS_BUNDLES,businessBundle,businessBundleLabel} from '../shared/utils/business-modules';
 @Component({selector:'app-admin',standalone:true,imports:[CommonModule,FormsModule,PasswordFieldComponent],templateUrl:'./admin.component.html',styleUrl:'./admin.component.scss'})
 export class AdminComponent implements OnInit,OnDestroy {
  root=false;busy=false;error='';message='';view='farms';farms:any[]=[];users:any[]=[];events:any[]=[];catalogue:any[]=[];
  selected:any=null;draft:any={};selectedUser:any=null;grants:any[]=[];pendingStatus='active';invalid=new Set<string>();
- newFarm=false;farmName='';businessType='broiler';ownerName='';ownerPassword='';staffName='';staffPassword='';replacementPassword='';
+ newFarm=false;farmName='';businessType='broiler_distribution';ownerName='';ownerPassword='';staffName='';staffPassword='';replacementPassword='';
  farmMore=false;userMore=false;auditMore=false;private destroyed=false;
+ businessBundles=BUSINESS_BUNDLES;businessBundleLabel=businessBundleLabel;
  currentPassword='';newDeleteCode='';deleteConfigured=false;
  constructor(public auth:AuthService,private api:AdminApi,private cdr:ChangeDetectorRef,private host:ElementRef<HTMLElement>){}
  ngOnDestroy(){this.destroyed=true;this.ownerPassword=this.staffPassword=this.replacementPassword=this.currentPassword=this.newDeleteCode='';}
@@ -29,7 +31,7 @@ export class AdminComponent implements OnInit,OnDestroy {
   }else{const r=await this.read('/api/account/staff');this.selected=r.farm;this.users=r.users;this.userMore=r.users.length===50;this.deleteConfigured=(await this.read('/api/account/delete-code')).configured;}
  });}
  async tab(value:string){if(this.busy)return;this.view=value;this.render();if(value==='audit')await this.task(async()=>{this.events=(await this.read('/api/admin/audit')).events;this.auditMore=this.events.length===50;});}
- private async loadFarm(f:any){this.selected={...f};this.draft={farmName:f.farm_name,businessType:f.business_type,status:f.status,seatLimit:f.staff_seat_limit,allowStaffCreation:f.can_admin_add_staff===1,expectedVersion:f.admin_version};
+ private async loadFarm(f:any){this.selected={...f};this.draft={farmName:f.farm_name,businessType:businessBundle(f.business_type),status:f.status,seatLimit:f.staff_seat_limit,allowStaffCreation:f.can_admin_add_staff===1,expectedVersion:f.admin_version};
   this.selectedUser=null;this.users=(await this.read(`/api/admin/farms/${f.farm_id}/users`)).users;this.userMore=this.users.length===50;}
  async selectFarm(f:any){await this.task(()=>this.loadFarm(f));this.focus('farm-editor-title');}
  focus(id:string){this.render();this.host.nativeElement.querySelector<HTMLElement>('#'+id)?.focus();}

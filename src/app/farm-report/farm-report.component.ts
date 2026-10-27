@@ -1,3 +1,4 @@
+import {activeBusinessModule} from '../shared/utils/business-modules';
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -152,9 +153,7 @@ export class FarmReportComponent implements OnInit, OnDestroy {
    */
   private detectModule(): FarmReportModuleType {
     const businessType = this.authService.getCurrentFarm()?.business_type || 'broiler';
-    const tab = businessType === 'all'
-      ? (localStorage.getItem('activeBusinessTab') || 'broiler')
-      : businessType;
+    const tab=activeBusinessModule(businessType,localStorage.getItem('activeBusinessTab'));
     if (tab === 'layer') return 'layer';
     if (tab === 'broiler') return 'broiler';
     return this.farmUnitService.getCurrentUnit()?.module_type === 'layer' ? 'layer' : 'broiler';
