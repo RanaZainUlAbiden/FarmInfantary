@@ -83,15 +83,21 @@ try {
   const r=await db('get',{sql:'SELECT product_id FROM products'},a,{'x-fi-session-context':`${ownerId}:1`});assert.equal(r.statusCode,200);ok(r.json());
   assert.equal((await sql('SELECT current_stock FROM products WHERE product_id=$1',[product1])).rows[0].current_stock,before);
  });
- await check('business type updates use current server ownership, exact origin and farm-admin authority',async()=>{
+ await check('module assignment is forbidden through the retired owner API and raw SQL',async()=>{
   const patch=(body,cookie=a,headers={})=>app.inject({method:'PATCH',url:'/api/account/business-type',payload:body,headers:{origin,...(cookie?{cookie}:{}),...headers}});
   assert.equal((await patch({businessType:'all'},null)).statusCode,401);
   assert.equal((await patch({businessType:'all'},a,{origin:'https://evil.example'})).statusCode,403);
-  for(const cookie of [staff,admin])assert.equal((await patch({businessType:'all'},cookie)).statusCode,403);
-  assert.equal((await patch({businessType:'invalid'})).statusCode,400);
+  for(const cookie of [a,staff,admin])assert.equal((await patch({businessType:'all'},cookie)).statusCode,403);
+  assert.equal((await patch({businessType:'invalid'})).statusCode,403);
   assert.equal((await patch({businessType:'all'},a,{'x-fi-session-context':'999:2'})).statusCode,409);
-  const result=await patch({businessType:'all',farmId:2,userId:999});assert.equal(result.statusCode,200);assert.equal(result.json().user.farmId,1);assert.equal(result.json().user.farm.business_type,'all');
-  assert.equal(result.json().user.sessionKey,undefined);assert.equal((await sql('SELECT business_type FROM farms WHERE farm_id=2')).rows[0].business_type,'broiler');
+  const before=(await sql('SELECT farm_id,business_type FROM farms ORDER BY farm_id')).rows;
+  assert.equal((await patch({businessType:'all',farmId:2,userId:999,role:'super_admin'})).statusCode,403);
+  for(const suffix of ['',' WHERE farm_id=?']){
+   const payload={sql:'UPDATE farms SET business_type=?'+suffix,params:suffix?['all',1]:['all']};
+   no((await db('run',payload)).json());
+   no((await db('batch',{ops:[payload]})).json());
+  }
+  assert.deepEqual((await sql('SELECT farm_id,business_type FROM farms ORDER BY farm_id')).rows,before);
  });
  await check('known foreign IDs, OR conditions, CTEs, subqueries and UNION cannot cross accounts',async()=>{
   assert.equal((await query('SELECT * FROM products WHERE product_id=?',[foreignProduct])).data.length,0);

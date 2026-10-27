@@ -123,14 +123,22 @@ try {
   for(const [index,bundle] of ['broiler_distribution','layer_distribution','all'].entries()){
    const username='bundle.owner.'+index,r=ok(await req('POST','/api/admin/farms',{farmName:'Bundle QA '+index,businessType:bundle,username,password}));
    const cookie=await login(username),identity=ok(await req('GET','/api/auth/me',undefined,cookie));assert.equal(identity.user.farm.business_type,bundle);assert.equal(identity.user.farmId,r.farmId);
-   for(const next of ['broiler_distribution','layer_distribution','all']){const changed=ok(await req('PATCH','/api/account/business-type',{businessType:next},cookie));assert.equal(changed.user.farm.business_type,next);}
-   const restored=ok(await req('GET','/api/auth/me',undefined,await login(username)));assert.equal(restored.user.farm.business_type,'all');
+   for(const next of ['broiler_distribution','layer_distribution','all'])assert.equal((await req('PATCH','/api/account/business-type',{businessType:next},cookie)).statusCode,403);
+   const restored=ok(await req('GET','/api/auth/me',undefined,await login(username)));assert.equal(restored.user.farm.business_type,bundle);
+   const metadata=ok(await req('GET',`/api/admin/farms/${r.farmId}`)).farm;
+   const input={farmName:metadata.farm_name,businessType:bundle==='all'?'layer_distribution':'all',status:metadata.status,seatLimit:0,allowStaffCreation:false,expectedVersion:metadata.admin_version};
+   assert.equal((await req('PUT',`/api/admin/farms/${r.farmId}`,input,cookie)).statusCode,403);
+   assert.equal((await req('POST','/api/admin/farms',{farmName:'Self provision',businessType:'all',username:'self.provision',password},cookie)).statusCode,403);
+   ok(await req('PUT',`/api/admin/farms/${r.farmId}`,input));
+   assert.equal((await req('GET','/api/auth/me',undefined,cookie)).statusCode,401);
+   const reassigned=ok(await req('GET','/api/auth/me',undefined,await login(username)));assert.equal(reassigned.user.farm.business_type,input.businessType);
   }
  });
- await check('standalone module choices are rejected by both administration and owner mutation APIs',async()=>{
+ await check('standalone choices are refused in platform create/edit and owner requests remain forbidden',async()=>{
   for(const businessType of ['broiler','layer','distribution','invalid']){
    assert.equal((await req('POST','/api/admin/farms',{farmName:'Refused bundle',businessType,username:'refused.bundle',password})).statusCode,400);
-   assert.equal((await req('PATCH','/api/account/business-type',{businessType},ownerCookie)).statusCode,400);
+   assert.equal((await saveFarm({businessType})).statusCode,400);
+   assert.equal((await req('PATCH','/api/account/business-type',{businessType},ownerCookie)).statusCode,403);
   }
  });
  console.log('ALL CHECKS PASSED — '+passed+' admin provisioning/seat/audit scenarios');

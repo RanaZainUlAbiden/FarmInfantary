@@ -62,13 +62,9 @@ export async function createAuthentication(pool, env, options = {}) {
       const actor=await resolve(req);
       if(!actor)return fail(reply,401,'Please sign in.');
       if(!sameSessionContext(req,actor))return reply.code(409).send({success:false,code:'SESSION_CHANGED',error:'Your sign-in changed. Sign in again.'});
-      if(actor.role!=='farm_admin')return fail(reply,403,'Only the account administrator can change business type.');
-      const businessType=req.body?.businessType;
-      if(!['broiler_distribution','layer_distribution','all'].includes(businessType))return fail(reply,400,'Choose Broiler + Distribution, Layers + Distribution, or all three modules.');
-      if(!await store.throttle(req.ip,String(actor.userId),'account'))return fail(reply,429,'Too many account changes. Try again later.');
-      if(!await store.updateBusinessType(actor,businessType))return fail(reply,401,'Your account changed. Sign in again.');
-      const updated=await resolve(req);
-      return updated?{success:true,user:publicUser(updated)}:fail(reply,401,'Please sign in.');
+      // Retire the owner mutation explicitly so older open clients cannot
+      // change their assigned bundle. Platform changes use /api/admin/farms.
+      return fail(reply,403,'Only a super administrator can assign account modules through platform administration.');
     });
     app.post('/api/auth/password',scope,async(req,reply)=>{
       const user = await resolve(req);

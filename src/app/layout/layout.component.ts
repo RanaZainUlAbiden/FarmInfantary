@@ -270,34 +270,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  // Lets the Farms page change the logged-in account's business type without
-  // forcing a re-login: mirrors what ngOnInit derives from localStorage, then
-  // makes sure the active route still exists in the (possibly new) menu.
-  private async onBusinessTypeChanged(newType: string) {
-    this.cancelMenuDrag();this.menuOrderSaving=false;this.pendingMenuOrder=null;await this.loadMenuOrder();
-    this.currentFarm = this.authService.getCurrentFarm();
-    this.savedBusinessType = newType;
-    this.activeBusinessTab=activeBusinessModule(newType,localStorage.getItem('activeBusinessTab'));
-    localStorage.setItem('activeBusinessTab',this.activeBusinessTab);
-
-    // Same ordering fix as switchBusinessTab(): resolve the new module's
-    // units/current-unit before anything (a route change, a child mount)
-    // can read the shared state.
-    await this.refreshModuleData();
-    if (!this.isDistributionMode && !this.isOverviewMode) {
-      this.farmUnitService.notifyModuleChanged(this.isLayerMode ? 'layer' : 'broiler');
-    }
-
-    const validRoutes = this.menuItems.map((m: any) => m.route);
-    if (!validRoutes.includes(this.activeRoute)) {
-      const target = this.menuItems[0]?.route || 'flock-health';
-      this.activeRoute = target;
-      this.router.navigate(['/app', target]);
-    }
-
-    this.cdr.detectChanges();
-  }
-
   async ngOnInit() {
     // 🔥 Check license first
     this.checkLicense();
@@ -333,12 +305,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
     // no second path and no per-entity Subject to forget to wire up.
     this.subs.add(
       this.dataChange.changed$.subscribe(scope => { this.onDataChanged(scope); })
-    );
-
-    this.subs.add(
-      this.authService.businessTypeChanged$.subscribe(newType => {
-        this.onBusinessTypeChanged(newType);
-      })
     );
 
     // The child route '' under /app always redirects to 'flock-health' —

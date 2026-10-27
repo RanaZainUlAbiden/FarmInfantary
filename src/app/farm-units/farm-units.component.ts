@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import {BUSINESS_BUNDLES,businessBundle,activeBusinessModule} from '../shared/utils/business-modules';
+import {activeBusinessModule} from '../shared/utils/business-modules';
 import { DatabaseService } from '../shared/services/database.service';
 import { AuthService } from '../shared/services/auth.service';
 import { FarmUnitService } from '../shared/services/farm-unit.service';
@@ -33,11 +33,6 @@ export class FarmUnitsComponent implements OnInit, OnDestroy {
   newRow: { unit_name: string; location: string; notes: string; opening_balance: number | null } =
     { unit_name: '', location: '', notes: '', opening_balance: null };
 
-  businessType = 'broiler_distribution';
-  businessBundles=BUSINESS_BUNDLES;
-  isSavingBusinessType = false;
-  businessTypeMessage = '';
-
   private moduleChangedSub?: Subscription;
 
   constructor(
@@ -50,7 +45,6 @@ export class FarmUnitsComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.currentFarm = this.authService.getCurrentFarm();
-    this.businessType = businessBundle(this.currentFarm?.business_type);
     this.moduleType = this.resolveModuleType();
     this.loadUnits();
 
@@ -73,9 +67,7 @@ export class FarmUnitsComponent implements OnInit, OnDestroy {
     return this.moduleType === 'layer' ? 'Batches' : 'Flocks';
   }
 
-  // Matches layout.component.ts's own resolution of the active module: 'all'
-  // accounts read the tab the sidebar last had active, everyone else just
-  // uses their fixed business_type.
+  // Use the enabled tab from the super-admin-assigned bundle, matching layout.
   private resolveModuleType(): 'broiler' | 'layer' {
     const savedBusinessType = this.authService.getCurrentFarm()?.business_type || 'broiler';
     const activeTab=activeBusinessModule(savedBusinessType,localStorage.getItem('activeBusinessTab'));
@@ -201,30 +193,5 @@ export class FarmUnitsComponent implements OnInit, OnDestroy {
 
   onDeleteCancelled() {
     this.showDeleteDialog = false;
-  }
-
-  get businessTypeDirty(): boolean {
-    return this.businessType !== businessBundle(this.currentFarm?.business_type);
-  }
-
-  async saveBusinessType() {
-    if (!this.businessTypeDirty || this.isSavingBusinessType) return;
-    this.isSavingBusinessType = true;
-    this.businessTypeMessage = '';
-    this.cdr.detectChanges();
-
-    const result = await this.authService.updateBusinessType(this.currentFarm.farm_id, this.businessType);
-
-    if (result.success) {
-      this.currentFarm = this.authService.getCurrentFarm();
-      this.businessTypeMessage = 'Saved. Your menu has been updated.';
-      this.moduleType = this.resolveModuleType();
-      await this.loadUnits();
-    } else {
-      this.businessTypeMessage = friendlySqlError(result.error, 'Failed to update. Please try again.');
-    }
-
-    this.isSavingBusinessType = false;
-    this.cdr.detectChanges();
   }
 }

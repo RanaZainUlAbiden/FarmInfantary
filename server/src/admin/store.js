@@ -79,7 +79,7 @@ export function createAdminStore(pool,{onRevokeUser=async()=>{}}={}) {
     const changed=old.farm_name!==input.farmName||old.business_type!==input.businessType||old.status!==input.status||old.staff_seat_limit!==input.seatLimit||old.can_admin_add_staff!==Number(input.allowStaffCreation);
     if(!changed)return {changed:false};
     await c.query('UPDATE farms SET farm_name=$1,business_type=$2,status=$3,staff_seat_limit=$4,can_admin_add_staff=$5 WHERE farm_id=$6',[input.farmName,input.businessType,input.status,input.seatLimit,Number(input.allowStaffCreation),id]);
-    if(old.status!==input.status)await revoke(c,(await c.query('SELECT user_id FROM users WHERE farm_id=$1',[id])).rows.map(r=>r.user_id),revoked);
+    if(old.status!==input.status||old.business_type!==input.businessType)await revoke(c,(await c.query('SELECT user_id FROM users WHERE farm_id=$1',[id])).rows.map(r=>r.user_id),revoked);
     await audit(c,actor,id,'farm.updated',id,{status:input.status,seatLimit:input.seatLimit,allowStaffCreation:input.allowStaffCreation,businessType:input.businessType});return {changed:true};
    });
   },
