@@ -9,6 +9,7 @@ import {migrate,readMigrations,MIGRATIONS_DIR} from '../../db/migration-runner.m
 import {provisionRuntimeRole} from '../../db/runtime-role.mjs';
 import {buildServer} from '../../server/src/server.js';
 import {hashPassword} from '../../server/src/auth/password.js';
+import {checkBrokerDestinations} from './lib/broker-destination-checks.mjs';
 if(!loadEnv())throw new Error('DATABASE_URL is required');
 const {Pool}=createRequire(new URL('../../server/package.json',import.meta.url))('pg'),f=await createScratchDb('broker'),q=(s,v=[])=>f.pool.query(s,v);
 const dir=mkdtempSync(join(tmpdir(),'broker-migration-')),role='vp_broker_'+randomBytes(6).toString('hex'),password='Broker verification password 2026',origin='http://localhost:4200';
@@ -119,5 +120,6 @@ try{
   assert.equal((await req('DELETE',`/api/brokers/${brokerId}/sales/${saleId}`)).statusCode,409);
   const unpaid=after.sales.find(s=>s.flock_id===2);ok(await req('DELETE',`/api/brokers/${brokerId}/sales/${unpaid.sale_id}`));assert.equal(ok(await req('GET',`/api/brokers/${brokerId}`)).summary.total,100);
  });
+ await checkBrokerDestinations({q,req,ok,check,sale,payment,other,staff,root});
  console.log('ALL CHECKS PASSED — '+passed+' broker ledger scenarios');
 }finally{await app?.close();await runtime?.end();await q(`DROP SCHEMA IF EXISTS ${f.schema}_meta CASCADE`);await f.close();if(created){const p=new Pool({connectionString:process.env.DATABASE_URL});try{await p.query('DROP ROLE '+role);}finally{await p.end();}}rmSync(dir,{recursive:true,force:true});}

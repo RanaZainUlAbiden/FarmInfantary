@@ -120,6 +120,18 @@ return URL is navigation convenience and never authorization.
 
 ## Rollout and verification
 
+Broker Receive payment opens shared FormDialog and requires a destination before
+showing entry fields. Own offers cash, house bank or a referenced other method;
+supplier offers searchable names/payables and direct settlement; customer offers
+searchable names followed by only that customer's deposit bank accounts. The
+effect on balances is stated before saving. Recipient search pages 30 rows,
+debounces input and discards stale results. Errors preserve the draft and focus
+the modal error region. Saving disables duplicate actions and Escape; cancellation
+restores focus. Enter during composition does not submit. No automatic write retry.
+Broker-level receipts allocate oldest eligible sales first, with optional selected
+flock or sale scope; receipt rows show each allocation and original receipt total.
+Reversal confirms and reverses the complete receipt, including other flocks.
+
 Production build verification must inspect the actual generated HTML: screen
 stylesheets cannot require inline event handlers blocked by the deployed CSP.
 Verify computed card/field/button styles on the public HTTPS sign-in route,

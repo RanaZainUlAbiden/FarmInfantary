@@ -24,7 +24,7 @@ try{
  const f=await fixture('unique_indexes');
  const options={schema:f.schema,historySchema:f.schema+'_meta'};
  await check('unversioned 001 baseline upgrades through immutable 002',async()=>{
-  const r=await migrate(f.pool,{...options,baseline:true});assert.deepEqual(r.applied,['002_preserve_unique_indexes.sql','003_authentication.sql','004_tenant_isolation.sql','005_staff_permissions.sql','006_admin_seats_audit.sql','007_delete_authorization.sql','008_broker_ledgers.sql','009_broker_history_protection.sql','010_broker_workflow_boundary.sql']);assert.equal(r.version,10);
+  const r=await migrate(f.pool,{...options,baseline:true});assert.deepEqual(r.applied,['002_preserve_unique_indexes.sql','003_authentication.sql','004_tenant_isolation.sql','005_staff_permissions.sql','006_admin_seats_audit.sql','007_delete_authorization.sql','008_broker_ledgers.sql','009_broker_history_protection.sql','010_broker_workflow_boundary.sql','011_broker_payment_destinations.sql','012_broker_destination_history.sql']);assert.equal(r.version,12);
  });
  await check('three unique indexes include NOCASE and the partial predicate',async()=>{
   const r=await f.pool.query("SELECT indexname,indexdef FROM pg_indexes WHERE schemaname=$1 AND indexname IN ('idx_expense_categories_unique','idx_layer_health_source','idx_categories_farm_type_name')",[f.schema]);

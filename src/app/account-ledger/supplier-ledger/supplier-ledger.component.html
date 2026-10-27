@@ -188,7 +188,8 @@
             <td>
               <!-- A purchase mirror is owned by Purchase Orders, and a voucher's line by
                    the Payment Voucher screen, which removes its bank withdrawal with it. -->
-              <button class="btn-delete" (click)="confirmDeleteEntry(entry.ledger_id)" *ngIf="entry.reference_type !== 'purchase' && !entry.voucher_id">🗑️</button>
+              <button class="btn-delete" (click)="confirmDeleteEntry(entry.ledger_id)" *ngIf="entry.reference_type !== 'purchase' && entry.reference_type !== 'broker_payment' && !entry.voucher_id">🗑️</button>
+              <span class="row-note" *ngIf="entry.reference_type === 'broker_payment'" title="Reverse this receipt from its broker account">broker receipt</span>
               <span class="row-note" *ngIf="entry.voucher_id" title="Delete this on the Payment Voucher screen">voucher</span>
             </td>
           </tr>
