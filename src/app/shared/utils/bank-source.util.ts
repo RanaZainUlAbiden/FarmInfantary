@@ -133,6 +133,7 @@ export function paymentSourceLabel(
   row: { payment_source?: string | null; bank_id?: number | null; bank_name?: string | null } | null | undefined,
   banks: any[] = []
 ): string {
+  if (row?.payment_source === 'broker') return 'Broker direct';
   if (row?.payment_source !== 'bank') return 'Cash';
   return 'Bank · ' + (row.bank_name || bankNameOf(banks, row.bank_id) || 'account');
 }

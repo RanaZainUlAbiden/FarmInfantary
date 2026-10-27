@@ -74,7 +74,9 @@ export class BankPickerComponent {
   /** The pending / edit / saved row. Mutated in place — see the class note. */
   @Input() row: BankSourceRow = {};
 
-  /** The farm's own accounts, from `getHouseBankAccounts()`. Never a customer's. */
+  /** Caller-scoped accounts: house accounts for ordinary payments; the explicitly
+   * selected customer's deposit accounts for broker receipt-form destinations.
+   * The broker API independently validates account ownership before posting. */
   @Input() banks: any[] = [];
 
   /**

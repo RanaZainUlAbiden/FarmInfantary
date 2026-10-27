@@ -149,7 +149,8 @@ export class SupplierManagementComponent implements OnInit {
 
   async onDeleteConfirmed() {
     try {
-      await this.db.run('DELETE FROM suppliers WHERE supplier_id=?', [this.deletingId]);
+      const result = await this.db.run('DELETE FROM suppliers WHERE supplier_id=?', [this.deletingId]);
+      if (!result.success) throw new Error(result.error);
       this.showDeleteDialog = false;
       await this.loadSuppliers();
     } catch (err: any) {

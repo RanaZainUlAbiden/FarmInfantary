@@ -44,6 +44,12 @@ date and method selects follow existing farm forms. The shared BankPicker's
 corrections use the shared ConfirmDialog's native modal variant, with Cancel
 initial focus, Escape and background inertness.
 
+Broker receipt entry uses shared `FormDialogComponent`: a native modal with
+focus containment, Escape (except during saving), focus return and its own
+scroll area. Destination is the first required choice. Existing BankPicker
+geometry is retained for explicitly scoped own/customer accounts; selectable
+recipient names include supplier outstanding balances. No palette changes.
+
 ## Business navigation at narrow widths
 
 The existing green sidebar is a compact 60px rail at widths up to 768px. Its

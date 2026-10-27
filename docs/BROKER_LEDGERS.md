@@ -70,7 +70,7 @@ an older cascade. No metadata/auth role receives business access.
 
 ## Validation and release
 
-The dedicated restricted-role PostgreSQL/HTTP suite covers 14 broker scenarios:
+The dedicated restricted-role PostgreSQL/HTTP suite covers 28 broker scenarios:
 legacy mapping/module isolation, owner-only access, duplicate/stale names, credit,
 partial cash and later bank/other receipts, exact replay, overpayment, concurrent
 payments, foreign tenant references, inactive brokers, raw-workflow denial,
@@ -111,3 +111,32 @@ GitHub main. Existing running owner sessions are preserved. Old binaries cannot
 pass their runtime attestation against the new receipt grants: deploy compatible
 code promptly after migration. Roll back only to a compatible reviewed release;
 never delete production data or rewrite migration history.
+
+## Broker payment destinations — Codex, 2026-10-27
+
+Receive payment is available on the broker account and each unpaid sale. Its
+popup first requires Own account or cash, Supplier account, or Customer account.
+Supplier/customer names are searchable and paged; suppliers show derived payable.
+Own offers cash, own bank, or other method with reference. Customer requires a
+bank/deposit account owned by that selected customer; house/other customers'
+accounts cannot be used. Supplier direct payment reduces supplier payable with a
+supplier-ledger debit and no invented house cash/bank movement. Customer payment
+increases that customer's deposit balance without silently settling customer bills.
+These are ledger records, not external bank transfers.
+
+POST /api/brokers/:id/collections allocates to oldest unpaid Broiler sales on or
+before the payment date, optionally restricted to a flock or sale. At most 1,000
+sale allocations are considered; larger accounts must use smaller receipts. A
+shared group/save fingerprint prevents duplicates across allocations and brokers;
+changed/reversed groups are refused. Supplier/customer/bank locks and all ledger
+writes share one transaction. Overpaying a supplier on a later allocation rolls
+back every earlier allocation. Reversing any allocation reverses the whole group;
+insufficient bank balance refuses the whole reversal. Historical destinations and
+account ownership are preserved, and manual SQL cannot alter broker-owned mirrors.
+Supplier reports label these rows Broker direct, separately from Cash.
+
+Forward migrations 011–012 add destination/group fields and protect ledger mirrors
+and destination history, with no new tables, FKs, money types or role expansion.
+Restricted-role tests cover direct supplier settlements, customer deposits,
+scoped FIFO allocation, replay, cross-tenant references, partial rollback,
+concurrent payables, protected mirrors/history and grouped reversal/overdraw.

@@ -56,11 +56,13 @@ export class CustomerManagementComponent implements OnInit {
   }
   confirmDelete(id: number) { this.deletingId = id; this.showDeleteDialog = true; }
   async onDeleteConfirmed() {
-    await this.db.run(
+    const result = await this.db.run(
       `DELETE FROM customers WHERE customer_id=? AND ${CustomerManagementComponent.EXTERNAL_ONLY}`,
       [this.deletingId]
     );
-    this.showDeleteDialog = false; await this.loadCustomers();
+    this.showDeleteDialog = false;
+    if (!result.success) { this.errorMessage = result.error; this.cdr.detectChanges(); return; }
+    await this.loadCustomers();
   }
   onDeleteCancelled() { this.showDeleteDialog = false; }
 }

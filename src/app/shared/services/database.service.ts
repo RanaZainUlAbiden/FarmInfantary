@@ -1216,6 +1216,10 @@ export class DatabaseService {
     const entry = entryRes.data && entryRes.data[0];
     if (!entry) return { success: false, error: 'That ledger entry no longer exists.' };
 
+    if (entry.reference_type === 'broker_payment') {
+      return { success: false, error: 'Reverse this receipt from its broker account so both balances are restored together.' };
+    }
+
     if ((entry.reference_type || '') === 'purchase') {
       return {
         success: false,
@@ -1325,7 +1329,7 @@ export class DatabaseService {
         s.supplier_name,
         s.phone,
         pv.voucher_number,
-        COALESCE(pv.payment_source,
+        COALESCE(CASE WHEN l.reference_type = 'broker_payment' THEN 'broker' END, pv.payment_source,
                  CASE WHEN COALESCE(l.reference_type,'') = 'purchase' AND COALESCE(l.debit, 0) > 0
                       THEN po.payment_source END) AS payment_source,
         COALESCE(pv.bank_id,
@@ -1529,7 +1533,7 @@ export class DatabaseService {
               COALESCE(SUM(amount), 0) AS total_paid
        FROM (
          SELECT
-           COALESCE(pv.payment_source,
+           COALESCE(CASE WHEN l.reference_type = 'broker_payment' THEN 'broker' END, pv.payment_source,
                     CASE WHEN COALESCE(l.reference_type,'') = 'purchase' AND COALESCE(l.debit, 0) > 0
                          THEN po.payment_source END, 'cash') AS payment_source,
            COALESCE(pv.bank_id,

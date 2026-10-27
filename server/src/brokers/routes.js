@@ -54,14 +54,58 @@ export function registerBrokerRoutes(app,{session,runtime,deleteAuthorization}) 
   const totalPaid=(await c.query(`SELECT ${paid} AS paid FROM sales s WHERE sale_id=$1`,[s.sale_id])).rows[0].paid;
   if(p.amount>s.total_amount-totalPaid+0.000001)fail(409,'Payment exceeds the outstanding amount. Reload this sale.');
   if(p.date<s.date)fail(400,'Payment date cannot precede the sale.');
-  if(p.bankId){const b=(await c.query('SELECT bank_id FROM bank_accounts WHERE bank_id=$1 AND customer_id IS NULL FOR UPDATE',[p.bankId])).rows[0];if(!b)fail(400,'Choose one of the farm’s own bank accounts.');}
-  const r=(await c.query(`INSERT INTO broker_payments(broker_id,flock_id,sale_id,date,amount,method,bank_id,reference,note,request_id,request_hash)
-   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,[s.broker_id,s.flock_id,s.sale_id,p.date,p.amount,p.method,p.bankId,p.reference,p.note,requestId,requestHash])).rows[0];
+  const destination=p.destination??'own';
+  if(destination==='supplier'){
+   if(!(await c.query('SELECT supplier_id FROM suppliers WHERE supplier_id=$1 FOR UPDATE',[p.supplierId])).rowCount)fail(404,'Supplier not found.');
+   const payable=(await c.query('SELECT COALESCE(SUM(credit-debit),0) AS amount FROM supplier_ledger WHERE supplier_id=$1',[p.supplierId])).rows[0].amount;
+   if(!Number.isFinite(payable)||p.amount>payable+0.000001)fail(409,'Payment exceeds this supplier’s outstanding balance. Reload the supplier balance.');
+  }
+  if(destination==='customer'&&!(await c.query('SELECT customer_id FROM customers WHERE customer_id=$1 FOR UPDATE',[p.customerId])).rowCount)fail(404,'Customer not found.');
+  if(p.bankId){const b=(await c.query('SELECT bank_id FROM bank_accounts WHERE bank_id=$1 AND (($2::text=\'own\' AND customer_id IS NULL) OR ($2::text=\'customer\' AND customer_id=$3)) FOR UPDATE',[p.bankId,destination,p.customerId??null])).rows[0];if(!b)fail(400,destination==='customer'?'Choose a deposit account belonging to this customer.':'Choose one of the farm’s own bank accounts.');}
+  const r=(await c.query(`INSERT INTO broker_payments(broker_id,flock_id,sale_id,date,amount,method,bank_id,reference,note,request_id,request_hash,destination,supplier_id,customer_id,receipt_group)
+   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,[s.broker_id,s.flock_id,s.sale_id,p.date,p.amount,p.method,p.bankId,p.reference,p.note,requestId,requestHash,destination,p.supplierId??null,p.customerId??null,p.receiptGroup??null])).rows[0];
+  if(destination==='supplier')await c.query(`INSERT INTO supplier_ledger(supplier_id,transaction_date,description,debit,credit,balance,reference_type,reference_id,notes)
+   VALUES($1,$2,$3,$4,0,(SELECT COALESCE(SUM(credit-debit),0) FROM supplier_ledger WHERE supplier_id=$1)-$4,'broker_payment',$5,$6)`,[p.supplierId,p.date,'Paid directly by broker '+s.broker+' / Sale #'+s.sale_id,p.amount,r.payment_id,p.note||p.reference]);
   if(p.bankId){await c.query(`INSERT INTO bank_ledger(bank_id,transaction_date,description,debit,credit,balance,reference_type,reference_id,transaction_number)
    VALUES($1,$2,$3,$4,0,(SELECT COALESCE(SUM(debit-credit),0) FROM bank_ledger WHERE bank_id=$1)+$4,'broker_payment',$5,$6)`,
    [p.bankId,p.date,'Broker receipt — '+s.broker+' / Sale #'+s.sale_id,p.amount,String(r.payment_id),'BR-'+r.payment_id]);await rebuild(c,p.bankId);}
   return r;
  }
+ app.get('/api/brokers/:brokerId/payment-options',scope,req=>tx(req,async c=>{
+  await broker(c,id(req.params.brokerId));const type=req.query.type,search=text(String(req.query.search??''),100),offset=page(req);
+  if(!['supplier','customer'].includes(type))fail(400,'Choose supplier or customer.');
+  const rows=type==='supplier'?(await c.query(`SELECT s.supplier_id AS id,s.supplier_name AS name,
+   COALESCE((SELECT SUM(l.credit-l.debit) FROM supplier_ledger l WHERE l.supplier_id=s.supplier_id),0) AS outstanding
+   FROM suppliers s WHERE s.supplier_name ILIKE '%'||$1||'%' ORDER BY s.supplier_name,s.supplier_id LIMIT 31 OFFSET $2`,[search,offset])).rows:
+   (await c.query("SELECT customer_id AS id,customer_name AS name FROM customers WHERE customer_name ILIKE '%'||$1||'%' ORDER BY customer_name,customer_id LIMIT 31 OFFSET $2",[search,offset])).rows;
+  let banks=[];if(type==='customer'&&req.query.customerId){const customerId=id(req.query.customerId);if(!(await c.query('SELECT 1 FROM customers WHERE customer_id=$1',[customerId])).rowCount)fail(404,'Customer not found.');banks=(await c.query('SELECT bank_id,bank_name,account_holder,account_number FROM bank_accounts WHERE customer_id=$1 ORDER BY bank_name,bank_id LIMIT 201',[customerId])).rows;if(banks.length>200)fail(409,'This customer has too many accounts for this receipt. Review its accounts first.');}
+  return {parties:rows.slice(0,30),more:rows.length>30,banks};
+ }));
+ app.post('/api/brokers/:brokerId/collections',scope,req=>tx(req,async c=>{
+  const b=body(req.body,['amount','date','method','bankId','reference','note','requestId','destination','supplierId','customerId','saleId','flockId']),brokerId=id(req.params.brokerId);await broker(c,brokerId,true);
+  const destination=b.destination??'own';if(!['own','supplier','customer'].includes(destination))fail(400,'Choose where to receive this payment.');
+  const supplierId=destination==='supplier'?id(b.supplierId):null,customerId=destination==='customer'?id(b.customerId):null;
+  if((destination!=='supplier'&&b.supplierId!=null)||(destination!=='customer'&&b.customerId!=null))fail(400,'Recipient does not match the destination.');
+  if(destination==='supplier'&&(b.bankId!=null||b.method!=='other'))fail(400,'Supplier payments go directly to the selected supplier.');
+  if(destination==='customer'&&b.method!=='bank')fail(400,'Choose the customer deposit account.');
+  const p={...paymentInput({...b,reference:destination==='supplier'&&!b.reference?'Direct supplier payment':b.reference}),destination,supplierId,customerId,receiptGroup:token(b.requestId)};
+  if(p.amount<0.01)fail(400,'Enter a payment of at least Rs. 0.01.');
+  // Serialize a save identifier across brokers in the same tenant as well.
+  await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[String(req.brokerActor.farmId)+':broker-receipt:'+p.receiptGroup]);
+  const saleId=b.saleId==null?null:id(b.saleId),flockId=b.flockId==null?null:id(b.flockId),fingerprint=hash({brokerId,saleId,flockId,p});
+  const old=(await c.query('SELECT payment_id,request_hash,reversed FROM broker_payments WHERE receipt_group=$1 ORDER BY payment_id',[p.receiptGroup])).rows;
+  if(old.length){if(old.some(r=>r.request_hash!==fingerprint))fail(409,'This save identifier belongs to another receipt.');if(old.some(r=>r.reversed))fail(409,'This receipt was already reversed. Start a new payment.');return {replayed:true,paymentIds:old.map(r=>r.payment_id)};}
+  if(flockId)await flock(c,flockId);
+  const candidates=(await c.query(`SELECT s.*,${paid} AS amount_paid FROM sales s WHERE broker_id=$1 AND COALESCE(module_type,'broiler')='broiler'
+   AND ($2::bigint IS NULL OR sale_id=$2) AND ($3::bigint IS NULL OR flock_id=$3) AND date<=$4 AND total_amount-(${paid})>0.000001 ORDER BY date,sale_id LIMIT 1000 FOR UPDATE`,[brokerId,saleId,flockId,p.date])).rows;
+  const available=candidates.reduce((n,s)=>n+s.total_amount-s.amount_paid,0);if(p.amount>available+0.000001)fail(409,candidates.length===1000?'Use a smaller payment or select an individual sale.':'Payment exceeds the outstanding sales available on this date. Reload the broker account.');
+  let remaining=p.amount;const allocations=[];
+  for(const s of candidates){if(remaining<=0.000001)break;const take=Math.min(remaining,s.total_amount-s.amount_paid);
+   if(!s.broker_managed)await c.query("UPDATE sales SET broker_legacy_paid=CASE WHEN COALESCE(payment_type,'cash')='credit' THEN 0 ELSE total_amount END,broker_managed=1 WHERE sale_id=$1",[s.sale_id]);
+   const row=await receipt(c,s,{...p,amount:take},hash(p.receiptGroup+':'+s.sale_id),fingerprint);allocations.push({paymentId:row.payment_id,saleId:s.sale_id,flockId:s.flock_id,amount:take});remaining-=take;
+  }
+  return {allocations,receiptGroup:p.receiptGroup};
+ }));
  app.get('/api/brokers',scope,req=>tx(req,async c=>{
   const search=text(String(req.query.search??''),100),offset=page(req),flockId=req.query.flockId?id(req.query.flockId):null;if(flockId)await flock(c,flockId);
   const rows=(await c.query(`SELECT b.*,COALESCE(t.total,0) AS total,COALESCE(t.paid,0) AS paid,COALESCE(t.total-t.paid,0) AS pending
@@ -92,7 +136,9 @@ export function registerBrokerRoutes(app,{session,runtime,deleteAuthorization}) 
    GROUP BY f.unit_id,u.unit_name,s.flock_id,f.flock_name ORDER BY u.unit_name NULLS LAST,f.flock_name,s.flock_id LIMIT 31 OFFSET $3`,[b.broker_id,flockId,offset])).rows;
   const sales=(await c.query(`SELECT s.*,${paid} AS amount_paid,f.flock_name,u.unit_name AS farm_name FROM sales s LEFT JOIN flocks f ON f.flock_id=s.flock_id LEFT JOIN farm_units u ON u.unit_id=f.unit_id
    WHERE s.broker_id=$1 AND ($2::bigint IS NULL OR s.flock_id=$2) AND COALESCE(s.module_type,'broiler')='broiler' ORDER BY s.date DESC,s.sale_id DESC LIMIT 31 OFFSET $3`,[b.broker_id,flockId,offset])).rows;
-  const payments=(await c.query(`SELECT p.*,b.bank_name,f.flock_name,u.unit_name AS farm_name FROM broker_payments p LEFT JOIN bank_accounts b ON b.bank_id=p.bank_id LEFT JOIN flocks f ON f.flock_id=p.flock_id LEFT JOIN farm_units u ON u.unit_id=f.unit_id
+  const payments=(await c.query(`SELECT p.*,b.bank_name,f.flock_name,u.unit_name AS farm_name,sp.supplier_name,c.customer_name,
+   CASE WHEN p.receipt_group IS NULL THEN p.amount ELSE (SELECT SUM(g.amount) FROM broker_payments g WHERE g.receipt_group=p.receipt_group AND g.farm_id=p.farm_id) END AS collection_amount
+   FROM broker_payments p LEFT JOIN bank_accounts b ON b.bank_id=p.bank_id LEFT JOIN flocks f ON f.flock_id=p.flock_id LEFT JOIN farm_units u ON u.unit_id=f.unit_id LEFT JOIN suppliers sp ON sp.supplier_id=p.supplier_id LEFT JOIN customers c ON c.customer_id=p.customer_id
    WHERE p.broker_id=$1 AND ($2::bigint IS NULL OR p.flock_id=$2) ORDER BY p.date DESC,p.payment_id DESC LIMIT 31 OFFSET $3`,[b.broker_id,flockId,offset])).rows;
   return {broker:b,summary:{...summary,pending:summary.total-summary.paid},breakdown:breakdown.slice(0,30),moreBreakdown:breakdown.length>30,sales:sales.slice(0,30),payments:payments.slice(0,30),moreSales:sales.length>30,morePayments:payments.length>30};
  }));
@@ -122,11 +168,15 @@ export function registerBrokerRoutes(app,{session,runtime,deleteAuthorization}) 
  app.post('/api/brokers/:brokerId/payments/:paymentId/reverse',scope,req=>tx(req,async c=>{
   body(req.body,[]);if(!await deleteAuthorization.canDelete(req.brokerActor))fail(403,'Confirm the delete code on this device first.');
   await broker(c,id(req.params.brokerId),true);
-  const p=(await c.query('SELECT * FROM broker_payments WHERE payment_id=$1 AND broker_id=$2 FOR UPDATE',[id(req.params.paymentId),id(req.params.brokerId)])).rows[0];if(!p)fail(404,'Payment not found.');if(p.reversed)return {reversed:true};
-  if(p.bank_id){await c.query('SELECT bank_id FROM bank_accounts WHERE bank_id=$1 FOR UPDATE',[p.bank_id]);
-   const current=(await c.query('SELECT COALESCE(SUM(debit-credit),0) AS balance FROM bank_ledger WHERE bank_id=$1',[p.bank_id])).rows[0].balance;if(current+0.000001<p.amount)fail(409,'Reversing this payment would overdraw the account.');
-   await c.query("DELETE FROM bank_ledger WHERE reference_type='broker_payment' AND reference_id=$1",[String(p.payment_id)]);await rebuild(c,p.bank_id);}
-  await c.query('UPDATE broker_payments SET reversed=1 WHERE payment_id=$1',[p.payment_id]);return {reversed:true};
+  const p=(await c.query('SELECT * FROM broker_payments WHERE payment_id=$1 AND broker_id=$2 FOR UPDATE',[id(req.params.paymentId),id(req.params.brokerId)])).rows[0];if(!p)fail(404,'Payment not found.');
+  const entries=p.receipt_group?(await c.query('SELECT * FROM broker_payments WHERE receipt_group=$1 AND broker_id=$2 ORDER BY payment_id FOR UPDATE',[p.receipt_group,p.broker_id])).rows:[p];
+  for(const entry of entries){if(entry.reversed)continue;
+   if(entry.supplier_id){if(!(await c.query('SELECT supplier_id FROM suppliers WHERE supplier_id=$1 FOR UPDATE',[entry.supplier_id])).rowCount)fail(409,'Restore the supplier before reversing this receipt.');await c.query("DELETE FROM supplier_ledger WHERE reference_type='broker_payment' AND reference_id=$1",[entry.payment_id]);}
+   if(entry.bank_id){if(!(await c.query('SELECT bank_id FROM bank_accounts WHERE bank_id=$1 FOR UPDATE',[entry.bank_id])).rowCount)fail(409,'Restore the receiving account before reversing this receipt.');
+    const current=(await c.query('SELECT COALESCE(SUM(debit-credit),0) AS balance FROM bank_ledger WHERE bank_id=$1',[entry.bank_id])).rows[0].balance;if(current+0.000001<entry.amount)fail(409,'Reversing this receipt would overdraw the receiving account.');
+    await c.query("DELETE FROM bank_ledger WHERE reference_type='broker_payment' AND reference_id=$1",[String(entry.payment_id)]);await rebuild(c,entry.bank_id);}
+   await c.query('UPDATE broker_payments SET reversed=1 WHERE payment_id=$1',[entry.payment_id]);
+  }return {reversed:true};
  }));
  app.delete('/api/brokers/:brokerId/sales/:saleId',scope,req=>tx(req,async c=>{
   if(!await deleteAuthorization.canDelete(req.brokerActor))fail(403,'Confirm the delete code on this device first.');await broker(c,id(req.params.brokerId),true);
