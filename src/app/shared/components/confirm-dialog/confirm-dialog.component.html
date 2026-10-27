@@ -1,4 +1,8 @@
-<div class="dialog-overlay">
+<dialog *ngIf="modal" #dialog class="dialog-box native-confirm" aria-labelledby="correction-title" aria-describedby="correction-message" (cancel)="$event.preventDefault();cancelled.emit()">
+  <h3 id="correction-title" class="dialog-title">{{title}}</h3><p id="correction-message" class="dialog-message">{{message}}</p>
+  <div class="dialog-actions"><button type="button" class="btn-cancel" (click)="cancelled.emit()">{{cancelText}}</button><button type="button" class="btn-confirm" [ngClass]="type" (click)="confirmed.emit()">{{confirmText}}</button></div>
+</dialog>
+<div *ngIf="!modal" class="dialog-overlay">
   <div class="dialog-box">
     <div class="dialog-icon" [ngClass]="type">
       <span *ngIf="type === 'danger'">🗑️</span>

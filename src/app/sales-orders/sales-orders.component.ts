@@ -100,6 +100,10 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
   internalTargetModule: string = 'broiler';
   internalTargetFlockId: number | null = null;
   internalFlocks: any[] = [];
+  internalTargetUnitId:number|null=null;
+  internalUnits:any[]=[];
+  internalTargetsLoading=false;
+  private internalTargetEpoch=0;
 
   /**
    * DERIVED from `receivedInto`, never assigned.
@@ -181,6 +185,7 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.internalTargetEpoch++;
     if (this.viewMode !== 'list' && !this.isSubmitting) {
       this.saveState();
     }
@@ -210,6 +215,7 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
           customerBankId: this.customerBankId,
           internalTargetModule: this.internalTargetModule,
           internalTargetFlockId: this.internalTargetFlockId,
+          internalTargetUnitId:this.internalTargetUnitId,
           productSearchTerm: this.productSearchTerm,
           isEditMode: this.isEditMode,
           editingBillId: this.editingBillId,
@@ -248,6 +254,7 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
       this.customerBankId = state.customerBankId || null;
       this.internalTargetModule = state.internalTargetModule || 'broiler';
       this.internalTargetFlockId = state.internalTargetFlockId || null;
+      this.internalTargetUnitId=state.internalTargetUnitId??null;
       this.productSearchTerm = state.productSearchTerm || '';
       this.isEditMode = state.isEditMode || false;
       this.editingBillId = state.editingBillId || null;
@@ -456,6 +463,7 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
         const t = transferRes.data[0];
         this.internalTargetModule = t.target_module || 'broiler';
         this.internalTargetFlockId = t.target_flock_id || null;
+        this.internalTargetUnitId=null;
       } else {
         this.internalTargetModule = 'broiler';
         this.internalTargetFlockId = null;
@@ -530,6 +538,7 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
     this.internalTargetModule = 'broiler'; 
     this.internalTargetFlockId = null; 
     this.internalFlocks = [];
+    this.internalTargetUnitId=null;this.internalUnits=[];this.internalTargetEpoch++;
   }
 
   // ── CUSTOMER TYPE CHANGE ──────────────────────────────────
@@ -557,14 +566,38 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
   }
 
   async loadInternalTargets() {
-    if (this.internalTargetModule === 'broiler') {
-      const flocks = await this.db.get('SELECT flock_id, flock_name FROM flocks WHERE farm_id=? AND status=?', [this.currentFarm.farm_id, 'active']);
-      this.internalFlocks = flocks.success ? flocks.data : [];
-    } else {
-      const batches = await this.db.get('SELECT batch_id, batch_name FROM batches WHERE farm_id=? AND status=?', [this.currentFarm.farm_id, 'active']);
-      this.internalFlocks = batches.success ? batches.data : [];
-    }
-    this.cdr.detectChanges();
+    const epoch=++this.internalTargetEpoch,module=this.internalTargetModule,selected=this.internalTargetFlockId;
+    this.internalTargetsLoading=true;this.internalFlocks=[];
+    try{
+      const units=this.assertOk(await this.db.get('SELECT unit_id,unit_name,status FROM farm_units WHERE farm_id=? AND module_type=? ORDER BY unit_name,unit_id',[this.currentFarm.farm_id,module]),'Could not load target farms');
+      let selectedUnit=this.internalTargetUnitId;
+      if(selected && selectedUnit==null){const owner=this.assertOk(await this.db.get(module==='broiler'?'SELECT unit_id FROM flocks WHERE flock_id=? AND farm_id=?':'SELECT unit_id FROM batches WHERE batch_id=? AND farm_id=?',[selected,this.currentFarm.farm_id]),'Could not restore the target farm');selectedUnit=owner.data.length?(owner.data[0].unit_id??0):null;}
+      const unassigned=this.assertOk(await this.db.get(module==='broiler'?'SELECT flock_id FROM flocks WHERE farm_id=? AND unit_id IS NULL LIMIT 1':'SELECT batch_id FROM batches WHERE farm_id=? AND unit_id IS NULL LIMIT 1',[this.currentFarm.farm_id]),'Could not check unassigned targets');
+      if(epoch!==this.internalTargetEpoch)return;
+      this.internalUnits=units.data.filter((u:any)=>u.status==='active'||u.unit_id===selectedUnit);
+      if(unassigned.data.length)this.internalUnits.push({unit_id:0,unit_name:'Unassigned farm (legacy)'});
+      this.internalTargetUnitId=this.internalUnits.some((u:any)=>u.unit_id===selectedUnit)?selectedUnit:null;
+      if(this.internalTargetUnitId==null)this.internalTargetFlockId=null;
+      await this.loadInternalFlocks();
+    }catch(e:any){if(epoch===this.internalTargetEpoch){this.errorMessage=e.message;this.internalUnits=[];this.internalFlocks=[];this.internalTargetUnitId=null;this.internalTargetFlockId=null;}}
+    finally{if(epoch===this.internalTargetEpoch){this.internalTargetsLoading=false;this.cdr.detectChanges();}}
+  }
+
+  async onInternalModuleChange(){this.internalTargetUnitId=null;this.internalTargetFlockId=null;this.internalUnits=[];this.internalFlocks=[];await this.loadInternalTargets();this.onFormChange();}
+  async onInternalFarmChange(){this.internalTargetFlockId=null;await this.loadInternalFlocks();this.onFormChange();}
+  async loadInternalFlocks(){
+    const epoch=++this.internalTargetEpoch,module=this.internalTargetModule,unit=this.internalTargetUnitId,selected=this.internalTargetFlockId;
+    this.internalFlocks=[];if(unit==null){this.internalTargetsLoading=false;this.cdr.detectChanges();return;}
+    this.internalTargetsLoading=true;
+    try{
+      const result=this.assertOk(await this.db.get(module==='broiler'?
+       'SELECT flock_id,flock_name,unit_id FROM flocks WHERE farm_id=? AND COALESCE(unit_id,0)=? AND (status=? OR flock_id=?) ORDER BY flock_name,flock_id':
+       'SELECT batch_id,batch_name,unit_id FROM batches WHERE farm_id=? AND COALESCE(unit_id,0)=? AND (status=? OR batch_id=?) ORDER BY batch_name,batch_id',
+       [this.currentFarm.farm_id,unit,'active',selected]),'Could not load this farm’s flocks or batches');
+      if(epoch!==this.internalTargetEpoch)return;this.internalFlocks=result.data;
+      if(!this.internalFlocks.some((f:any)=>(f.flock_id??f.batch_id)===selected))this.internalTargetFlockId=null;
+    }catch(e:any){if(epoch===this.internalTargetEpoch){this.errorMessage=e.message;this.internalTargetFlockId=null;}}
+    finally{if(epoch===this.internalTargetEpoch){this.internalTargetsLoading=false;this.cdr.detectChanges();}}
   }
 
   async getAvailableStock(productId: number): Promise<number> { 
@@ -1095,6 +1128,8 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
     const unitId = ownerRes.data.length > 0 && ownerRes.data[0].unit_id != null
       ? ownerRes.data[0].unit_id
       : null;
+    if(!ownerRes.data.length)throw new Error('The selected flock or batch no longer exists. Select its farm and target again.');
+    if(this.internalTargetUnitId!=null && (unitId??0)!==this.internalTargetUnitId)throw new Error('This flock or batch belongs to a different farm. Select the farm and target again.');
 
     const findSql = unitId == null
       ? `SELECT customer_id FROM customers WHERE farm_id=? AND customer_type='own_farm' AND unit_id IS NULL`
@@ -1351,6 +1386,8 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
 
   async saveBill(): Promise<number | null> {
     if (this.gridItems.length === 0 || this.isSubmitting) return null;
+    if(this.customerType==='internal' && this.internalTargetsLoading){this.errorMessage='Wait for the target farms and flocks to finish loading.';this.cdr.detectChanges();return null;}
+    if(this.customerType==='internal' && this.internalTargetUnitId===null){this.errorMessage='Please select a target farm first.';this.cdr.detectChanges();return null;}
 
     if (this.customerType === 'internal' && !this.internalTargetFlockId) {
       this.errorMessage = 'Please select a target Flock/Batch.';

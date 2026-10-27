@@ -8,6 +8,10 @@
   z-index: 1000;
   backdrop-filter: blur(2px);
 }
+.native-confirm{border:0;max-width:calc(100vw - 32px);box-sizing:border-box;max-height:calc(100dvh - 32px);overflow:auto}
+.native-confirm::backdrop{background:rgba(0,0,0,.45)}
+.native-confirm button:focus-visible{outline:3px solid var(--fi-primary,#1a5c38);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.native-confirm{animation:none}.native-confirm button{transition:none}}
 
 .dialog-box {
   background: white;

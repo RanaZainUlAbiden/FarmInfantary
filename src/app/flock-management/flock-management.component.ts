@@ -323,6 +323,9 @@ export class FlockManagementComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     try {
+      const brokerSales=await this.db.get('SELECT sale_id FROM sales WHERE flock_id=? AND broker_managed=1 AND COALESCE(module_type,\'broiler\')=\'broiler\' LIMIT 1',[flockId]);
+      if(!brokerSales.success)throw new Error('Could not check broker accounts. Reload before deleting the flock.');
+      if(brokerSales.data?.length){this.errorMessage='This flock has broker ledger sales. Keep the flock to preserve its sales and receipts; correct or remove unpaid sales from the broker account first.';return;}
       // Foreign keys are declared but never enforced (PRAGMA foreign_keys is
       // left OFF), so nothing cascades and every child row has to go by hand.
       // One runBatch, so a failure part-way cannot leave the flock deleted with
@@ -418,7 +421,7 @@ export class FlockManagementComponent implements OnInit, OnDestroy {
         { sql: `DELETE FROM flock_health     WHERE flock_id = ?`, params: [flockId] },
         { sql: `DELETE FROM ledger_entries   WHERE flock_id = ?`, params: [flockId] },
         { sql: `DELETE FROM ledgers          WHERE flock_id = ?`, params: [flockId] },
-        { sql: `DELETE FROM brokers          WHERE flock_id = ?`, params: [flockId] },
+        // Brokers are farm-wide accounts and survive removal of a legacy flock.
         // vaccinations carries both keys; a layer row has batch_id set and
         // flock_id NULL, so it cannot match this.
         { sql: `DELETE FROM vaccinations     WHERE flock_id = ?`, params: [flockId] },

@@ -2,7 +2,7 @@
 // in a schema: users, sessions and future platform tables must stay excluded.
 export const TENANT_TABLES = Object.freeze([
   'app_settings','asset_payments','assets','balance','bank_accounts','bank_ledger',
-  'batch_transactions','batches','bill_items','bills','brokers','categories',
+  'batch_transactions','batches','bill_items','bills','brokers','broker_payments','categories',
   'chick_entries','chick_traders','customer_ledger','customer_payments','customers',
   'debt_records','egg_collection','egg_sales','expense_categories','expense_ledger',
   'expenses','farm_units','farms','feed_entries','feed_traders','flock_health','flocks',

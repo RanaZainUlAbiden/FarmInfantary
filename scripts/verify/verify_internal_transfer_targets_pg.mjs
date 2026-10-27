@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {join} from 'node:path';
+import ts from 'typescript';
+import {loadEnv,createScratchDb,ROOT} from './lib/pg-harness.mjs';
+if(!loadEnv())throw new Error('DATABASE_URL is required');
+const file=join(ROOT,'src/app/sales-orders/sales-orders.component.ts'),ast=ts.createSourceFile(file,readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true);
+const names=new Set(['loadInternalTargets','loadInternalFlocks','onInternalModuleChange','onInternalFarmChange','resolveOwnFarmCustomerId','assertOk','mustRun']);
+const klass=ast.statements.find(n=>ts.isClassDeclaration(n)&&n.name.text==='SalesOrdersComponent');
+const methods=klass.members.filter(n=>ts.isMethodDeclaration(n)&&names.has(n.name.getText(ast))).map(n=>n.getText(ast));
+assert.equal(methods.length,names.size);
+const js=ts.transpileModule('class Lifted{'+methods.join('\n')+'}',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+const errors={};new Function('exports',ts.transpileModule(readFileSync(join(ROOT,'src/app/shared/utils/sql-error.util.ts'),'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText)(errors);
+const proto=new Function('friendlySqlError',js+';return Lifted.prototype;')(errors.friendlySqlError);
+const f=await createScratchDb('transfer_targets'),q=(s,p=[])=>f.pool.query(s,p);let passed=0;
+const check=async(label,fn)=>{await fn();passed++;console.log('  PASS  '+label);};
+const make=()=>Object.assign(Object.create(proto),{db:{get:(s,p)=>f.db.get(s,p),run:(s,p)=>f.db.run(s,p)},currentFarm:{farm_id:1},internalTargetModule:'broiler',internalTargetUnitId:null,internalTargetFlockId:null,internalUnits:[],internalFlocks:[],internalTargetEpoch:0,internalTargetsLoading:false,errorMessage:'',cdr:{detectChanges(){}},onFormChange(){}});
+try{
+ await q("INSERT INTO farms(farm_id,farm_name,password_hash) VALUES(1,'Account A','unused'),(2,'Account B','unused')");
+ await q("INSERT INTO farm_units(unit_id,farm_id,unit_name,module_type) VALUES(1,1,'Broiler A','broiler'),(2,1,'Broiler B','broiler'),(3,1,'Layer A','layer'),(4,2,'Other Farm','broiler')");
+ await q("INSERT INTO flocks(flock_id,farm_id,unit_id,flock_name,start_date,status) VALUES(1,1,1,'A One','2026-10-01','active'),(2,1,1,'A Two','2026-10-01','active'),(3,1,2,'B One','2026-10-01','active'),(4,2,4,'Foreign','2026-10-01','active'),(5,1,NULL,'Legacy','2026-10-01','active')");
+ await q("INSERT INTO batches(batch_id,farm_id,unit_id,batch_name,start_date,initial_birds,status) VALUES(1,1,3,'Layer One','2026-10-01',100,'active')");
+ const s=make();
+ await check('farm must be chosen first; only this account and module farms are offered',async()=>{await s.loadInternalTargets();assert.deepEqual(s.internalUnits.map(x=>x.unit_id),[1,2,0]);assert.deepEqual(s.internalFlocks,[]);assert.equal(s.internalTargetUnitId,null);assert.equal(s.internalTargetsLoading,false);});
+ await check('choosing a farm loads only its active flocks and clears the previous flock',async()=>{s.internalTargetUnitId=1;s.internalTargetFlockId=3;await s.onInternalFarmChange();assert.deepEqual(s.internalFlocks.map(x=>x.flock_id),[1,2]);assert.equal(s.internalTargetFlockId,null);s.internalTargetFlockId=1;s.internalTargetUnitId=2;await s.onInternalFarmChange();assert.deepEqual(s.internalFlocks.map(x=>x.flock_id),[3]);assert.equal(s.internalTargetFlockId,null);});
+ await check('switching modules clears farm/flock and Layer only offers the selected farm batches',async()=>{s.internalTargetModule='layer';await s.onInternalModuleChange();assert.equal(s.internalTargetUnitId,null);assert.equal(s.internalTargetFlockId,null);assert.deepEqual(s.internalUnits.map(x=>x.unit_id),[3]);s.internalTargetUnitId=3;await s.onInternalFarmChange();assert.deepEqual(s.internalFlocks.map(x=>x.batch_id),[1]);});
+ await check('editing an existing transfer restores its real farm without broadening the target list',async()=>{s.internalTargetModule='broiler';s.internalTargetUnitId=null;s.internalTargetFlockId=3;await s.loadInternalTargets();assert.equal(s.internalTargetUnitId,2);assert.equal(s.internalTargetFlockId,3);assert.deepEqual(s.internalFlocks.map(x=>x.flock_id),[3]);});
+ await check('legacy unassigned targets remain explicit and do not appear under named farms',async()=>{s.internalTargetUnitId=null;s.internalTargetFlockId=5;await s.loadInternalTargets();assert.equal(s.internalTargetUnitId,0);assert.deepEqual(s.internalFlocks.map(x=>x.flock_id),[5]);});
+ await check('actual target ownership is rechecked before creating the own-farm customer',async()=>{s.internalTargetUnitId=1;s.internalTargetFlockId=3;await assert.rejects(s.resolveOwnFarmCustomerId(),/different farm/);s.internalTargetFlockId=4;await assert.rejects(s.resolveOwnFarmCustomerId(),/no longer exists/);s.internalTargetFlockId=1;const customer=await s.resolveOwnFarmCustomerId();assert.equal((await q('SELECT unit_id FROM customers WHERE customer_id=$1',[customer])).rows[0].unit_id,1);});
+ await check('late results from a previous farm cannot replace the newly selected farm targets',async()=>{const v=make(),real=v.db.get;let release;const gate=new Promise(r=>release=r);let first=true;v.db.get=async(sql,p)=>{const r=await real(sql,p);if(first){first=false;await gate;}return r;};v.internalTargetUnitId=1;const old=v.loadInternalFlocks();v.internalTargetUnitId=2;await v.onInternalFarmChange();release();await old;assert.deepEqual(v.internalFlocks.map(x=>x.flock_id),[3]);});
+ await check('failed target reads clear stale selections and preserve a visible recovery error',async()=>{const v=make();v.internalTargetUnitId=1;v.internalTargetFlockId=1;v.db.get=async()=>({success:false,error:'fixture connection unavailable'});await v.loadInternalTargets();assert.equal(v.internalTargetUnitId,null);assert.equal(v.internalTargetFlockId,null);assert.match(v.errorMessage,/Could not load target farms/);assert.equal(v.internalTargetsLoading,false);});
+ console.log('ALL CHECKS PASSED — '+passed+' farm-first internal transfer scenarios');
+}finally{await f.close();}

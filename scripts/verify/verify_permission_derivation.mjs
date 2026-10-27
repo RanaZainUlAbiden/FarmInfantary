@@ -5,10 +5,10 @@ import {ROOT,currentCatalogue,deriveCatalogue,encodeCatalogue} from '../../tools
 import {sqlAccess,createPermissionRecorder,applicationSourceDigest,traceProducerDigest} from '../../tools/permission-trace.mjs';
 let passed=0;const check=async(label,fn)=>{await fn();passed++;console.log('  PASS  '+label);};
 const catalogue=currentCatalogue(),layout=readFileSync(resolve(ROOT,'src/app/layout/layout.component.ts'),'utf8'),routes=readFileSync(resolve(ROOT,'src/app/app.routes.ts'),'utf8');
-await check('catalogue is deterministic, generated from 50 current menu routes and matches its committed snapshot',()=>{
+await check('catalogue is deterministic, generated from 51 current menu routes and matches its committed snapshot',()=>{
  assert.equal(encodeCatalogue(catalogue),readFileSync(resolve(ROOT,'db/seeds/permission-catalogue.json'),'utf8').replaceAll('\r\n','\n'));
- assert.equal(catalogue.entries.length,50);assert.deepEqual(['broiler','layer','distribution','owner'].map(m=>catalogue.entries.filter(p=>p.module===m).length),[14,15,15,6]);
- assert.equal(new Set(catalogue.entries.map(e=>e.key)).size,50);
+ assert.equal(catalogue.entries.length,51);assert.deepEqual(['broiler','layer','distribution','owner'].map(m=>catalogue.entries.filter(p=>p.module===m).length),[14,15,16,6]);
+ assert.equal(new Set(catalogue.entries.map(e=>e.key)).size,51);
  assert.deepEqual(catalogue.entries.find(e=>e.key==='layer.batch-management').shortcuts,['Add Batch']);
  assert.ok(catalogue.entries.find(e=>e.key==='broiler.medicine'));assert.ok(catalogue.entries.find(e=>e.key==='layer.medicine'));
 });

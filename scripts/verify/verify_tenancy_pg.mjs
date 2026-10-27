@@ -17,6 +17,7 @@ const { Pool } = createRequire(new URL('../../server/package.json', import.meta.
 const directory = mkdtempSync(join(tmpdir(), 'farm-tenant-'));
 for (const name of ['001_initial_schema.sql','002_preserve_unique_indexes.sql','003_authentication.sql']) copyFileSync(join(MIGRATIONS_DIR,name),join(directory,name));
 const fixtures = [], roles = [];
+const inheritedTenants=TENANT_TABLES.filter(t=>t!=='broker_payments'),inheritedBusiness=BUSINESS_TABLES.filter(t=>t!=='broker_payments');
 let runtime, scoped, passed = 0;
 async function fixture(label) {
   const f = await createScratchDb(label); fixtures.push(f);
@@ -45,12 +46,12 @@ try {
   const inherited = (await f.pool.query('SELECT table_name FROM information_schema.tables WHERE table_schema=$1',[f.schema])).rows.map(r=>r.table_name);
   await seed(f,'farms',{farm_id:1,farm_name:'Farm A',password_hash:'unused'});
   await seed(f,'farms',{farm_id:2,farm_name:'Farm B',password_hash:'unused'});
-  for (const table of BUSINESS_TABLES) {
+  for (const table of inheritedBusiness) {
     if (!original.some(c=>c.table_name===table && c.column_name==='farm_id')) continue;
     await seed(f,table,{farm_id:table==='batches'?2:1});
   }
   const moduleTables = ['balance','chick_entries','chick_traders','expenses','feed_entries','feed_traders','income','labour_payments','medicine_entries','medicine_traders','sales'];
-  for (const table of BUSINESS_TABLES) {
+  for (const table of inheritedBusiness) {
     if (original.some(c=>c.table_name===table && c.column_name==='farm_id') || table==='vaccinations') continue;
     await seed(f,table,moduleTables.includes(table)?{module_type:null}:{});
     if (moduleTables.includes(table)) await seed(f,table,{module_type:'layer'});
@@ -58,15 +59,26 @@ try {
   await seed(f,'vaccinations',{flock_id:1,batch_id:null,cost:12.25,bill_id:7,bill_number:'preserve'});
   await seed(f,'vaccinations',{flock_id:null,batch_id:1,cost:7.5});
   await check('schema classification covers exactly 60 inherited tables and excludes platform identities',async()=>{
-    assert.equal(TENANT_TABLES.length,59); assert.equal(BUSINESS_TABLES.length,58);
-    assert.deepEqual([...TENANT_TABLES,'activation'].sort(),inherited.filter(n=>!['users','auth_sessions','auth_login_limits'].includes(n)).sort());
+    assert.equal(inheritedTenants.length,59); assert.equal(inheritedBusiness.length,58);
+    assert.deepEqual([...inheritedTenants,'activation'].sort(),inherited.filter(n=>!['users','auth_sessions','auth_login_limits'].includes(n)).sort());
     assert.equal(original.filter(c=>c.column_name==='farm_id' && BUSINESS_TABLES.includes(c.table_name)).length,28);
   });
   await check('migration backfills all 30 missing tenant ownership columns atomically',async()=>{
-    const result=await migrate(f.pool,f.migrations); assert.deepEqual(result.applied,['004_tenant_isolation.sql','005_staff_permissions.sql','006_admin_seats_audit.sql','007_delete_authorization.sql']); assert.equal(result.version,7);
+    const result=await migrate(f.pool,f.migrations); assert.deepEqual(result.applied,['004_tenant_isolation.sql','005_staff_permissions.sql','006_admin_seats_audit.sql','007_delete_authorization.sql','008_broker_ledgers.sql','009_broker_history_protection.sql','010_broker_workflow_boundary.sql']); assert.equal(result.version,10);
     const n=Number((await f.pool.query(`SELECT count(*) FROM information_schema.columns WHERE table_schema=$1
       AND table_name=ANY($2) AND column_name='farm_id' AND is_nullable='NO'`,[f.schema,TENANT_TABLES])).rows[0].count);
-    assert.equal(n,59);
+    assert.equal(n,60);
+    // This API-only table intentionally refused the generic raw insert below.
+    // Seed actual protected rows so subsequent UPDATE isolation checks exercise
+    // rows rather than treating a zero-row UPDATE as an ownership refusal.
+    const brokerClient=await f.pool.connect();try{
+      await brokerClient.query('BEGIN');
+      for(const tenant of [1,2]){
+        await brokerClient.query("SELECT set_config('app.farm_id',$1,true),set_config('app.broker_workflow','on',true)",[String(tenant)]);
+        await brokerClient.query("INSERT INTO broker_payments(broker_id,flock_id,sale_id,date,amount,method,request_id,request_hash) VALUES(1,1,1,'2026-10-27',1,'cash',$1,'fixture')",['tenant-fixture-'+tenant]);
+      }
+      await brokerClient.query('COMMIT');
+    }finally{brokerClient.release();}
   });
   await check('module backfill distinguishes colliding flock/batch IDs and legacy NULL broiler rows',async()=>{
     for(const table of moduleTables) {
@@ -81,12 +93,12 @@ try {
     assert.deepEqual(rows,[{farm_id:1,flock_id:1,batch_id:null,cost:12.25,bill_id:7,bill_number:'preserve'},
       {farm_id:2,flock_id:null,batch_id:1,cost:7.5,bill_id:null,bill_number:null}]);
   });
-  await check('59 tenant policies are FORCE enabled and index-backed; all 58 business tables have stamp triggers',async()=>{
+  await check('60 tenant policies are FORCE enabled and index-backed; all 59 business tables have stamp triggers',async()=>{
     const rows=(await f.pool.query(`SELECT c.relname,c.relrowsecurity,c.relforcerowsecurity
       FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relname=ANY($2)`,[f.schema,TENANT_TABLES])).rows;
-    assert.equal(rows.length,59); assert.ok(rows.every(r=>r.relrowsecurity&&r.relforcerowsecurity));
+    assert.equal(rows.length,60); assert.ok(rows.every(r=>r.relrowsecurity&&r.relforcerowsecurity));
     assert.equal(Number((await f.pool.query(`SELECT count(*) FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid
-      JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND t.tgname='tenant_identity'`,[f.schema])).rows[0].count),58);
+      JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND t.tgname='tenant_identity'`,[f.schema])).rows[0].count),59);
   });
   await check('migration changes no existing column types and adds no foreign keys',async()=>{
     const now=(await f.pool.query(`SELECT table_name,column_name,data_type FROM information_schema.columns WHERE table_schema=$1 ORDER BY table_name,ordinal_position`,[f.schema])).rows;
@@ -104,7 +116,7 @@ try {
   const url=new URL(process.env.DATABASE_URL); url.username=role; url.password=password; url.search='';
   runtime=new Pool({connectionString:url.toString(),max:3,connectionTimeoutMillis:3000});
   await check('actual direct non-owner login passes runtime attestation',async()=>{
-    const result=await attestRuntimeRole(runtime,{schema:f.schema}); assert.equal(result.tenantTables,59); assert.equal(result.businessTables,58);
+    const result=await attestRuntimeRole(runtime,{schema:f.schema}); assert.equal(result.tenantTables,60); assert.equal(result.businessTables,59);
     assert.equal((await runtime.query('SELECT current_user=session_user AS direct')).rows[0].direct,true);
   });
   await check('runtime attestation rejects overridden search paths and row-security settings',async()=>{
@@ -121,7 +133,7 @@ try {
   scoped=createSessionDb(runtime,{authorize:()=>true,maxConnections:2}); await scoped.init(); // trusted fixture only
   const A=scoped.forActor({farmId:1,userId:10,authVersion:1,role:'farm_admin',sessionKey:'a'.repeat(64)});
   const B=scoped.forActor({farmId:2,userId:20,authVersion:1,role:'farm_admin',sessionKey:'b'.repeat(64)});
-  await check('all 59 tenant tables hide foreign rows without client farm predicates',async()=>{
+  await check('all 60 tenant tables hide foreign rows without client farm predicates',async()=>{
     for(const table of TENANT_TABLES) {
       const cols=table==='farms'?FARM_READ_COLUMNS.map(q).join(','):'*';
       for(const [scope,id] of [[A,1],[B,2]]) {
@@ -134,15 +146,17 @@ try {
     assert.equal((await runtime.query('SELECT * FROM products')).rows.length,0);
     await assert.rejects(runtime.query("INSERT INTO products(product_name) VALUES('missing context')"),/context/);
   });
-  await check('all 58 insert triggers stamp farm ownership from the server context',async()=>{
+  await check('runtime inserts stamp farm ownership; broker receipts require the trusted workflow',async()=>{
     for(const table of BUSINESS_TABLES) {
       const columns=(await f.pool.query(`SELECT column_name,data_type,is_nullable,column_default,is_identity FROM information_schema.columns
         WHERE table_schema=$1 AND table_name=$2 ORDER BY ordinal_position`,[f.schema,table])).rows;
       const data={};
       for(const c of columns) if(c.column_name!=='farm_id'&&c.is_nullable==='NO'&&c.column_default==null&&c.is_identity==='NO') data[c.column_name]=c.data_type==='text'?'runtime-'+table:1;
       if(table==='app_settings') data.key='runtime';
+      if(table==='broker_payments') data.method='cash';
       const names=Object.keys(data);
       const sql=`INSERT INTO ${q(table)}(${names.map(q).join(',')}) VALUES(${names.map(()=>'?').join(',')}) RETURNING farm_id`;
+      if(table==='broker_payments'){no(await A.get(sql,Object.values(data)));continue;}
       const result=ok(await A.get(sql,Object.values(data))); assert.equal(result.data[0].farm_id,1,table);
     }
   });

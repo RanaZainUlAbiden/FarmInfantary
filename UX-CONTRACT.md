@@ -26,6 +26,7 @@ runtime styles. No new business policy is defined here.
 | Admin Form | Shared AdminComponent and PasswordField | Admin API validation; D7/D11/D12 | farm create/edit, staff create, status/password/grants | admin HTTP PG/browser checks |
 | Admin CRUD | AdminApi, dedicated routes, same root/team component | D7/D8/D11/D12 | explicit save, return to people list | verify_admin_pg.mjs |
 | Dialog | Shared DeleteCodeDialog with native HTML dialog | Server delete-code API and existing confirmation flow | showModal owns focus/inert background/Escape | browser keyboard/modal verification |
+| Date | Native input type date in BrokersComponent | Local TEXT business dates; browser owns calendar locale and popup | sale and receipt date | broker API validation and browser form |
 
 There is no date picker in the changed screens. Admin tables use captions,
 headers and row-header account names; grant checkboxes edit flags, not bulk row
@@ -47,6 +48,41 @@ Existing farm-units native business-type selection is retained without changing
 popup ownership; its confirmed mutation now goes through the dedicated API.
 
 ## Flow ledger
+
+Broker register and flock sale share `BrokersComponent`. Distribution lists
+farm-wide brokers; Broiler Sale opens the same broker with a fixed selected
+flock scope. Server totals cover the full scope independently of 30-row pages.
+Search and broker selection use URL parameters; pending search is cancelled on
+selection and stale reads are ignored. Broker activation preserves history.
+The register totals cover all matching records, independently of page size;
+broker detail breaks balances down by physical farm and flock. Distribution
+shows the account-wide scope; Broiler Sales restricts both figures and detail
+to the current flock. Sale/receipt rows also identify the physical farm.
+
+SalesOrdersComponent owns Internal Transfer's native module → physical farm →
+flock/batch controls. Module/farm changes clear the old target and loading
+disables target selection; late responses are ignored. Edit restoration derives
+the real physical farm, preserving explicit legacy unassigned targets. The actual
+target owner is checked before the bill resolves its own-farm customer. Native
+labels name each selector; failures retain the bill and clear stale targets.
+
+Forms use native labeled dates/selects, the shared BankPicker receipt variant,
+novalidate and persistent live errors/status. Sales and payments stay in the
+broker detail after explicit save. Failed writes retain input and save IDs;
+there is no automatic replay. Cash, bank and other receipts are distinct; zero
+received means unpaid. Each later payment identifies one sale. Server validation
+and row locks prevent overpayment; duplicate save IDs cannot create a second
+movement. Other method requires a reference. Corrections retain reversed receipt
+history and require device delete proof plus the shared native modal confirmation.
+An unpaid sale can be deleted; paid sales require reversal of recorded receipts.
+Legacy history edits retain their original broker. New receipt accounting never
+counts receipts as a second sale or silently settles Distribution bills.
+
+Canonical broker owners: form/CRUD/state `BrokersComponent` and dedicated broker
+API; date/method popup native browser; account picker shared BankPicker;
+confirmation shared ConfirmDialog native modal variant; errors/status persistent
+inline live regions; scrollbar global tokens. Verification is the broker PG/API
+suite, actual cash service checks, production build and in-app browser flows.
 
 | Operation | Trigger | Pending | Success destination | Success feedback | Failure recovery | Focus outcome | Source ref |
 |---|---|---|---|---|---|---|---|

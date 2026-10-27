@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -8,7 +8,12 @@ import { CommonModule } from '@angular/common';
   templateUrl: './confirm-dialog.component.html',
   styleUrl: './confirm-dialog.component.scss'
 })
-export class ConfirmDialogComponent {
+export class ConfirmDialogComponent implements AfterViewInit,OnDestroy {
+  @Input() modal=false;
+  @ViewChild('dialog') dialog?:ElementRef<HTMLDialogElement>;
+  private previous:HTMLElement|null=null;
+  ngAfterViewInit(){if(this.modal){this.previous=document.activeElement as HTMLElement;this.dialog?.nativeElement.showModal();this.dialog?.nativeElement.querySelector<HTMLElement>('.btn-cancel')?.focus();}}
+  ngOnDestroy(){if(this.modal){this.dialog?.nativeElement.close();if(this.previous?.isConnected)this.previous.focus();}}
   @Input() title: string = 'Confirm';
   @Input() message: string = 'Are you sure?';
   @Input() confirmText: string = 'Confirm';

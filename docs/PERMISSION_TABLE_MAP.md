@@ -3,12 +3,12 @@
 Run `node tools/permission-report.mjs` to regenerate. This is an incomplete
 review worksheet, **not an authorization policy**. No server file imports it.
 
-The current sidebar derives **50 keys**: 14 broiler, 15 layer,
+The current sidebar derives **51 keys**: 14 broiler, 15 layer,
 15 distribution and 6 owner. Add Batch is a shortcut onto Batches. The older
 47-key estimate is superseded by these measured current menus.
 
 Real PostgreSQL voucher regressions provide **4 action scopes across
-2/50 screens**. These observations include refused workflows and
+2/51 screens**. These observations include refused workflows and
 their reads; SQL recorded by a failed attempt is not proof of a successful write.
 Setup/fixture SQL outside explicitly labeled workflows is excluded. Action
 intent comes from the real application entry point, never from the SQL verb.
@@ -24,7 +24,7 @@ Evidence: `tools/permission-evidence/vouchers.json`; scenarios include bank/cash
 and overpayment/deletion cases in `verify_vouchers_pg.mjs`. Query text, parameter
 values, rows and database error details are not saved. Only query hashes, table
 names, operation kinds and counters persist. The source digest is
-`7f993a0c795ee184dabd09273003fc49db43a7c0e725daaf9d00bfe7334ec736`.
+`219909758ac02d32e26697068d3f3a3e6a9c331a04e5deb73354b4fc32a2ba30`.
 
 ## Unobserved screen keys
 
@@ -43,6 +43,7 @@ names, operation kinds and counters persist. The source digest is
 - broiler.sale
 - broiler.vaccination
 - distribution.account-ledger
+- distribution.brokers
 - distribution.customer-management
 - distribution.distribution-report
 - distribution.expense-ledger

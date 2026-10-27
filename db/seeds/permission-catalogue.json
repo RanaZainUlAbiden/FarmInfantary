@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "authority": "catalogue-only; no table access is implied",
-  "sourceDigest": "d76d482e14cf3d96104c40f5ddcdd561bacb3a3a5255ee4d44351589d5989031",
+  "sourceDigest": "4d88ff53f5a5f0e468b1f2a2278bdb0a238172a40d8b0ea9a6826b4b2d5a9232",
   "entries": [
     {
       "key": "broiler.chicks",
@@ -195,7 +195,20 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 130
+        "line": 131
+      }
+    },
+    {
+      "key": "distribution.brokers",
+      "module": "distribution",
+      "route": "brokers",
+      "label": "Brokers",
+      "component": "./brokers/brokers.component",
+      "shortcuts": [],
+      "source": {
+        "file": "src/app/layout/layout.component.ts",
+        "menu": "distributionMenu",
+        "line": 122
       }
     },
     {
@@ -208,7 +221,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 127
+        "line": 128
       }
     },
     {
@@ -221,7 +234,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 136
+        "line": 137
       }
     },
     {
@@ -234,7 +247,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 135
+        "line": 136
       }
     },
     {
@@ -247,7 +260,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 139
+        "line": 140
       }
     },
     {
@@ -260,7 +273,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 122
+        "line": 123
       }
     },
     {
@@ -273,7 +286,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 129
+        "line": 130
       }
     },
     {
@@ -286,7 +299,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 138
+        "line": 139
       }
     },
     {
@@ -299,7 +312,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 123
+        "line": 124
       }
     },
     {
@@ -312,7 +325,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 124
+        "line": 125
       }
     },
     {
@@ -325,7 +338,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 137
+        "line": 138
       }
     },
     {
@@ -338,7 +351,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 125
+        "line": 126
       }
     },
     {
@@ -351,7 +364,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 126
+        "line": 127
       }
     },
     {
@@ -364,7 +377,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 134
+        "line": 135
       }
     },
     {
@@ -377,7 +390,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 128
+        "line": 129
       }
     },
     {
@@ -587,7 +600,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "overviewMenu",
-        "line": 151
+        "line": 152
       }
     },
     {
@@ -600,7 +613,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "overviewMenu",
-        "line": 156
+        "line": 157
       }
     },
     {
@@ -613,7 +626,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "overviewMenu",
-        "line": 153
+        "line": 154
       }
     },
     {
@@ -626,7 +639,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "overviewMenu",
-        "line": 150
+        "line": 151
       }
     },
     {
@@ -639,7 +652,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "overviewMenu",
-        "line": 157
+        "line": 158
       }
     },
     {
@@ -652,7 +665,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "overviewMenu",
-        "line": 152
+        "line": 153
       }
     }
   ]

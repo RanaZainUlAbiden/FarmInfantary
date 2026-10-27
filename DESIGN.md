@@ -32,6 +32,18 @@ components:
 
 # FarmInfantary design context
 
+## Broker accounts and flock sales
+
+The Distribution Broker register and Broiler Sale broker detail share one
+`BrokersComponent`. Keep the existing Segoe UI, green actions, white surfaces
+and global `--fi-*` tokens. Broker name plus selected flock is the main context;
+the sales/received/pending strip is an account reconciliation, not decoration.
+Tables own horizontal overflow; forms retain natural document height. Native
+date and method selects follow existing farm forms. The shared BankPicker's
+`receipt-form` variant gives account selection the same field geometry. Broker
+corrections use the shared ConfirmDialog's native modal variant, with Cancel
+initial focus, Escape and background inertness.
+
 ## Business navigation at narrow widths
 
 The existing green sidebar is a compact 60px rail at widths up to 768px. Its

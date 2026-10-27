@@ -141,7 +141,7 @@ const methods = {
   deleteDebtRecord: loadMethod('deleteDebtRecord')
 }
 
-const scratch = await createScratchDb('debt_records')
+const scratch = await createScratchDb('debt_records', {brokerCash:true})
 db = scratch.db
 try {
 

@@ -33,7 +33,7 @@ try {
  await check('a real restored database preserves money, date text, orphans and migration history',async()=>{
   await restoreBackup({connectionString:urls[1],path:backup.path,encryptionKey:secret});
   const row=(await target.query('SELECT amount,date,flock_id FROM expenses')).rows[0];assert.equal(row.amount,1234.56);assert.equal(row.date,'2026-10-26');assert.equal(Number(row.flock_id),404);
-  assert.equal(Number((await target.query('SELECT max(version) AS n FROM farminfantary_meta.schema_migrations')).rows[0].n),7);
+  assert.equal(Number((await target.query('SELECT max(version) AS n FROM farminfantary_meta.schema_migrations')).rows[0].n),10);
  });
  await check('restored sessions and delete confirmations are revoked before startup',async()=>{assert.equal(Number((await target.query('SELECT count(*) AS n FROM auth_sessions')).rows[0].n),0);assert.equal(Number((await target.query('SELECT count(*) AS n FROM auth_delete_grants')).rows[0].n),0);});
  await check('restore refuses to overwrite an occupied database',async()=>{await assert.rejects(restoreBackup({connectionString:urls[1],path:backup.path,encryptionKey:secret}),/empty database/);assert.equal((await target.query('SELECT count(*)::int AS n FROM expenses')).rows[0].n,1);});
