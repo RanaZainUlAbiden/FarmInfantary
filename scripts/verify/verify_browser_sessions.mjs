@@ -31,6 +31,9 @@ await check('cookie restoration adopts only validated server identity without pe
  assert.equal(f.localStorage.getItem('businessType'),null);const copy=f.auth.getCurrentFarm();copy.farm_id=2;assert.equal(f.auth.getCurrentFarm().farm_id,1);
  assert.equal(f.auth.canUseBusinessApp(),true);
 });
+await check('session restoration accepts all three combined bundles and legacy saved metadata',async()=>{
+ for(const type of ['broiler_distribution','layer_distribution','all','broiler','layer','distribution']){const f=await signedIn(fixture(),user(1,1,'farm_admin',type));assert.equal(f.auth.canUseBusinessApp(),true);assert.equal(f.auth.getCurrentFarm().business_type,type);}
+});
 await check('malformed server actors and mismatched farms fail closed',async()=>{
  for(const bad of [{...user(),farmId:2},{...user(),role:'invented'}, {...user(),userId:0}, {...user(),farm:{...user().farm,business_type:'unknown'}}]) {
   const f=fixture();const p=f.auth.initialize();f.flush(f.requests[0],{success:true,user:bad});await p;assert.equal(f.auth.isLoggedIn(),false);
@@ -80,9 +83,9 @@ await check('old failures cannot expire a newer identity and return URLs stay in
 });
 await check('business type updates use a dedicated API and discard responses after sign-out',async()=>{
  const f=await signedIn(fixture());const modes=[];f.auth.businessTypeChanged$.subscribe(v=>modes.push(v));
- const update=f.auth.updateBusinessType(999,'layer'),request=f.requests.at(-1);assert.equal(request.url,'/api/account/business-type');assert.equal(Object.keys(request.body).join(','),'businessType');
- f.flush(request,{success:true,user:user(1,1,'farm_admin','layer')});assert.equal((await update).success,true);assert.deepEqual(modes,['layer']);
- const stale=f.auth.updateBusinessType(1,'broiler'),old=f.requests.at(-1);f.auth.invalidate();f.flush(old,{success:true,user:user()});assert.equal((await stale).success,false);assert.equal(f.auth.isLoggedIn(),false);
+ const update=f.auth.updateBusinessType(999,'layer_distribution'),request=f.requests.at(-1);assert.equal(request.url,'/api/account/business-type');assert.equal(Object.keys(request.body).join(','),'businessType');
+ f.flush(request,{success:true,user:user(1,1,'farm_admin','layer_distribution')});assert.equal((await update).success,true);assert.deepEqual(modes,['layer_distribution']);
+ const stale=f.auth.updateBusinessType(1,'broiler_distribution'),old=f.requests.at(-1);f.auth.invalidate();f.flush(old,{success:true,user:user()});assert.equal((await stale).success,false);assert.equal(f.auth.isLoggedIn(),false);
 });
 await check('late BEGIN responses cannot restore a previous identity transaction token',async()=>{
  const requests=[],http={post:(url,body)=>{const result=new rx.Subject();requests.push({url,body,result});return result;}};

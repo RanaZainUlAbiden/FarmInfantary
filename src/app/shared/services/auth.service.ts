@@ -11,7 +11,7 @@ export interface SessionUser {
   userId: number; username: string; role: 'super_admin' | 'farm_admin' | 'staff'; farmId: number | null;
   farm: { farm_id: number; farm_name: string; business_type: string } | null;
 }
-const businessTypes = ['broiler', 'layer', 'distribution', 'all'];
+const businessTypes = ['broiler_distribution', 'layer_distribution', 'all', 'broiler', 'layer', 'distribution'];
 export function safeReturnUrl(value: unknown): string {
   return typeof value === 'string' && /^(?:\/app(?:\/|\?|$)|\/team(?:\?|$))/.test(value) && !/[\\\u0000-\u001f]/.test(value) ? value : '/app';
 }

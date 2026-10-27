@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "status": "observations-only; not authorized policy",
-  "sourceDigest": "1363d995784ce22343b576c259e9f987d4bb1b5799f2b41123dc6a837a473306",
-  "catalogueDigest": "5c246100a5d96fe381bac98e81d0572fb146978922acc7903163be7138b92c28",
+  "sourceDigest": "7748e24199f6478e47c1a9fc175014569f703268a51198a90370c72457bfe4f3",
+  "catalogueDigest": "3b3e3aab9e5530b83c8af78b9415e54856a0f92fd0339aaaf1572b86fa0d8930",
   "producerDigest": "4f75426aab9f94d63bc0ab3d5e52441ee3e1dcf96326131da8f9065ac75be4b4",
   "scopes": [
     {

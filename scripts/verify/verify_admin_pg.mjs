@@ -46,7 +46,7 @@ try {
  });
  await check('duplicate usernames roll back farm creation and its audit event',async()=>{
   const before=(await farms()).length,events=Number((await q('SELECT count(*) AS n FROM audit_events')).rows[0].n);
-  assert.equal((await req('POST','/api/admin/farms',{farmName:'Rollback Farm',businessType:'broiler',username:'admin.owner',password})).statusCode,409);
+  assert.equal((await req('POST','/api/admin/farms',{farmName:'Rollback Farm',businessType:'broiler_distribution',username:'admin.owner',password})).statusCode,409);
   assert.equal((await farms()).length,before);assert.equal(Number((await q('SELECT count(*) AS n FROM audit_events')).rows[0].n),events);
  });
  await check('farm admins cannot call platform endpoints or grant themselves delegation',async()=>{
@@ -118,6 +118,20 @@ try {
   assert.equal((await req('PUT',`/api/admin/users/${id}/status`,{expectedVersion:1,status:'suspended'})).statusCode,404);
   assert.equal((await req('POST','/api/db/get',{sql:'SELECT * FROM users'})).statusCode,403);
   assert.equal((await req('GET','/api/admin/farms?limit=100000')).json().farms.length,1);
+ });
+ await check('platform provisioning offers exactly three combined module choices and owners retain the saved choice on sign-in',async()=>{
+  for(const [index,bundle] of ['broiler_distribution','layer_distribution','all'].entries()){
+   const username='bundle.owner.'+index,r=ok(await req('POST','/api/admin/farms',{farmName:'Bundle QA '+index,businessType:bundle,username,password}));
+   const cookie=await login(username),identity=ok(await req('GET','/api/auth/me',undefined,cookie));assert.equal(identity.user.farm.business_type,bundle);assert.equal(identity.user.farmId,r.farmId);
+   for(const next of ['broiler_distribution','layer_distribution','all']){const changed=ok(await req('PATCH','/api/account/business-type',{businessType:next},cookie));assert.equal(changed.user.farm.business_type,next);}
+   const restored=ok(await req('GET','/api/auth/me',undefined,await login(username)));assert.equal(restored.user.farm.business_type,'all');
+  }
+ });
+ await check('standalone module choices are rejected by both administration and owner mutation APIs',async()=>{
+  for(const businessType of ['broiler','layer','distribution','invalid']){
+   assert.equal((await req('POST','/api/admin/farms',{farmName:'Refused bundle',businessType,username:'refused.bundle',password})).statusCode,400);
+   assert.equal((await req('PATCH','/api/account/business-type',{businessType},ownerCookie)).statusCode,400);
+  }
  });
  console.log('ALL CHECKS PASSED — '+passed+' admin provisioning/seat/audit scenarios');
 } finally {await app?.close();await authPool?.end();await q(`DROP SCHEMA IF EXISTS ${f.schema}_meta CASCADE`);await f.close();if(authCreated){const {Pool}=createRequire(new URL('../../server/package.json',import.meta.url))('pg'),p=new Pool({connectionString:process.env.DATABASE_URL});try{await p.query('DROP ROLE '+authRole);}finally{await p.end();}}}

@@ -1,3 +1,4 @@
+import {activeBusinessModule} from '../shared/utils/business-modules';
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -49,9 +50,7 @@ export class VaccinationComponent implements OnInit, OnDestroy {
   get isLayerMode(): boolean {
     if (this.currentBatchId) return true;
     if (this.currentFlockId) return false;
-    const type = this.currentFarm?.business_type === 'all'
-      ? (localStorage.getItem('activeBusinessTab') || 'broiler')
-      : this.currentFarm?.business_type;
+    const type=activeBusinessModule(this.currentFarm?.business_type,localStorage.getItem('activeBusinessTab'));
     return type === 'layer';
   }
 

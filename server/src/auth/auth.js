@@ -64,7 +64,7 @@ export async function createAuthentication(pool, env, options = {}) {
       if(!sameSessionContext(req,actor))return reply.code(409).send({success:false,code:'SESSION_CHANGED',error:'Your sign-in changed. Sign in again.'});
       if(actor.role!=='farm_admin')return fail(reply,403,'Only the account administrator can change business type.');
       const businessType=req.body?.businessType;
-      if(!['broiler','layer','distribution','all'].includes(businessType))return fail(reply,400,'Choose a valid business type.');
+      if(!['broiler_distribution','layer_distribution','all'].includes(businessType))return fail(reply,400,'Choose Broiler + Distribution, Layers + Distribution, or all three modules.');
       if(!await store.throttle(req.ip,String(actor.userId),'account'))return fail(reply,429,'Too many account changes. Try again later.');
       if(!await store.updateBusinessType(actor,businessType))return fail(reply,401,'Your account changed. Sign in again.');
       const updated=await resolve(req);

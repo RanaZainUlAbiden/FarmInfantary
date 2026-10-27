@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "authority": "catalogue-only; no table access is implied",
-  "sourceDigest": "5c246100a5d96fe381bac98e81d0572fb146978922acc7903163be7138b92c28",
+  "sourceDigest": "3b3e3aab9e5530b83c8af78b9415e54856a0f92fd0339aaaf1572b86fa0d8930",
   "entries": [
     {
       "key": "broiler.chicks",
@@ -13,7 +13,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 92
+        "line": 93
       }
     },
     {
@@ -26,7 +26,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 88
+        "line": 89
       }
     },
     {
@@ -39,7 +39,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 98
+        "line": 99
       }
     },
     {
@@ -52,7 +52,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 103
+        "line": 104
       }
     },
     {
@@ -65,7 +65,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 91
+        "line": 92
       }
     },
     {
@@ -78,7 +78,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 87
+        "line": 88
       }
     },
     {
@@ -91,7 +91,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 99
+        "line": 100
       }
     },
     {
@@ -104,7 +104,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 96
+        "line": 97
       }
     },
     {
@@ -117,7 +117,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 93
+        "line": 94
       }
     },
     {
@@ -130,7 +130,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 89
+        "line": 90
       }
     },
     {
@@ -143,7 +143,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 90
+        "line": 91
       }
     },
     {
@@ -156,7 +156,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 97
+        "line": 98
       }
     },
     {
@@ -169,7 +169,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 95
+        "line": 96
       }
     },
     {
@@ -182,7 +182,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "broilerMenu",
-        "line": 94
+        "line": 95
       }
     },
     {
@@ -195,7 +195,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 135
+        "line": 136
       }
     },
     {
@@ -208,7 +208,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 126
+        "line": 127
       }
     },
     {
@@ -221,7 +221,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 132
+        "line": 133
       }
     },
     {
@@ -234,7 +234,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 141
+        "line": 142
       }
     },
     {
@@ -247,7 +247,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 140
+        "line": 141
       }
     },
     {
@@ -260,7 +260,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 144
+        "line": 145
       }
     },
     {
@@ -273,7 +273,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 127
+        "line": 128
       }
     },
     {
@@ -286,7 +286,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 134
+        "line": 135
       }
     },
     {
@@ -299,7 +299,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 143
+        "line": 144
       }
     },
     {
@@ -312,7 +312,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 128
+        "line": 129
       }
     },
     {
@@ -325,7 +325,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 129
+        "line": 130
       }
     },
     {
@@ -338,7 +338,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 142
+        "line": 143
       }
     },
     {
@@ -351,7 +351,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 130
+        "line": 131
       }
     },
     {
@@ -364,7 +364,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 131
+        "line": 132
       }
     },
     {
@@ -377,7 +377,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 139
+        "line": 140
       }
     },
     {
@@ -390,7 +390,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "distributionMenu",
-        "line": 133
+        "line": 134
       }
     },
     {
@@ -405,7 +405,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 107
+        "line": 108
       }
     },
     {
@@ -418,7 +418,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 109
+        "line": 110
       }
     },
     {
@@ -431,7 +431,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 110
+        "line": 111
       }
     },
     {
@@ -444,7 +444,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 121
+        "line": 122
       }
     },
     {
@@ -457,7 +457,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 122
+        "line": 123
       }
     },
     {
@@ -470,7 +470,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 113
+        "line": 114
       }
     },
     {
@@ -483,7 +483,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 111
+        "line": 112
       }
     },
     {
@@ -496,7 +496,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 119
+        "line": 120
       }
     },
     {
@@ -509,7 +509,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 115
+        "line": 116
       }
     },
     {
@@ -522,7 +522,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 117
+        "line": 118
       }
     },
     {
@@ -535,7 +535,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 116
+        "line": 117
       }
     },
     {
@@ -548,7 +548,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 118
+        "line": 119
       }
     },
     {
@@ -561,7 +561,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 120
+        "line": 121
       }
     },
     {
@@ -574,7 +574,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 112
+        "line": 113
       }
     },
     {
@@ -587,7 +587,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "layerMenu",
-        "line": 114
+        "line": 115
       }
     },
     {
@@ -600,7 +600,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "overviewMenu",
-        "line": 156
+        "line": 157
       }
     },
     {
@@ -613,7 +613,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "overviewMenu",
-        "line": 161
+        "line": 162
       }
     },
     {
@@ -626,7 +626,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "overviewMenu",
-        "line": 158
+        "line": 159
       }
     },
     {
@@ -639,7 +639,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "overviewMenu",
-        "line": 155
+        "line": 156
       }
     },
     {
@@ -652,7 +652,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "overviewMenu",
-        "line": 162
+        "line": 163
       }
     },
     {
@@ -665,7 +665,7 @@
       "source": {
         "file": "src/app/layout/layout.component.ts",
         "menu": "overviewMenu",
-        "line": 157
+        "line": 158
       }
     }
   ]

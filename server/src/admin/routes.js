@@ -10,7 +10,7 @@ function body(value,keys) {
 }
 const status=v=>{if(!['active','suspended'].includes(v))bad('Choose active or suspended.');return v;};
 const name=v=>{if(typeof v!=='string'||v.trim().length<1||v.trim().length>100||/[\x00-\x1f]/.test(v))bad('Enter a farm name of 1 to 100 characters.');return v.trim();};
-const type=v=>{if(!['broiler','layer','distribution','all'].includes(v))bad('Choose a valid business type.');return v;};
+const type=v=>{if(!['broiler_distribution','layer_distribution','all'].includes(v))bad('Choose Broiler + Distribution, Layers + Distribution, or all three modules.');return v;};
 function userInput(value,extra=[]) {const b=body(value,['username','password',...extra]),username=normalizeUsername(b.username);if(!username||!validNewPassword(b.password))bad('Use a valid username and a password of 15 to 128 characters.');return {...b,username};}
 export function registerAdminRoutes(app,{pool,session,onRevokeUser}) {
  const store=createAdminStore(pool,{onRevokeUser});
