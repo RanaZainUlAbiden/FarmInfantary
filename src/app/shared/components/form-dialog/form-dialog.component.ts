@@ -5,7 +5,7 @@ import {AfterViewInit,Component,ElementRef,EventEmitter,Input,OnDestroy,Output,V
  <dialog #dialog [attr.aria-label]="title" [attr.aria-busy]="busy" (cancel)="cancel($event)">
   <ng-content />
  </dialog>`,styles:[`
- dialog{box-sizing:border-box;width:min(720px,calc(100vw - 24px));max-height:calc(100dvh - 32px);overflow:auto;scrollbar-gutter:stable;border:1px solid var(--fi-border,#d5dedb);border-radius:12px;padding:24px;color:var(--fi-text,#1a1a1a);background:white;box-shadow:0 12px 48px #0003}
+ dialog{box-sizing:border-box;margin:auto;width:min(720px,calc(100vw - 24px));max-height:calc(100dvh - 32px);overflow:auto;scrollbar-gutter:stable;border:1px solid var(--fi-border,#d5dedb);border-radius:12px;padding:24px;color:var(--fi-text,#1a1a1a);background:white;box-shadow:0 12px 48px #0003}
  dialog::backdrop{background:#142d2466}
  @media(max-width:600px){dialog{padding:16px}}
  `]})
