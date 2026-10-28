@@ -10,6 +10,8 @@ async function filterAsync(items, predicate) {
 // Application method bodies come from src/, not the frozen desktop tree.
 // Original fixture values and assertions are retained; SQL helpers now await
 // the real server query layer. Scratch schemas are removed even on failure.
+import {loadBrowserSource} from './lib/browser-source-harness.mjs'
+const {settledPurchases}=loadBrowserSource('src/app/shared/utils/purchase-settlement.util.ts',{})
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { loadEnv, createScratchDb, REF } from './lib/pg-harness.mjs'
@@ -371,7 +373,7 @@ const payableOf = async (supplierId) => (await one(
   `SELECT COALESCE(SUM(COALESCE(credit,0) - COALESCE(debit,0)), 0) v
    FROM supplier_ledger WHERE supplier_id = ?`, [supplierId]))
 
-const PO_SELECT = liftSql(SA_SRC, 'SELECT po.purchase_id, po.date, po.quantity')
+const PO_SELECT = liftSql(SA_SRC, 'SELECT po.purchase_id, po.supplier_id, po.date, po.quantity')
 const LAST_TXN_SELECT = liftSql(SA_SRC, 'MAX(l.transaction_date) AS last_transaction_date')
 const SUPPLIER_SELECT = liftSql(SA_SRC, 'SELECT * FROM suppliers WHERE supplier_id = ? AND farm_id = ?')
 const PV_INSERT = liftSql(PV_SRC, 'INSERT INTO payment_vouchers')

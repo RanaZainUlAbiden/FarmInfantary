@@ -366,9 +366,10 @@
           <td>Rs. {{ p.cost_price | number:'1.0-0' }}</td>
           <td class="amount">Rs. {{ p.total_amount | number:'1.0-0' }}</td>
           <td>
-            <span class="payment-badge" [class.cash]="p.payment_type === 'cash'">
-              {{ p.payment_type === 'cash' ? 'Paid' : 'Credit' }}
+            <span class="payment-badge" [class.cash]="p.settlement_due === 0">
+              {{ p.settlement_status }}
             </span>
+            <div>Paid Rs. {{ p.settlement_paid | number:'1.0-2' }} · Due Rs. {{ p.settlement_due | number:'1.0-2' }}</div>
           </td>
           <!-- An unpaid order moved no money, so it names no account. -->
           <td class="account-cell" [class.bank]="orderWasPaid(p) && p.payment_source === 'bank'">

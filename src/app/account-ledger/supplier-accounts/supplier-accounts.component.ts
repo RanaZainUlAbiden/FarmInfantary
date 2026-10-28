@@ -9,6 +9,7 @@ import { AuthService } from '../../shared/services/auth.service';
 import { toLocalDateString } from '../../shared/utils/date.util';
 import { friendlySqlError } from '../../shared/utils/sql-error.util';
 import { paymentSourceLabel } from '../../shared/utils/bank-source.util';
+import { settledPurchases } from '../../shared/utils/purchase-settlement.util';
 import { alignHeadFootWithColumnStyles, getTableRightEdge } from '../../shared/utils/pdf-table.util';
 import { BackLinkComponent } from '../../shared/components/back-link/back-link.component';
 import { printPdfBase64 } from '../../shared/utils/browser-print.util';
@@ -168,7 +169,7 @@ export class SupplierAccountsComponent implements OnInit {
       // `bank_accounts` rather than stored on the order, so renaming an
       // account propagates — the same shape the Distribution report uses.
       const purchaseRes = await this.db.get(
-        `SELECT po.purchase_id, po.date, po.quantity, po.cost_price, po.total_amount,
+        `SELECT po.purchase_id, po.supplier_id, po.date, po.quantity, po.cost_price, po.total_amount,
                 po.payment_type, po.payment_source, po.bank_id, po.notes,
                 p.product_name, b.bank_name
          FROM purchase_orders po
@@ -178,7 +179,8 @@ export class SupplierAccountsComponent implements OnInit {
          ORDER BY po.date DESC, po.purchase_id DESC`,
         [this.currentFarm.farm_id, supplierId]
       );
-      this.purchases = purchaseRes.success ? (purchaseRes.data || []) : [];
+      if (!ledgerRes.success || !purchaseRes.success) throw new Error('Could not load current purchase settlements. Try again.');
+      this.purchases = settledPurchases(purchaseRes.data || [], this.ledgerEntries);
 
       const accountsRes = await this.db.getSupplierPaymentsByAccount(
         this.currentFarm.farm_id, supplierId);
@@ -274,7 +276,7 @@ export class SupplierAccountsComponent implements OnInit {
 
   /** Was this order settled when it was raised? */
   isPaidOrder(purchase: any): boolean {
-    return (purchase?.payment_type || '').toLowerCase() !== 'credit';
+    return purchase?.settlement_due !== undefined ? purchase.settlement_due === 0 : (purchase?.payment_type || '').toLowerCase() !== 'credit';
   }
 
   // ── NAVIGATION ───────────────────────────────────────────
@@ -386,7 +388,7 @@ export class SupplierAccountsComponent implements OnInit {
             String(Number(p.quantity) || 0),
             'Rs. ' + Math.round(Number(p.cost_price) || 0).toLocaleString(),
             'Rs. ' + Math.round(Number(p.total_amount) || 0).toLocaleString(),
-            this.isPaidOrder(p) ? this.accountLabel(p) : 'Credit'
+            `${p.settlement_status} — Paid Rs. ${p.settlement_paid}; Due Rs. ${p.settlement_due}`
           ])
         : [['No purchases recorded', '', '', '', '', '']],
       theme: 'striped',

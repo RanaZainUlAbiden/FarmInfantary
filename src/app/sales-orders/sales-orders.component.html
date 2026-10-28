@@ -304,10 +304,10 @@
 
         <!-- ── Actions ────────────────────────────────────── -->
         <div class="rblock r-actions">
-          <button class="btn-create" (click)="saveBill()" [disabled]="isSubmitting || gridItems.length === 0">
+          <button class="btn-create" (click)="requestSave()" [disabled]="isSubmitting || gridItems.length === 0">
             {{ isSubmitting ? 'Saving...' : (isEditMode ? 'Update Bill' : (customerType === 'internal' ? 'Transfer to Farm' : 'Save Bill')) }}
           </button>
-          <button class="btn-print" (click)="saveAndPrint()"
+          <button class="btn-print" (click)="requestSave(true)"
                   [disabled]="isSubmitting || gridItems.length === 0"
                   style="margin-top:8px">🖨️ Save & Print</button>
           <button class="btn-cancel-edit" (click)="backToList()" style="margin-top:8px;width:100%">Cancel</button>
@@ -317,6 +317,8 @@
     </div>
   </ng-container>
 </div>
+<app-delete-code-dialog *ngIf="correctionBillId !== null" [correction]="true"
+ (verified)="onCorrectionVerified()" (cancelled)="correctionBillId=null" />
 
 <app-delete-code-dialog
   *ngIf="showDeleteCodeDialog"

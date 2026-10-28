@@ -173,6 +173,20 @@ The native delete dialog owns focus trapping, Escape, background inertness and
 focus restoration. Code verification is a separate step from the existing final
 delete confirmation. All API data and writes bypass the static-shell cache.
 
+Purchase edits, sales edits/Save & Print and sales returns use this same native
+dialog with correction wording before replacing protected stock/ledger rows.
+Cancel retains the draft; verified purchase/bill callbacks must still match the
+active edit. Authorization remains server-owned and short-lived.
+
+Purchase, Supplier Accounts and Distribution Report share current supplier
+settlement labels and paid/returned/due figures derived from the full statement.
+Unassigned payments allocate oldest claims first. The editable Paid/Unpaid at
+purchase field describes the original entry, independently of later settlement;
+settling a purchase must never create another cash/bank withdrawal. New purchase
+claims and date corrections retain the purchase date in the supplier statement.
+Purchase-return stock/status/history/supplier changes commit atomically; failures
+preserve the draft and report that nothing was saved.
+
 The premium static manifest is deliberately scoped to migrated auth/admin screens
 and shared password/delete-code controls; it is not an application-wide conformance
 claim. The full business regression suite remains mandatory. Browser evidence

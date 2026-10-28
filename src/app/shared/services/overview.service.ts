@@ -518,11 +518,11 @@ export class OverviewService {
       broilerRevenue: [broilerSales, broilerIncome],
       layerRevenue: [eggSales, henSales, layerIncome],
       broilerExpenses: [
-        broilerExpenses, broilerMedicine, broilerFeed,
+        broilerExpenses, broilerMedicine, broilerFeed, broilerChicks,
         broilerVaccination, broilerLabour, broilerLedgerDebits, broilerInternalCost
       ],
       layerExpenses: [
-        layerExpenses, layerMedicine, layerFeed, layerVaccination, layerLabour,
+        layerExpenses, layerMedicine, layerFeed, layerChicks, layerVaccination, layerLabour,
         layerLedgerDebits, layerInternalCost
       ]
     }, distributionRevenueAll, distributionExpenseTotal, distributionOpeningBalance);

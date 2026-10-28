@@ -14,6 +14,7 @@ import { jsPDF } from 'jspdf';
 
 import { toLocalDateString } from '../shared/utils/date.util';
 import { friendlySqlError } from '../shared/utils/sql-error.util';
+import { settledPurchases } from '../shared/utils/purchase-settlement.util';
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
 @Component({
   selector: 'app-purchase-orders',
@@ -37,6 +38,9 @@ export class PurchaseOrdersComponent implements OnInit, OnDestroy {
   editForm: any = {};
   showDeleteDialog = false;
   showDeleteCodeDialog = false;
+  correctionId: number | null = null;
+  requestEdit(id: number) { if (!this.isSaving && this.editingId === id) this.correctionId = id; }
+  async onCorrectionVerified() { const id = this.correctionId; this.correctionId = null; if (id !== null && this.editingId === id) await this.saveEdit(id); }
   deletingId: number | null = null;
   isSaving = false;
   isSavingAll = false;
@@ -192,7 +196,13 @@ export class PurchaseOrdersComponent implements OnInit, OnDestroy {
          LEFT JOIN product_batches pb ON pb.batch_id = po.batch_id
          WHERE po.farm_id = ? ORDER BY po.date DESC`,
         [this.currentFarm.farm_id]);
-      this.orders = or.success ? or.data : [];
+      this.assertOk(or, 'Could not load purchases');
+      const statement = this.assertOk(await this.db.get(
+        `SELECT sl.* FROM supplier_ledger sl
+         JOIN suppliers s ON s.supplier_id = sl.supplier_id
+         WHERE s.farm_id = ? ORDER BY sl.transaction_date, sl.ledger_id`,
+        [this.currentFarm.farm_id]), 'Could not load current supplier settlements');
+      this.orders = settledPurchases(or.data || [], statement.data || []);
       
       // 🔥 Restore state AFTER data is loaded
       this.restoreState();
@@ -416,7 +426,7 @@ export class PurchaseOrdersComponent implements OnInit, OnDestroy {
 
   // ── SUPPLIER LEDGER INTEGRATION ─────────────────────────
 
-  async addToSupplierLedger(supplierId: number, purchaseId: number, amount: number, paymentType: string, notes: string) {
+  async addToSupplierLedger(supplierId: number, purchaseId: number, amount: number, paymentType: string, notes: string, date = toLocalDateString()) {
     if (!supplierId) {
       console.warn('⚠️ No supplier ID provided, skipping ledger entry');
       return;
@@ -427,7 +437,7 @@ export class PurchaseOrdersComponent implements OnInit, OnDestroy {
 
     this.assertOk(await this.db.addSupplierLedgerEntry({
       supplier_id: supplierId,
-      transaction_date: toLocalDateString(),
+      transaction_date: date,
       description: `Purchase Order #${purchaseId}${notes ? ' - ' + notes : ''}`,
       debit: debit,
       credit: credit,
@@ -641,7 +651,7 @@ export class PurchaseOrdersComponent implements OnInit, OnDestroy {
           }
 
           if (row.supplier_id) {
-            await this.addToSupplierLedger(row.supplier_id, purchaseId, totalAmount, paymentType, row.notes);
+            await this.addToSupplierLedger(row.supplier_id, purchaseId, totalAmount, paymentType, row.notes, row.date);
           }
           const batchResult = await this.updateInventoryWithBatch(row.product_id, row.quantity, row.cost_price, row.batch_code);
           if (batchResult.batch_id) {
@@ -703,6 +713,7 @@ export class PurchaseOrdersComponent implements OnInit, OnDestroy {
   }
 
   async saveEdit(id: number) {
+    if (this.isSaving) return;
     const existing = this.orders.find(o => o.purchase_id === id);
     if (!existing) return;
 
@@ -722,6 +733,7 @@ export class PurchaseOrdersComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.isSaving = true;
     try {
       // One transaction for the whole edit: the batch adjustment, the order
       // row and the supplier-ledger change either all land together or none
@@ -805,7 +817,7 @@ export class PurchaseOrdersComponent implements OnInit, OnDestroy {
           if (newSupplierId) {
             this.assertOk(await this.db.addSupplierLedgerEntry({
               supplier_id: newSupplierId,
-              transaction_date: toLocalDateString(),
+              transaction_date: this.editForm.date,
               description: `Purchase Order #${id}${this.editForm.notes ? ' - ' + this.editForm.notes : ''}`,
               debit: isPaid ? newTotal : 0,
               credit: newTotal,
@@ -815,8 +827,8 @@ export class PurchaseOrdersComponent implements OnInit, OnDestroy {
           }
         } else if (newSupplierId) {
           await this.mustRun(
-            'UPDATE supplier_ledger SET debit = ?, credit = ? WHERE reference_id = ? AND reference_type = ?',
-            [isPaid ? newTotal : 0, newTotal, id, 'purchase']
+            'UPDATE supplier_ledger SET debit = ?, credit = ?, transaction_date = ?, description = ? WHERE reference_id = ? AND reference_type = ?',
+            [isPaid ? newTotal : 0, newTotal, this.editForm.date, `Purchase Order #${id}${this.editForm.notes ? ' - ' + this.editForm.notes : ''}`, id, 'purchase']
           );
         }
       });
@@ -829,6 +841,8 @@ export class PurchaseOrdersComponent implements OnInit, OnDestroy {
       // The transaction rolled back — nothing at all was written.
       console.error('❌ Error saving edit:', error);
       this.errorMessage = 'Error saving edit: ' + (error?.message || error);
+    } finally {
+      this.isSaving = false;
       this.cdr.detectChanges();
     }
   }

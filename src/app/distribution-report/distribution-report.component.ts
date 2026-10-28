@@ -501,8 +501,8 @@ export class DistributionReportComponent implements OnInit {
    * An UNPAID (credit) order moved nothing yet, so it names no account even
    * though its `payment_source` column holds the default 'cash'. Reading
    * `payment_type` here rather than `payment_source` is deliberate: on this one
-   * table `payment_type` is the settlement status ("Paid" vs "Credit"), which
-   * is precisely the question being asked.
+   * table `payment_type` records payment at purchase entry. Later vouchers can
+   * settle the order without changing that original cash/bank movement.
    */
   orderWasPaid(order: any): boolean {
     return (order?.payment_type || '').toLowerCase() === 'cash';
@@ -634,7 +634,11 @@ export class DistributionReportComponent implements OnInit {
          ORDER BY po.date DESC`,
         [this.currentFarm.farm_id]
       );
-      this.purchases = pu.success ? pu.data : [];
+      const purchaseStatement = await this.db.get(
+        `SELECT sl.* FROM supplier_ledger sl JOIN suppliers s ON s.supplier_id=sl.supplier_id
+         WHERE s.farm_id=? ORDER BY sl.transaction_date,sl.ledger_id`, [this.currentFarm.farm_id]);
+      if (!pu.success || !purchaseStatement.success) throw new Error('Could not load current purchase settlements. Try again.');
+      this.purchases = settledPurchases(pu.data || [], purchaseStatement.data || []);
 
       // ── SUPPLIER PAYABLES ────────────────────────────────────
       //
@@ -1457,7 +1461,7 @@ export class DistributionReportComponent implements OnInit {
           String(p.quantity || 0),
           'Rs. ' + (p.cost_price || 0).toLocaleString(),
           'Rs. ' + (p.total_amount || 0).toLocaleString(),
-          p.payment_type || '—',
+          `${p.settlement_status}; Paid Rs. ${p.settlement_paid}; Due Rs. ${p.settlement_due}`,
           this.orderWasPaid(p) ? this.accountLabel(p) : '—'
         ]);
 
@@ -1859,3 +1863,4 @@ export class DistributionReportComponent implements OnInit {
     });
   }
 }
+import { settledPurchases } from '../shared/utils/purchase-settlement.util';

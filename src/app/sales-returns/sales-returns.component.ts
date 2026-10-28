@@ -8,10 +8,11 @@ import { DateOnlyPipe } from '../shared/pipes/date-format.pipe';
 import { toLocalDateString } from '../shared/utils/date.util';
 import { distributionBillsOnly } from '../shared/utils/bill-source.util';
 import { friendlySqlError } from '../shared/utils/sql-error.util';
+import { DeleteCodeDialogComponent } from '../shared/components/delete-code-dialog/delete-code-dialog.component';
 @Component({
   selector: 'app-sales-returns',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateOnlyPipe],
+  imports: [CommonModule, FormsModule, DateOnlyPipe, DeleteCodeDialogComponent],
   templateUrl: './sales-returns.component.html',
   styleUrl: './sales-returns.component.scss'
 })
@@ -30,6 +31,9 @@ export class SalesReturnsComponent implements OnInit {
   isSaving = false;
   errorMessage = '';
   successMessage = '';
+  showCorrectionCodeDialog = false;
+  requestSaveReturn() { if (this.selectedBill && !this.isSaving && this.totalReturnAmount > 0) this.showCorrectionCodeDialog = true; }
+  async onCorrectionVerified() { this.showCorrectionCodeDialog = false; await this.saveReturn(); }
 
   editingReturnId: number | null = null;
   editingReturnNumber: string = '';
@@ -486,11 +490,12 @@ export class SalesReturnsComponent implements OnInit {
       });
 
       // Committed.
-      this.successMessage = this.editingReturnId
+      const successMessage = this.editingReturnId
         ? `Return updated (was ${this.editingReturnNumber}, now ${returnNumber}).`
         : `Return ${returnNumber} saved successfully.`;
       this.clearSelection();
       await this.loadData();
+      this.successMessage = successMessage;
     } catch (error: any) {
       // The transaction rolled back — nothing at all was written.
       this.errorMessage = 'Failed to save return: ' + (error?.message || error);

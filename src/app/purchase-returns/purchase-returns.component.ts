@@ -195,61 +195,63 @@ export class PurchaseReturnsComponent implements OnInit {
     this.successMessage = '';
 
     try {
-      const returnNumber = await this.getNextReturnNumber();
-      const returnAmt = this.returnAmount;
-      const purchase = this.selectedPurchase;
+      let returnNumber = '';
+      await this.db.transaction(async () => {
+        returnNumber = await this.getNextReturnNumber();
+        const returnAmt = this.returnAmount;
+        const purchase = this.selectedPurchase;
 
-      // 1. Insert purchase_returns record
-      const insertReturn = await this.db.run(
-        `INSERT INTO purchase_returns
-          (farm_id, purchase_id, return_number, return_date, quantity, return_amount, refund_method, reason)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          this.currentFarm.farm_id,
-          purchase.purchase_id,
-          returnNumber,
-          this.returnDate,
-          qty,
-          returnAmt,
-          this.refundMethod,
-          this.reason || null
-        ]
-      );
-      if (!insertReturn.success) throw new Error('Failed to create return record: ' + friendlySqlError(insertReturn.error, 'unknown error'));
-      const returnId = insertReturn.lastId;
-      if (!returnId) throw new Error('Return ID not obtained — check PRIMARY_KEY_MAP.');
+        // 1. Insert purchase_returns record
+        const insertReturn = await this.db.run(
+          `INSERT INTO purchase_returns
+            (farm_id, purchase_id, return_number, return_date, quantity, return_amount, refund_method, reason)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            this.currentFarm.farm_id,
+            purchase.purchase_id,
+            returnNumber,
+            this.returnDate,
+            qty,
+            returnAmt,
+            this.refundMethod,
+            this.reason || null
+          ]
+        );
+        if (!insertReturn.success) throw new Error('Failed to create return record: ' + friendlySqlError(insertReturn.error, 'unknown error'));
+        const returnId = insertReturn.lastId;
+        if (!returnId) throw new Error('Return ID not obtained — check PRIMARY_KEY_MAP.');
 
-      // 2. Remove the returned stock from inventory
-      await this.deductReturnedStock(purchase, qty, returnId, returnNumber);
+        // 2. Remove the returned stock from inventory
+        await this.deductReturnedStock(purchase, qty, returnId, returnNumber);
 
-      // 3. Update purchase order status (quantity/total_amount stay as originally
-      //    purchased — the return is tracked separately via purchase_returns —
-      //    but we flag status so fully-returned orders drop out of the eligible list)
-      const newReturnedTotal = (Number(purchase.returned_quantity) || 0) + qty;
-      const newStatus = newReturnedTotal >= Number(purchase.quantity) ? 'returned' : 'partial_return';
-      await this.db.run(
-        `UPDATE purchase_orders SET status = ? WHERE purchase_id = ?`,
-        [newStatus, purchase.purchase_id]
-      );
+        // 3. Update purchase order status (quantity/total_amount stay as originally
+        //    purchased — the return is tracked separately via purchase_returns —
+        //    but we flag status so fully-returned orders drop out of the eligible list)
+        const newReturnedTotal = (Number(purchase.returned_quantity) || 0) + qty;
+        const newStatus = newReturnedTotal >= Number(purchase.quantity) ? 'returned' : 'partial_return';
+        this.assertOk(await this.db.run(
+          `UPDATE purchase_orders SET status = ? WHERE purchase_id = ?`,
+          [newStatus, purchase.purchase_id]
+        ), 'Could not update the purchase status');
 
-      // 4. Supplier ledger — always post a debit for the returned amount.
-      //    This correctly reduces what you owe if the order was unpaid (credit),
-      //    or shows a receivable from the supplier if it was already paid (cash).
-      if (purchase.supplier_id) {
-        await this.db.addSupplierLedgerEntry({
-          supplier_id: purchase.supplier_id,
-          transaction_date: this.returnDate,
-          description: `Return ${returnNumber} - Purchase #${purchase.purchase_id}${this.reason ? ' - ' + this.reason : ''}`,
-          debit: returnAmt,
-          credit: 0,
-          reference_type: 'return',
-          reference_id: purchase.purchase_id
-        });
-      }
-
-      this.successMessage = `Return ${returnNumber} saved successfully.`;
+        // 4. Supplier ledger — always post a debit for the returned amount.
+        //    This correctly reduces what you owe if the order was unpaid (credit),
+        //    or shows a receivable from the supplier if it was already paid (cash).
+        if (purchase.supplier_id) {
+          this.assertOk(await this.db.addSupplierLedgerEntry({
+            supplier_id: purchase.supplier_id,
+            transaction_date: this.returnDate,
+            description: `Return ${returnNumber} - Purchase #${purchase.purchase_id}${this.reason ? ' - ' + this.reason : ''}`,
+            debit: returnAmt,
+            credit: 0,
+            reference_type: 'return',
+            reference_id: purchase.purchase_id
+          }), 'Could not update the supplier balance');
+        }
+      });
       this.clearSelection();
       await this.loadData();
+      this.successMessage = `Return ${returnNumber} saved successfully.`;
     } catch (error: any) {
       this.errorMessage = 'Failed to save return: ' + error.message;
     } finally {
@@ -259,6 +261,10 @@ export class PurchaseReturnsComponent implements OnInit {
   }
 
   // ── Private Helpers ───────────────────────────────────────────
+  private assertOk(result: any, message: string): any {
+    if (!result?.success) throw new Error(message + ': ' + friendlySqlError(result?.error, 'the database refused the change'));
+    return result;
+  }
 
   private async getNextReturnNumber(): Promise<string> {
     const result = await this.db.get(
@@ -267,6 +273,7 @@ export class PurchaseReturnsComponent implements OnInit {
        WHERE farm_id = ? AND return_number LIKE 'PRET-%'`,
       [this.currentFarm.farm_id]
     );
+    this.assertOk(result, 'Could not allocate a return number');
     const num = result.success && result.data && result.data[0]
       ? result.data[0].next_number
       : 1;
@@ -280,7 +287,7 @@ export class PurchaseReturnsComponent implements OnInit {
     if (purchase.batch_id) {
       const result = await this.adjustBatch(purchase.batch_id, -qty, purchase.product_id, note);
       if (result.success) {
-        await this.db.updateBatchStatuses();
+        this.assertOk(await this.db.updateBatchStatuses(), 'Could not refresh stock status');
         return;
       }
       // Linked batch missing — fall through to FIFO fallback below.
@@ -288,7 +295,7 @@ export class PurchaseReturnsComponent implements OnInit {
 
     // FIFO fallback across the product's active batches
     const batchesResult = await this.db.getBatchesByProduct(purchase.product_id, this.currentFarm.farm_id);
-    if (!batchesResult.success || !batchesResult.data) return;
+    this.assertOk(batchesResult, 'Could not read available stock');
 
     const activeBatches = batchesResult.data
       .filter((b: any) => (b.calculated_status === 'active' || b.calculated_status === 'expiring') && b.quantity > 0)
@@ -299,29 +306,32 @@ export class PurchaseReturnsComponent implements OnInit {
       if (remaining <= 0) break;
       const deduct = Math.min(remaining, batch.quantity || 0);
       const newQty = (batch.quantity || 0) - deduct;
-      await this.db.updateBatch(batch.batch_id, { quantity: newQty });
-      await this.db.addBatchTransaction(
+      this.assertOk(await this.db.updateBatch(batch.batch_id, { quantity: newQty }), 'Could not deduct stock');
+      this.assertOk(await this.db.addBatchTransaction(
         batch.batch_id, purchase.product_id, 'adjustment', deduct, today, returnId, note
-      );
+      ), 'Could not record the stock movement');
       remaining -= deduct;
     }
-    await this.db.updateBatchStatuses();
+    if (remaining > 0) throw new Error('Not enough available stock to return this quantity. Nothing was saved.');
+    this.assertOk(await this.db.updateBatchStatuses(), 'Could not refresh stock status');
   }
 
   private async adjustBatch(batchId: number, delta: number, productId: number, note: string): Promise<{ success: boolean }> {
     const r = await this.db.get('SELECT * FROM product_batches WHERE batch_id = ?', [batchId]);
+    this.assertOk(r, 'Could not read the purchased stock');
     const batch = r.success && r.data && r.data.length > 0 ? r.data[0] : null;
     if (!batch) return { success: false };
 
-    const newQty = Math.max(0, Number(batch.quantity) + delta);
+    if (Number(batch.quantity) + delta < 0) throw new Error('Not enough stock remains in this purchase batch to return this quantity. Nothing was saved.');
+    const newQty = Number(batch.quantity) + delta;
     const appliedDelta = newQty - Number(batch.quantity);
-    await this.db.updateBatch(batchId, { quantity: newQty });
+    this.assertOk(await this.db.updateBatch(batchId, { quantity: newQty }), 'Could not deduct purchased stock');
 
     if (appliedDelta !== 0) {
-      await this.db.addBatchTransaction(
+      this.assertOk(await this.db.addBatchTransaction(
         batchId, productId, 'adjustment', Math.abs(appliedDelta),
         toLocalDateString(), null, note
-      );
+      ), 'Could not record the stock movement');
     }
     return { success: true };
   }

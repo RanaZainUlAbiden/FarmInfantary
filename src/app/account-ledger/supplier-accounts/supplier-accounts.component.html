@@ -151,8 +151,10 @@
               <td class="num">Rs. {{ p.cost_price | number:'1.0-0' }}</td>
               <td class="num">Rs. {{ p.total_amount | number:'1.0-0' }}</td>
               <td>
-                <span class="pill" *ngIf="isPaidOrder(p)">{{ accountLabel(p) }}</span>
-                <span class="pill credit" *ngIf="!isPaidOrder(p)">Credit</span>
+                <span class="pill" [class.credit]="p.settlement_due > 0">{{ p.settlement_status }}</span>
+                <div>Paid Rs. {{ p.settlement_paid | number:'1.0-2' }} · Due Rs. {{ p.settlement_due | number:'1.0-2' }}</div>
+                <div *ngIf="p.settlement_returned">Returned Rs. {{ p.settlement_returned | number:'1.0-2' }}</div>
+                <div *ngIf="p.payment_type === 'cash'">{{ accountLabel(p) }}</div>
               </td>
             </tr>
             <tr *ngIf="purchases.length === 0">
