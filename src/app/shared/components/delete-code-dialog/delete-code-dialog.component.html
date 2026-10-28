@@ -1,8 +1,8 @@
 <dialog #dialog class="dialog-overlay" aria-labelledby="delete-code-title" aria-describedby="delete-code-help" (cancel)="$event.preventDefault();cancel()" (keydown)="trapTab($event)">
  <div class="dialog-box">
   <div class="dialog-icon danger" aria-hidden="true">🔒</div>
-  <h3 id="delete-code-title" class="dialog-title">Delete code required</h3>
-  <p id="delete-code-help" class="dialog-message">This action deletes data permanently. Confirm your delete code to allow deletes on this device for 60 seconds.</p>
+  <h3 id="delete-code-title" class="dialog-title">{{ correction ? 'Authorize ledger correction' : 'Delete code required' }}</h3>
+  <p id="delete-code-help" class="dialog-message">{{ correction ? 'This correction replaces existing stock or ledger records. Confirm your delete code to authorize the correction on this device for 60 seconds. If no code is configured, set one in Staff & security first.' : 'This action deletes data permanently. Confirm your delete code to allow deletes on this device for 60 seconds.' }}</p>
   <form novalidate (ngSubmit)="submit()" (keydown.enter)="onEnter($event)">
    <app-password-field inputId="delete-confirmation-code" label="Delete code" [value]="code" (valueChange)="setCode($event)" [disabled]="isVerifying" [invalid]="!!error" describedBy="delete-code-error" />
    <p id="delete-code-error" class="code-error" role="alert">{{error}}</p>

@@ -161,3 +161,9 @@ Preserve the logo/card identity, visible labels, keyboard focus and password-man
 support. Never persist passwords, cookies or authoritative user/farm/role state in
 browser storage. Never list accounts or invent a public registration policy.
 Backend D7/D8/D14 rules and API authorization override visual convenience.
+
+Purchase settlement uses the existing table/status treatment with compact
+paid/due/returned details. No new financial dashboard or color system is added.
+Correction authorization reuses the native delete-code modal's focus and
+cancellation behavior, with wording that explains the stock/ledger replacement.
+See `docs/BROILER_DISTRIBUTION_AUDIT.md` for measured acceptance and limits.

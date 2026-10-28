@@ -148,8 +148,8 @@
               [(ngModel)]="row.payment_type"
               (ngModelChange)="onPaymentTypeChange(row)"
             >
-              <option value="cash">Paid (Debit)</option>
-              <option value="credit">Unpaid (Credit)</option>
+              <option value="cash">Paid at purchase (Debit)</option>
+              <option value="credit">Unpaid at purchase (Credit)</option>
             </select>
             <!-- Only a PAID order can have come out of an account. An unpaid
                  one has moved no money yet, so there is nothing to pick. -->
@@ -192,12 +192,13 @@
             <td>Rs. {{ o.cost_price | number:'1.0-2' }}</td>
             <td class="amount">Rs. {{ o.total_amount | number:'1.0-0' }}</td>
             <td>
-              <span class="payment-badge" [class.cash]="o.payment_type==='cash'">
-                {{ o.payment_type === 'cash' ? 'Paid (Debit)' : 'Unpaid (Credit)' }}
+              <span class="payment-badge" [class.cash]="o.settlement_due === 0">
+                {{ o.settlement_status }}
               </span>
-              <!-- A paid order shows the account it came out of; no account
-                   shown means it was paid in cash. -->
-              <app-bank-picker [row]="o" [banks]="houseBanks" readonly></app-bank-picker>
+              <small class="settlement-detail">Paid Rs. {{ o.settlement_paid | number:'1.0-2' }} · Due Rs. {{ o.settlement_due | number:'1.0-2' }}</small>
+              <small class="settlement-detail" *ngIf="o.settlement_returned">Returned Rs. {{ o.settlement_returned | number:'1.0-2' }}</small>
+              <small class="settlement-detail" *ngIf="o.settlement_credit">Supplier credit Rs. {{ o.settlement_credit | number:'1.0-2' }}</small>
+              <app-bank-picker *ngIf="o.payment_type === 'cash'" [row]="o" [banks]="houseBanks" readonly></app-bank-picker>
             </td>
             <td>{{ o.notes || '—' }}</td>
             <td><div class="photo-thumb" *ngIf="o.receipt_image" (click)="openImage(o.receipt_image)"><img [src]="o.receipt_image" title="Click to view full"/></div></td>
@@ -259,8 +260,8 @@
             <td class="amount">Rs. {{ (editForm.quantity || 0) * (editForm.cost_price || 0) | number:'1.0-0' }}</td>
             <td>
               <select class="inline-input" [(ngModel)]="editForm.payment_type" (ngModelChange)="onPaymentTypeChange(editForm)">
-                <option value="cash">Paid (Debit)</option>
-                <option value="credit">Unpaid (Credit)</option>
+                <option value="cash">Paid at purchase (Debit)</option>
+                <option value="credit">Unpaid at purchase (Credit)</option>
               </select>
               <ng-container *ngIf="editForm.payment_type === 'cash'">
                 <select class="inline-input" [(ngModel)]="editForm.payment_source">
@@ -284,7 +285,7 @@
               <button class="btn-remove-photo" *ngIf="editForm.receipt_image" (click)="editForm.receipt_image = null">✕</button>
             </td>
             <td class="actions">
-              <button class="btn-save" (click)="saveEdit(o.purchase_id)">Save</button>
+              <button class="btn-save" (click)="requestEdit(o.purchase_id)">Save</button>
               <button class="btn-cancel-edit" (click)="cancelEdit()">Cancel</button>
             </td>
           </ng-container>
@@ -299,6 +300,8 @@
     ></app-pagination>
   </div>
 </div>
+<app-delete-code-dialog *ngIf="correctionId !== null" [correction]="true"
+ (verified)="onCorrectionVerified()" (cancelled)="correctionId=null" />
 
 <app-delete-code-dialog
   *ngIf="showDeleteCodeDialog"

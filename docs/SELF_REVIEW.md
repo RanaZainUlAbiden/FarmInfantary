@@ -1,5 +1,33 @@
 # Codex release self-review — 2026-10-26
 
+## Broiler + Distribution acceptance repairs - 2026-10-28
+
+[Codex] Reviewed source digest
+`101ba961a8ea98fff5be0038eeea69663fad1b5450878529282db63c65a1e6e5`
+under the user's D17 self-review authorization. Statement-derived purchase
+settlement is read-only, supplier-scoped and uses integer paisa; original
+payment flags/cash/bank writers are preserved. Purchase date corrections keep
+statement claims aligned. Overview per-farm chick costs now agree with headline
+and farm-report attribution for Broiler and Layer. Existing native code modal
+guards purchase/sales edits and sales returns; the backend grant and guard/RLS
+remain authoritative. Purchase edits block duplicate saves. Purchase-return
+header/stock/history/status/supplier legs use one transaction, check all failures
+and refuse insufficient stock without partial credit. Frozen DatabaseService
+signatures, schema and staff profile are unchanged.
+
+Evidence: 95/95 scripts (~10,002 reported checks), targeted 8-scenario final
+correction gate/busy-state rerun, 83 backend tests, production build and CSP
+shell checks; 36 populated browser menu contexts and actual-source/live-HTTP
+synthetic farm lifecycle, including 42 health days, closed flock, vouchers,
+returns, broker receipts, internal elimination, assets and loans. Purchase and
+internal-sale corrections leave all measured cash/bank/stock balances unchanged.
+Permission observations were regenerated; 51 keys and inactive staff policy
+remain unchanged. No independent reviewer is claimed. Browser transport failed
+before final visual release checks; those and the shared artifact sync remain
+pending, as documented in BROILER_DISTRIBUTION_AUDIT.md. Live build/API evidence
+is recorded separately after deployment. Concurrency and every PDF permutation
+are not certified by this audit.
+
 Screen reliability follow-up: reviewed source digest
 `e4d91ede9d913e7c1d180757cf422aadafec2a8bd7e2c7fd8383b40b270907ca`.
 The browser bridge bounds report bursts, captures payloads before queuing,

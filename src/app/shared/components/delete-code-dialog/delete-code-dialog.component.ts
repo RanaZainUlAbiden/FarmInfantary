@@ -1,10 +1,11 @@
-import {Component,EventEmitter,Output,ViewChild,ElementRef,AfterViewInit,OnDestroy,ChangeDetectorRef} from '@angular/core';
+import {Component,EventEmitter,Input,Output,ViewChild,ElementRef,AfterViewInit,OnDestroy,ChangeDetectorRef} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {DeleteAuthService} from '../../services/delete-auth.service';
 import {PasswordFieldComponent} from '../password-field/password-field.component';
 @Component({selector:'app-delete-code-dialog',standalone:true,imports:[CommonModule,FormsModule,PasswordFieldComponent],templateUrl:'./delete-code-dialog.component.html',styleUrl:'./delete-code-dialog.component.scss'})
 export class DeleteCodeDialogComponent implements AfterViewInit,OnDestroy {
+ @Input() correction=false;
  @Output() verified=new EventEmitter<void>();@Output() cancelled=new EventEmitter<void>();
  @ViewChild('dialog') dialog?:ElementRef<HTMLDialogElement>;@ViewChild(PasswordFieldComponent) input?:PasswordFieldComponent;
  code='';error='';isVerifying=false;private destroyed=false;private previous:HTMLElement|null=null;private previousOverflow='';

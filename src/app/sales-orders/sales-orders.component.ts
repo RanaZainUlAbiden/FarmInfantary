@@ -71,6 +71,17 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
   editingBillId: number | null = null;
   showDeleteDialog: boolean = false;
   showDeleteCodeDialog: boolean = false;
+  correctionBillId: number | null = null;
+  correctionPrint = false;
+  async requestSave(print = false) {
+    if (this.isSubmitting) return;
+    if (this.isEditMode && this.editingBillId) { this.correctionBillId = this.editingBillId; this.correctionPrint = print; return; }
+    if (print) await this.saveAndPrint(); else await this.saveBill();
+  }
+  async onCorrectionVerified() {
+    const id = this.correctionBillId, print = this.correctionPrint; this.correctionBillId = null;
+    if (id === this.editingBillId && this.isEditMode) { if (print) await this.saveAndPrint(); else await this.saveBill(); }
+  }
   deletingBillId: number | null = null;
   errorMessage: string = '';
   isLoading: boolean = true;
