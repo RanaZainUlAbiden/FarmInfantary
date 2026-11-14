@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { sessionGuard, signedInGuard, adminGuard, teamGuard } from './shared/guards/session.guard';
+import { sessionGuard, moduleGuard, signedInGuard, adminGuard, teamGuard } from './shared/guards/session.guard';
 import { FlockHealthResolver } from './shared/resolvers/flock-health.resolver';
 import { LedgerResolver } from './shared/resolvers/ledger.resolver';
 import { ExpensesResolver } from './shared/resolvers/expenses.resolver';
@@ -36,7 +36,7 @@ export const routes: Routes = [
   {
     path: 'app',
     canActivate: [sessionGuard],
-    canActivateChild: [sessionGuard],
+    canActivateChild: [sessionGuard, moduleGuard],
     loadComponent: () =>
       import('./layout/layout.component')
         .then(m => m.LayoutComponent),
