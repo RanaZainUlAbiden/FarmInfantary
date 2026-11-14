@@ -68,9 +68,11 @@ export function createAdminStore(pool,{onRevokeUser=async()=>{}}={}) {
    admin(actor);return transaction(actor,async c=>{
     const id=(await c.query("SELECT nextval(pg_get_serial_sequence('farms','farm_id')) AS id")).rows[0].id;
     await c.query("SELECT set_config('app.farm_id',$1,true)",[String(id)]);
-    await c.query("INSERT INTO farms(farm_id,farm_name,business_type,password_hash) VALUES($1,$2,$3,'retired-server-identity')",[id,input.farmName,input.businessType]);
+    // A farm with staff seats lets its owner create that many staff accounts; the database trigger enforces the cap.
+    const seats=input.staffSeats??0;
+    await c.query("INSERT INTO farms(farm_id,farm_name,business_type,password_hash,staff_seat_limit,can_admin_add_staff) VALUES($1,$2,$3,'retired-server-identity',$4,$5)",[id,input.farmName,input.businessType,seats,seats>0?1:0]);
     const u=(await c.query(`INSERT INTO users(farm_id,username,password_hash,role) VALUES($1,$2,$3,'farm_admin') RETURNING ${fields}`,[id,input.username,input.passwordHash])).rows[0];
-    await audit(c,actor,id,'farm.created',id,{ownerId:u.user_id,businessType:input.businessType});return {farmId:id,user:u};
+    await audit(c,actor,id,'farm.created',id,{ownerId:u.user_id,businessType:input.businessType,staffSeats:seats});return {farmId:id,user:u};
    });
   },
   async updateFarm(actor,id,input) {

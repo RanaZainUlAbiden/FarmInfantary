@@ -9,7 +9,7 @@ import {BUSINESS_BUNDLES,businessBundle,businessBundleLabel} from '../shared/uti
 export class AdminComponent implements OnInit,OnDestroy {
  root=false;busy=false;error='';message='';view='farms';farms:any[]=[];users:any[]=[];events:any[]=[];catalogue:any[]=[];
  selected:any=null;draft:any={};selectedUser:any=null;grants:any[]=[];pendingStatus='active';invalid=new Set<string>();
- newFarm=false;farmName='';businessType='broiler_distribution';ownerName='';ownerPassword='';staffName='';staffPassword='';replacementPassword='';
+ newFarm=false;staffSeats=0;farmName='';businessType='broiler_distribution';ownerName='';ownerPassword='';staffName='';staffPassword='';replacementPassword='';
  farmMore=false;userMore=false;auditMore=false;private destroyed=false;
  businessBundles=BUSINESS_BUNDLES;businessBundleLabel=businessBundleLabel;
  currentPassword='';newDeleteCode='';deleteConfigured=false;
@@ -42,11 +42,11 @@ export class AdminComponent implements OnInit,OnDestroy {
  }
  private validName(value:string){return /^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$/.test(value.trim());}
  private validPassword(value:string){return [...value].length>=1&&[...value].length<=128;}
- async createFarm(){if(!this.validate([['new-farm-name',!!this.farmName.trim()&&this.farmName.trim().length<=100,'Enter a farm name of 1 to 100 characters.'],['new-owner-name',this.validName(this.ownerName),'Enter a username of 3 to 64 letters, numbers, dots, underscores or hyphens.'],['new-owner-password',this.validPassword(this.ownerPassword),'Use a password of 1 to 128 characters.']]))return;
-  await this.task(async()=>{try{const r=await this.mutation('POST','/api/admin/farms',{farmName:this.farmName,businessType:this.businessType,username:this.ownerName,password:this.ownerPassword});this.farms=(await this.read('/api/admin/farms')).farms;this.farmMore=this.farms.length===50;await this.loadFarm(this.farms.find(f=>f.farm_id===r.farmId));this.newFarm=false;this.farmName=this.ownerName='';}finally{this.ownerPassword='';}},'Farm and administrator created.');
+ async createFarm(){if(!this.validate([['new-farm-name',!!this.farmName.trim()&&this.farmName.trim().length<=100,'Enter a farm name of 1 to 100 characters.'],['new-owner-name',this.validName(this.ownerName),'Enter a username of 3 to 64 letters, numbers, dots, underscores or hyphens.'],['new-owner-password',this.validPassword(this.ownerPassword),'Use a password of 1 to 128 characters.'],['new-staff-seats',Number.isSafeInteger(this.staffSeats)&&this.staffSeats>=0&&this.staffSeats<=1000000,'Enter how many staff accounts the owner may create (0 or more).']]))return;
+  await this.task(async()=>{try{const r=await this.mutation('POST','/api/admin/farms',{farmName:this.farmName,businessType:this.businessType,username:this.ownerName,password:this.ownerPassword,staffSeats:this.staffSeats});this.farms=(await this.read('/api/admin/farms')).farms;this.farmMore=this.farms.length===50;await this.loadFarm(this.farms.find(f=>f.farm_id===r.farmId));this.newFarm=false;this.farmName=this.ownerName='';}finally{this.ownerPassword='';}},'Farm and administrator created.');
   if(!this.error)this.focus('farm-editor-title');
  }
- async saveFarm(){if(!this.validate([['farm-name',!!this.draft.farmName?.trim()&&this.draft.farmName.trim().length<=100,'Enter a farm name.'],['seat-limit',Number.isSafeInteger(this.draft.seatLimit)&&this.draft.seatLimit>=0,'Enter a whole staff seat limit of zero or more.']]))return;
+ async saveFarm(){if(!this.validate([['farm-name',!!this.draft.farmName?.trim()&&this.draft.farmName.trim().length<=100,'Enter a farm name.'],['seat-limit',Number.isSafeInteger(this.draft.seatLimit)&&this.draft.seatLimit>=0,'Enter a whole number of staff accounts (0 or more).']]))return;this.draft.allowStaffCreation=this.draft.seatLimit>0;
   await this.task(async()=>{await this.mutation('PUT',`/api/admin/farms/${this.selected.farm_id}`,this.draft);const f=(await this.read('/api/admin/farms/'+this.selected.farm_id)).farm;this.farms=this.farms.map(x=>x.farm_id===f.farm_id?f:x);await this.loadFarm(f);},'Farm settings saved.');}
  async createStaff(){if(!this.validate([['new-staff-name',this.validName(this.staffName),'Enter a valid staff username.'],['new-staff-password',this.validPassword(this.staffPassword),'Use a staff password of 1 to 128 characters.']]))return;
   await this.task(async()=>{try{await this.mutation('POST',this.root?`/api/admin/farms/${this.selected.farm_id}/staff`:'/api/account/staff',{username:this.staffName,password:this.staffPassword});this.staffName='';await this.reloadUsers();}finally{this.staffPassword='';}},'Staff account created.');}

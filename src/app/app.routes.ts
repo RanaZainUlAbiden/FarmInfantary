@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { sessionGuard, moduleGuard, signedInGuard, adminGuard, teamGuard } from './shared/guards/session.guard';
+import { sessionGuard, moduleGuard, signedInGuard, adminGuard } from './shared/guards/session.guard';
 import { FlockHealthResolver } from './shared/resolvers/flock-health.resolver';
 import { LedgerResolver } from './shared/resolvers/ledger.resolver';
 import { ExpensesResolver } from './shared/resolvers/expenses.resolver';
@@ -42,6 +42,8 @@ export const routes: Routes = [
         .then(m => m.LayoutComponent),
     children: [
       {path:'brokers',loadComponent:()=>import('./brokers/brokers.component').then(m=>m.BrokersComponent)},
+      // Staff & security lives inside the app so the sidebar, module tabs and header stay in place.
+      {path:'team',loadComponent:()=>import('./team/team.component').then(m=>m.TeamComponent)},
       {
         path: '',
         redirectTo: 'flock-health',
@@ -376,7 +378,8 @@ export const routes: Routes = [
   },
   // ── Fallback Routes (Outside App) ──────────────────────
   {path:'admin',canActivate:[adminGuard],loadComponent:()=>import('./admin/admin.component').then(m=>m.AdminComponent)},
-  {path:'team',canActivate:[teamGuard],loadComponent:()=>import('./admin/admin.component').then(m=>m.AdminComponent)},
+  // Old address; the team screen now lives at /app/team.
+  {path:'team',redirectTo:'app/team',pathMatch:'full'},
   {
     path: 'access',
     canActivate: [signedInGuard],

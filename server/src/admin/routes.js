@@ -41,7 +41,10 @@ export function registerAdminRoutes(app,{pool,session,onRevokeUser}) {
  app.get('/api/admin/farms',root,async req=>{const p=page(req);return {success:true,farms:await store.listFarms(req.adminActor,p.before,p.limit)};});
  app.get('/api/admin/farms/:farmId',root,async req=>({success:true,farm:await store.getFarm(req.adminActor,id(req.params.farmId))}));
  app.post('/api/admin/farms',root,async(req,reply)=>{
-  const b=userInput(req.body,['farmName','businessType']);b.farmName=name(b.farmName);b.businessType=type(b.businessType);
+  const b=userInput(req.body,['farmName','businessType','staffSeats']);b.farmName=name(b.farmName);b.businessType=type(b.businessType);
+  // How many staff accounts this farm's owner may create. 0 (or omitted) means none until the platform administrator raises it.
+  b.staffSeats=b.staffSeats===undefined?0:b.staffSeats;
+  if(!Number.isSafeInteger(b.staffSeats)||b.staffSeats<0||b.staffSeats>1_000_000)bad('Enter a whole number of staff accounts from 0 to 1,000,000.');
   return withPassword(b,input=>store.createFarm(req.adminActor,input),reply);
  });
  app.put('/api/admin/farms/:farmId',root,async req=>{

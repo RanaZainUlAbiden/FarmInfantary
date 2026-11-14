@@ -1,0 +1,54 @@
+// Matches the other screens: white cards, #e0e0e0 borders, the app's green.
+.module-container { max-width: 900px; }
+
+.module-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+  h3 { font-size: 20px; font-weight: 600; color: #1a1a1a; margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: #888; margin: 0; }
+}
+
+.team-card {
+  background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; margin-bottom: 16px;
+  h4 { font-size: 16px; font-weight: 600; color: #1a1a1a; margin: 0 0 12px; }
+}
+.team-info { font-size: 13px; color: #666; line-height: 1.5; margin: 0 0 14px; }
+.team-empty { font-size: 13px; color: #888; margin: 6px 0 0; }
+.team-loading { padding: 24px; text-align: center; color: #888; font-size: 14px; }
+.team-error { padding: 12px 14px; margin-bottom: 14px; border-radius: 8px; background: #fdecea; color: #b3261e; font-size: 14px; line-height: 1.5; }
+.team-ok { padding: 12px 14px; margin-bottom: 14px; border-radius: 8px; background: #e8f5e9; color: #1a5c38; font-size: 14px; }
+
+// Seats
+.seats-count {
+  display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px;
+  strong { font-size: 32px; font-weight: 700; color: #1a5c38; line-height: 1; }
+  span { font-size: 14px; color: #666; }
+}
+.seats-bar { height: 10px; background: #eef2f1; border-radius: 999px; overflow: hidden; }
+.seats-fill { height: 100%; background: #1a5c38; border-radius: 999px; transition: width .3s ease; &.full { background: #c77700; } }
+.seats-note { font-size: 13px; color: #444; margin: 12px 0 0; line-height: 1.5; &.full { color: #8a5300; font-weight: 600; } &.muted { color: #888; } }
+
+// Table
+.table-card {
+  border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; margin-bottom: 12px;
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f8f9fa; padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; color: #666; border-bottom: 1px solid #e0e0e0; }
+  td { padding: 11px 12px; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
+  tr:last-child td { border-bottom: 0; }
+}
+.pill { display: inline-block; padding: 2px 10px; border-radius: 999px; background: #e8f5e9; color: #1a5c38; font-size: 12px; font-weight: 600; &.off { background: #f1f1f1; color: #777; } }
+
+// Forms
+fieldset { border: 0; min-width: 0; padding: 0; margin: 0; }
+.team-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; margin-bottom: 4px; }
+.btn-primary, .btn-secondary {
+  min-height: 42px; padding: 10px 18px; border-radius: 8px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  &:disabled { opacity: .55; cursor: not-allowed; }
+}
+.btn-primary { background: #1a5c38; color: #fff; border: 1px solid #1a5c38; &:hover:not(:disabled) { background: #144d2e; } }
+.btn-secondary { background: #fff; color: #1a5c38; border: 1px solid #1a5c38; }
+
+@media (max-width: 640px) {
+  .team-grid { grid-template-columns: minmax(0, 1fr); }
+  .team-card { padding: 16px; }
+  .btn-primary, .btn-secondary { width: 100%; }
+}

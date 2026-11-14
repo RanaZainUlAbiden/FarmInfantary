@@ -290,7 +290,7 @@ export class LayoutComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.activeBusinessTab=activeBusinessModule(this.savedBusinessType,localStorage.getItem('activeBusinessTab'));
     const menus:Record<string,any[]>={broiler:this.broilerMenu,layer:this.layerMenu,distribution:this.distributionMenu,overview:this.overviewMenu};
-    if(!menus[this.activeBusinessTab].some(m=>m.route===routeOwner)){
+    if(routeOwner!=='team'&&!menus[this.activeBusinessTab].some(m=>m.route===routeOwner)){
       this.activeBusinessTab=this.availableBusinessTabs.find(tab=>menus[tab].some(m=>m.route===routeOwner))||this.availableBusinessTabs[0];
     }
     localStorage.setItem('activeBusinessTab',this.activeBusinessTab);
@@ -324,7 +324,8 @@ export class LayoutComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const remembered = this.lastRouteByTab[this.activeBusinessTab];
     const isValidForTab = remembered && this.menuItems.some((m: any) => m.route === remembered);
-    const validRequested = requestedRoute && this.menuItems.some(m => m.route === routeOwner);
+    // 'team' (Staff & security) is not in any module menu, but it is a valid screen inside the app.
+    const validRequested = requestedRoute && (routeOwner === 'team' || this.menuItems.some(m => m.route === routeOwner));
     const targetRoute = validRequested ? routeOwner : isValidForTab ? remembered : (this.menuItems[0]?.route || 'flock-health');
 
     const currentUrl = this.router.url.split('/').pop();

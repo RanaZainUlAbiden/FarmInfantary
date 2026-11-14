@@ -121,7 +121,8 @@
     </nav>
 
     <div class="sidebar-footer">
-      <a class="nav-item" href="/team" aria-label="Staff & security" title="Manage staff & security"><span class="nav-icon">👥</span><span class="nav-label" *ngIf="!sidebarCollapsed">Staff &amp; security</span></a>
+      <button type="button" class="nav-item" [class.active]="activeRoute === 'team'" (click)="navigate('team')" aria-label="Staff & security"
+        [attr.aria-current]="activeRoute === 'team' ? 'page' : null" [title]="sidebarCollapsed ? 'Staff & security' : ''"><span class="nav-icon">👥</span><span class="nav-label" *ngIf="!sidebarCollapsed">Staff &amp; security</span></button>
       <!-- License Status in Footer (Collapsed Mode) -->
       <div class="license-status-collapsed" *ngIf="sidebarCollapsed" [title]="licenseStatus">
         <span class="status-icon-small">{{ isLicenseActivated ? '✅' : (showLicenseWarning ? '⚠️' : '🚀') }}</span>
@@ -162,7 +163,7 @@
     </div>
     <div class="content-body">
       <p *ngIf="exportMessage" class="export-notice" role="status">{{exportMessage}}</p>
-      <div *ngIf="!currentFlock() && !isDistributionMode && !isOverviewMode" class="no-flock-message">
+      <div *ngIf="!currentFlock() && !isDistributionMode && !isOverviewMode && activeRoute !== 'team'" class="no-flock-message">
         <p>{{ isLayerMode ? 'No batch found. Create your first batch to get started.' : 'No flock found. Create your first flock to get started.' }}</p>
         <button class="btn-primary" (click)="goToFlockManagement()">
           + {{ isLayerMode ? 'Create First Batch' : 'Create First Flock' }}

@@ -1,0 +1,92 @@
+<div class="module-container" (keydown.enter)="onEnter($event)">
+
+  <div class="module-header">
+    <div>
+      <h3>Staff &amp; security</h3>
+      <p class="subtitle">{{ farm?.farm_name }}</p>
+    </div>
+  </div>
+
+  <p class="team-error" role="alert" *ngIf="error">{{ error }}</p>
+  <p class="team-ok" role="status" *ngIf="message && !error">{{ message }}</p>
+
+  <div class="team-loading" *ngIf="loading">Loading your team…</div>
+
+  <ng-container *ngIf="!loading && farm">
+
+    <!-- How many staff accounts this farm may have, set by the platform administrator -->
+    <section class="team-card seats-card" aria-labelledby="seats-title">
+      <h4 id="seats-title">Staff accounts</h4>
+      <ng-container *ngIf="limit > 0; else noSeats">
+        <div class="seats-count"><strong>{{ used }}</strong><span>of {{ limit }} used</span></div>
+        <div class="seats-bar" role="progressbar" aria-valuemin="0" [attr.aria-valuemax]="limit" [attr.aria-valuenow]="used"
+          [attr.aria-label]="used + ' of ' + limit + ' staff accounts used'">
+          <div class="seats-fill" [class.full]="remaining === 0" [style.width.%]="percent"></div>
+        </div>
+        <p class="seats-note" *ngIf="remaining > 0">You can create {{ remaining }} more staff account{{ remaining === 1 ? '' : 's' }}.</p>
+        <p class="seats-note full" *ngIf="remaining === 0">All {{ limit }} staff accounts are in use. To add more, contact your platform administrator.</p>
+      </ng-container>
+      <ng-template #noSeats>
+        <p class="seats-note">No staff accounts have been set up for this farm. To add some, contact your platform administrator.</p>
+      </ng-template>
+      <p class="seats-note muted" *ngIf="farm.status !== 'active'">This farm is not active, so new staff accounts cannot be created.</p>
+    </section>
+
+    <!-- Staff list -->
+    <section class="team-card" aria-labelledby="staff-title">
+      <h4 id="staff-title">Your staff</h4>
+      <p class="team-info">Staff business access is not enabled in this release. Accounts and permissions can be prepared here.</p>
+      <div class="table-card" *ngIf="staffList.length; else noStaff">
+        <table>
+          <thead><tr><th>Username</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let u of staffList">
+              <td>{{ u.username }}</td>
+              <td><span class="pill" [class.off]="u.status !== 'active'">{{ u.status }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noStaff><p class="team-empty">No staff accounts yet.</p></ng-template>
+      <button type="button" class="btn-secondary" *ngIf="more" [disabled]="busy" (click)="loadMore()">Load more</button>
+    </section>
+
+    <!-- Create a staff account -->
+    <section class="team-card" aria-labelledby="create-title" *ngIf="canCreate">
+      <h4 id="create-title">Add a staff account</h4>
+      <form novalidate (ngSubmit)="createStaff()">
+        <fieldset [disabled]="busy">
+          <div class="team-grid">
+            <div class="auth-field">
+              <label for="team-staff-name">Staff username</label>
+              <input id="team-staff-name" name="staffName" [(ngModel)]="staffName" autocomplete="off" maxlength="64"
+                [attr.aria-invalid]="invalid.has('team-staff-name')" />
+            </div>
+            <app-password-field inputId="team-staff-password" label="Staff password" autocomplete="new-password"
+              [(value)]="staffPassword" [disabled]="busy" [invalid]="invalid.has('team-staff-password')" />
+          </div>
+          <button type="submit" class="btn-primary">{{ busy ? 'Working…' : 'Create staff account' }}</button>
+        </fieldset>
+      </form>
+    </section>
+
+    <!-- Delete code -->
+    <section class="team-card" aria-labelledby="delete-title">
+      <h4 id="delete-title">Delete authorization</h4>
+      <p class="team-info">{{ deleteConfigured ? 'A delete code is configured.' : 'Set a delete code before deleting business records.' }}
+        Confirming the code allows deletes on this device for 60 seconds. No default code is accepted.</p>
+      <form novalidate (ngSubmit)="saveDeleteCode()">
+        <fieldset [disabled]="busy">
+          <div class="team-grid">
+            <app-password-field inputId="team-current-password" label="Current account password"
+              [(value)]="currentPassword" [disabled]="busy" [invalid]="invalid.has('team-current-password')" />
+            <app-password-field inputId="team-delete-code" label="{{ deleteConfigured ? 'New delete code' : 'Delete code' }}" autocomplete="new-password"
+              [(value)]="newDeleteCode" [disabled]="busy" [invalid]="invalid.has('team-delete-code')" />
+          </div>
+          <button type="submit" class="btn-primary">Save delete code</button>
+        </fieldset>
+      </form>
+    </section>
+
+  </ng-container>
+</div>
