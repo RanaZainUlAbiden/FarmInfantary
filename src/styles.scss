@@ -81,10 +81,19 @@ body {
   table.fi-cards td:empty { display: none !important; }
   table.fi-cards td input, table.fi-cards td select, table.fi-cards td textarea { flex: 1 1 auto; min-width: 0; max-width: 62%; }
   table.fi-cards td > button, table.fi-cards td > a { margin-left: 6px; }
+  /* Summary tiles: two per row so amounts like "Rs. -1,500" fit on one line. Forms: one field per row. */
+  .summary-grid, .egg-stock-summary { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .summary-grid.cash-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .form-grid, .form-grid-3 { grid-template-columns: minmax(0, 1fr) !important; }
 }
 @media screen and (max-width: 768px) {
   /* 16px stops iPhones zooming the page when an input is tapped; 44px is a comfortable fingertip. */
   input:not([type=checkbox]):not([type=radio]), select, textarea { font-size: 16px !important; min-height: 44px; }
   button, .btn-primary, .btn-secondary { min-height: 44px; }
   body { -webkit-text-size-adjust: 100%; }
+  /* Keyboard shortcuts mean nothing on a phone. */
+  .shortcuts-hint { display: none !important; }
+  /* The header already shows account status; the menu list needs the room. */
+  .app-layout .sidebar .license-status-bar { display: none; }
+  .app-layout .sidebar-footer a.nav-item { color: inherit; text-decoration: none; }
 }
