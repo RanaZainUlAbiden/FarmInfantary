@@ -5,7 +5,7 @@ export const PASSWORD_OPTIONS = Object.freeze({
   hashLength: 32,
 });
 export function validNewPassword(value) {
-  return typeof value === 'string' && [...value].length >= 15
+  return typeof value === 'string' && [...value].length >= 1
     && [...value].length <= 128 && Buffer.byteLength(value, 'utf8') <= 1024;
 }
 export function validLoginPassword(value) {
@@ -13,7 +13,7 @@ export function validLoginPassword(value) {
     && Buffer.byteLength(value, 'utf8') <= 1024;
 }
 export async function hashPassword(password) {
-  if (!validNewPassword(password)) throw new Error('Use a password of 15 to 128 characters.');
+  if (!validNewPassword(password)) throw new Error('Use a password of 1 to 128 characters.');
   return argon2.hash(password, PASSWORD_OPTIONS);
 }
 export function validDeleteCode(code) {

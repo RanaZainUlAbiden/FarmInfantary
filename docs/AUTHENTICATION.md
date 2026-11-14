@@ -86,7 +86,7 @@ credentials or adding another owner. Remove bootstrap credentials afterward.
 The implementation is tested in disposable schemas; no real admin was created.
 
 Usernames use 3–64 ASCII letters/digits/dots/underscores/hyphens, starting with a
-letter/digit, and are case-insensitive. New passwords use 15–128 Unicode code
+letter/digit, and are case-insensitive. New passwords use 1–128 Unicode code
 points, at most 1,024 UTF-8 bytes. Whitespace remains part of the password.
 Farm/staff provisioning and seat limits belong to the dedicated admin path.
 

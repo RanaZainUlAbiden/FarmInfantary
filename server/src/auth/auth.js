@@ -70,7 +70,7 @@ export async function createAuthentication(pool, env, options = {}) {
       const user = await resolve(req);
       if (!user) return fail(reply,401,'Please sign in.');
       const old = req.body?.currentPassword, next = req.body?.newPassword;
-      if (!validLoginPassword(old) || !validNewPassword(next)) return fail(reply,400,'Use a new password of 15 to 128 characters.');
+      if (!validLoginPassword(old) || !validNewPassword(next)) return fail(reply,400,'Use a new password of 1 to 128 characters.');
       if (!await store.throttle(req.ip,String(user.userId),'password')) return fail(reply,429,'Too many attempts. Try again later.');
       const result = await work(async()=>{
         const record = await store.findUser(user.username);

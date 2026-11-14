@@ -41,14 +41,14 @@ export class AdminComponent implements OnInit,OnDestroy {
   if(first){this.error=first[2];this.focus(first[0]);return false;}return true;
  }
  private validName(value:string){return /^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$/.test(value.trim());}
- private validPassword(value:string){return [...value].length>=15&&[...value].length<=128;}
- async createFarm(){if(!this.validate([['new-farm-name',!!this.farmName.trim()&&this.farmName.trim().length<=100,'Enter a farm name of 1 to 100 characters.'],['new-owner-name',this.validName(this.ownerName),'Enter a username of 3 to 64 letters, numbers, dots, underscores or hyphens.'],['new-owner-password',this.validPassword(this.ownerPassword),'Use a password of 15 to 128 characters.']]))return;
+ private validPassword(value:string){return [...value].length>=1&&[...value].length<=128;}
+ async createFarm(){if(!this.validate([['new-farm-name',!!this.farmName.trim()&&this.farmName.trim().length<=100,'Enter a farm name of 1 to 100 characters.'],['new-owner-name',this.validName(this.ownerName),'Enter a username of 3 to 64 letters, numbers, dots, underscores or hyphens.'],['new-owner-password',this.validPassword(this.ownerPassword),'Use a password of 1 to 128 characters.']]))return;
   await this.task(async()=>{try{const r=await this.mutation('POST','/api/admin/farms',{farmName:this.farmName,businessType:this.businessType,username:this.ownerName,password:this.ownerPassword});this.farms=(await this.read('/api/admin/farms')).farms;this.farmMore=this.farms.length===50;await this.loadFarm(this.farms.find(f=>f.farm_id===r.farmId));this.newFarm=false;this.farmName=this.ownerName='';}finally{this.ownerPassword='';}},'Farm and administrator created.');
   if(!this.error)this.focus('farm-editor-title');
  }
  async saveFarm(){if(!this.validate([['farm-name',!!this.draft.farmName?.trim()&&this.draft.farmName.trim().length<=100,'Enter a farm name.'],['seat-limit',Number.isSafeInteger(this.draft.seatLimit)&&this.draft.seatLimit>=0,'Enter a whole staff seat limit of zero or more.']]))return;
   await this.task(async()=>{await this.mutation('PUT',`/api/admin/farms/${this.selected.farm_id}`,this.draft);const f=(await this.read('/api/admin/farms/'+this.selected.farm_id)).farm;this.farms=this.farms.map(x=>x.farm_id===f.farm_id?f:x);await this.loadFarm(f);},'Farm settings saved.');}
- async createStaff(){if(!this.validate([['new-staff-name',this.validName(this.staffName),'Enter a valid staff username.'],['new-staff-password',this.validPassword(this.staffPassword),'Use a staff password of 15 to 128 characters.']]))return;
+ async createStaff(){if(!this.validate([['new-staff-name',this.validName(this.staffName),'Enter a valid staff username.'],['new-staff-password',this.validPassword(this.staffPassword),'Use a staff password of 1 to 128 characters.']]))return;
   await this.task(async()=>{try{await this.mutation('POST',this.root?`/api/admin/farms/${this.selected.farm_id}/staff`:'/api/account/staff',{username:this.staffName,password:this.staffPassword});this.staffName='';await this.reloadUsers();}finally{this.staffPassword='';}},'Staff account created.');}
  private async reloadUsers(){this.selectedUser=null;if(this.root){const f=(await this.read('/api/admin/farms/'+this.selected.farm_id)).farm;this.farms=this.farms.map(x=>x.farm_id===f.farm_id?f:x);await this.loadFarm(f);}
   else{const r=await this.read('/api/account/staff');this.selected=r.farm;this.users=r.users;this.userMore=r.users.length===50;}}
@@ -58,7 +58,7 @@ export class AdminComponent implements OnInit,OnDestroy {
  toggleGrant(g:any,flag:string,event:Event){g[flag]=(event.target as HTMLInputElement).checked;if(flag==='view'&&!g.view)g.create=g.edit=g.delete=false;if(flag!=='view'&&g[flag])g.view=true;this.render();}
  async savePermissions(){await this.task(async()=>{await this.mutation('PUT',`/api/admin/users/${this.selectedUser.user_id}/permissions`,{expectedVersion:this.selectedUser.auth_version,grants:this.grants.map(g=>({key:g.permission_key,view:g.view,create:g.create,edit:g.edit,delete:g.delete}))});await this.reloadUsers();},'Permissions saved. Changed permissions sign the staff user out.');}
  async saveStatus(){await this.task(async()=>{await this.mutation('PUT',`/api/admin/users/${this.selectedUser.user_id}/status`,{expectedVersion:this.selectedUser.auth_version,status:this.pendingStatus});await this.reloadUsers();},'User status saved.');}
- async resetPassword(){if(!this.validate([['replacement-password',this.validPassword(this.replacementPassword),'Use a new password of 15 to 128 characters.']]))return;
+ async resetPassword(){if(!this.validate([['replacement-password',this.validPassword(this.replacementPassword),'Use a new password of 1 to 128 characters.']]))return;
   await this.task(async()=>{try{await this.mutation('POST',`/api/admin/users/${this.selectedUser.user_id}/password`,{expectedVersion:this.selectedUser.auth_version,password:this.replacementPassword});await this.reloadUsers();}finally{this.replacementPassword='';}},'Password changed. Existing sessions have ended.');}
  async more(kind:string){await this.task(async()=>{
   if(kind==='farms'){const r=await this.read('/api/admin/farms?before='+this.farms.at(-1).farm_id);this.farms.push(...r.farms);this.farmMore=r.farms.length===50;}

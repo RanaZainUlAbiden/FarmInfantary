@@ -16,9 +16,9 @@ test('passwords use salted Argon2id and reject wrong, legacy or malformed hashes
  assert.equal(await verifyPassword(a.replace('t=3','t=999999'),password),false);
 });
 test('new passwords have explicit length bounds and preserve whitespace',async()=>{
- assert.equal(validNewPassword('short'),false);assert.equal(validNewPassword('x'.repeat(129)),false);
+ assert.equal(validNewPassword('short'),true);assert.equal(validNewPassword(''),false);assert.equal(validNewPassword('x'.repeat(129)),false);
  assert.equal(validNewPassword('x'.repeat(15)),true);assert.equal(validNewPassword('🐓'.repeat(128)),true);
- await assert.rejects(hashPassword('short'),/15 to 128/);
+ await assert.rejects(hashPassword(''),/1 to 128/);
  const hash=await hashPassword('  whitespace is part of my password  ');
  assert.equal(await verifyPassword(hash,'whitespace is part of my password'),false);
 });

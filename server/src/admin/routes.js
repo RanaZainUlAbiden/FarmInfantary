@@ -11,7 +11,7 @@ function body(value,keys) {
 const status=v=>{if(!['active','suspended'].includes(v))bad('Choose active or suspended.');return v;};
 const name=v=>{if(typeof v!=='string'||v.trim().length<1||v.trim().length>100||/[\x00-\x1f]/.test(v))bad('Enter a farm name of 1 to 100 characters.');return v.trim();};
 const type=v=>{if(!['broiler_distribution','layer_distribution','all'].includes(v))bad('Choose Broiler + Distribution, Layers + Distribution, or all three modules.');return v;};
-function userInput(value,extra=[]) {const b=body(value,['username','password',...extra]),username=normalizeUsername(b.username);if(!username||!validNewPassword(b.password))bad('Use a valid username and a password of 15 to 128 characters.');return {...b,username};}
+function userInput(value,extra=[]) {const b=body(value,['username','password',...extra]),username=normalizeUsername(b.username);if(!username||!validNewPassword(b.password))bad('Use a valid username and a password of 1 to 128 characters.');return {...b,username};}
 export function registerAdminRoutes(app,{pool,session,onRevokeUser}) {
  const store=createAdminStore(pool,{onRevokeUser});
  const scope=roles=>({bodyLimit:16384,preHandler:async(req,reply)=>{
@@ -55,7 +55,7 @@ export function registerAdminRoutes(app,{pool,session,onRevokeUser}) {
  app.post('/api/account/staff',owner,async(req,reply)=>withPassword(userInput(req.body),input=>store.createStaff(req.adminActor,req.adminActor.farmId,input),reply));
  app.put('/api/admin/users/:userId/status',root,async req=>{const b=body(req.body,['status','expectedVersion']);return {success:true,...await store.setStatus(req.adminActor,id(req.params.userId),{status:status(b.status),expectedVersion:id(b.expectedVersion)})};});
  app.post('/api/admin/users/:userId/password',root,async(req,reply)=>{
-  const b=body(req.body,['password','expectedVersion']);if(!validNewPassword(b.password))bad('Use a password of 15 to 128 characters.');b.expectedVersion=id(b.expectedVersion);
+  const b=body(req.body,['password','expectedVersion']);if(!validNewPassword(b.password))bad('Use a password of 1 to 128 characters.');b.expectedVersion=id(b.expectedVersion);
   return withPassword(b,input=>store.resetPassword(req.adminActor,id(req.params.userId),input),reply);
  });
  app.get('/api/admin/permissions',root,async req=>({success:true,permissions:await store.catalogue(req.adminActor)}));
