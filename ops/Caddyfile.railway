@@ -21,19 +21,25 @@
    }
   }
  }
+ # Built files carry a content hash in their name (main-ABC123XY.js), so a file
+ # with that name never changes: browsers may keep it for a year instead of
+ # re-checking each one over a slow connection. The `file` matcher means a missing
+ # (old) chunk that falls back to index.html is never cached as immutable.
+ @hashed {
+  path_regexp hashed ^/[A-Za-z0-9_.-]+-[A-Z0-9]{8}\.(js|css)$
+  file {
+   root /srv
+  }
+ }
+ handle @hashed {
+  root * /srv
+  header Cache-Control "public, max-age=31536000, immutable"
+  file_server
+ }
  handle {
   root * /srv
   try_files {path} /index.html
   header Cache-Control "no-cache"
-  # Built files carry a content hash in their name (main-ABC123XY.js), so a file
-  # with that name never changes: browsers may keep it for a year instead of
-  # re-checking each one over a slow connection. The `file` matcher means a missing
-  # (old) chunk that falls back to index.html is never cached as immutable.
-  @hashed {
-   path_regexp hashed ^/[A-Za-z0-9_.-]+-[A-Z0-9]{8}\.(js|css)$
-   file
-  }
-  header @hashed Cache-Control "public, max-age=31536000, immutable"
   file_server
  }
 }
