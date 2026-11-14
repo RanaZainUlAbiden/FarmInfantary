@@ -8,6 +8,9 @@
     <a class="btn-banner-activate" href="/login">Sign in again</a>
   </div>
 
+  <!-- Phones only (see layout.component.scss): dark area behind the open menu. -->
+  <div class="sidebar-backdrop" *ngIf="!sidebarCollapsed" (click)="toggleSidebar()" aria-hidden="true"></div>
+
   <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
 
     <button type="button" class="sidebar-header" (click)="toggleSidebar()"
@@ -143,6 +146,8 @@
     </div>
     <div class="content-header">
       <div class="header-left">
+        <button type="button" class="mobile-menu-btn" (click)="toggleSidebar()"
+          aria-label="Open menu" [attr.aria-expanded]="!sidebarCollapsed">☰</button>
         <h2>{{ currentFarm?.farm_name }}</h2>
         <span class="flock-badge" *ngIf="currentFlock() && !isDistributionMode && !isOverviewMode">
           {{ currentFlock().flock_name || currentFlock().batch_name }}

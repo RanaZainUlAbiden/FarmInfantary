@@ -680,14 +680,30 @@ app-layout .sidebar.collapsed {
 .app-layout button.nav-item.active { background:rgba(255,255,255,.15); }
 .app-layout button.nav-item:hover { background:rgba(255,255,255,.1); }
 .app-layout button.nav-item:focus-visible, .app-layout button.sidebar-header:focus-visible { outline:2px solid white; outline-offset:-3px; }
+.app-layout .mobile-menu-btn, .app-layout .sidebar-backdrop { display:none; }
+/* Phones: the menu is a slide-in drawer opened from the ☰ button, not a permanent
+   icon strip. Closed, the content gets the full screen width. */
 @media (max-width:768px) {
   .app-layout { position:relative; }
-  .app-layout .sidebar { position:absolute; inset:0 auto 0 0; z-index:1200; width:240px; min-width:240px; background:#1a5c38; }
-  .app-layout .sidebar.collapsed { width:60px; min-width:60px; }
-  .app-layout .main-content { margin-left:60px; }
+  .app-layout .sidebar { position:fixed; inset:0 auto 0 0; z-index:1200; width:min(300px,86vw); min-width:0;
+    background:#1a5c38; overflow-y:auto; overscroll-behavior:contain; transition:transform .22s ease, visibility .22s; }
+  .app-layout .sidebar.collapsed { width:min(300px,86vw); min-width:0; transform:translateX(-100%); visibility:hidden; }
+  .app-layout .sidebar-backdrop { display:block; position:fixed; inset:0; z-index:1100; background:rgba(0,0,0,.45); }
+  .app-layout .mobile-menu-btn { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto;
+    width:44px; height:44px; border:1px solid var(--fi-border); border-radius:10px; background:var(--fi-surface);
+    color:var(--fi-primary); font-size:22px; line-height:1; cursor:pointer; }
+  .app-layout .mobile-menu-btn:focus-visible { outline:2px solid var(--fi-primary); outline-offset:2px; }
+  .app-layout .main-content { margin-left:0; width:100%; min-width:0; }
   .app-layout .content-body { padding:12px; }
-  .app-layout .content-header { padding:12px; flex-wrap:wrap; gap:8px; }
-  .app-layout .header-left { min-width:0; flex-wrap:wrap; gap:8px; }
-  .app-layout .business-tab { min-width:0; padding:10px 4px; font-size:11px; }
+  .app-layout .content-header { padding:10px 12px; flex-wrap:wrap; gap:8px; }
+  .app-layout .header-left { min-width:0; flex:1 1 auto; flex-wrap:wrap; gap:8px; align-items:center; }
+  .app-layout .header-left h2 { font-size:17px; flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* Four module tabs share one row: icon above label, comfortable to tap. */
+  .app-layout .business-tabs { display:flex; }
+  .app-layout .business-tab { flex:1 1 0; min-width:0; min-height:56px; padding:8px 2px; font-size:11px; line-height:1.25;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; white-space:normal; text-align:center; }
+  /* Drawer menu: roomy rows, and no drag-to-reorder instructions cluttering a small screen. */
+  .app-layout .sidebar .nav-item { min-height:48px; }
+  .app-layout .menu-order-feedback { display:none; }
 }
 .export-notice { padding:12px 16px; background:var(--fi-soft); color:var(--fi-primary); margin-bottom:16px; border-radius:8px; }

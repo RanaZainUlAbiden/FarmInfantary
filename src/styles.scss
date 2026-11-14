@@ -52,3 +52,39 @@ body {
 .auth-link { margin-top: 12px; padding: 8px 0; border: 0; color: var(--fi-primary); background: transparent; font: inherit; font-size: 13px; cursor: pointer; }
 .auth-link:disabled { opacity: .6; cursor: not-allowed; }
 @media (max-width: 480px) { .auth-card { padding: 28px 22px; } }
+
+/* ── Phone layout ────────────────────────────────────────────────────────
+   Tables get class `fi-cards` and per-cell `data-label` from
+   shared/utils/responsive-tables.ts. On a phone each row becomes a card of
+   "Label  value" lines instead of a wide, cut-off grid. Desktop is untouched. */
+@media screen and (max-width: 640px) {
+  .table-card:has(> table.fi-cards), .table-wrapper:has(> table.fi-cards) {
+    overflow: visible !important; background: transparent !important; box-shadow: none !important; padding: 0 !important; border: 0 !important;
+  }
+  table.fi-cards, table.fi-cards tbody, table.fi-cards tfoot { display: block !important; width: 100% !important; min-width: 0 !important; }
+  table.fi-cards thead { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  table.fi-cards tr {
+    display: block !important; margin: 0 0 12px; padding: 4px 14px; background: var(--fi-surface);
+    border: 1px solid var(--fi-border); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  table.fi-cards td {
+    display: flex !important; align-items: center; justify-content: space-between; gap: 12px;
+    width: auto !important; min-width: 0 !important; padding: 9px 0 !important; border: 0 !important;
+    border-bottom: 1px solid #eef2f1 !important; text-align: right !important; white-space: normal !important; overflow-wrap: anywhere;
+  }
+  table.fi-cards td:last-child { border-bottom: 0 !important; }
+  table.fi-cards td::before {
+    content: attr(data-label); flex: 0 0 38%; max-width: 45%; text-align: left; font-size: 12px; font-weight: 600; color: var(--fi-muted);
+  }
+  table.fi-cards td:not([data-label]) { justify-content: flex-start; text-align: left !important; font-weight: 600; }
+  table.fi-cards td:not([data-label])::before { content: none; }
+  table.fi-cards td:empty { display: none !important; }
+  table.fi-cards td input, table.fi-cards td select, table.fi-cards td textarea { flex: 1 1 auto; min-width: 0; max-width: 62%; }
+  table.fi-cards td > button, table.fi-cards td > a { margin-left: 6px; }
+}
+@media screen and (max-width: 768px) {
+  /* 16px stops iPhones zooming the page when an input is tapped; 44px is a comfortable fingertip. */
+  input:not([type=checkbox]):not([type=radio]), select, textarea { font-size: 16px !important; min-height: 44px; }
+  button, .btn-primary, .btn-secondary { min-height: 44px; }
+  body { -webkit-text-size-adjust: 100%; }
+}

@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, OnDestroy,
+  Component, OnInit, OnDestroy, AfterViewInit,
   HostListener, ViewEncapsulation, ChangeDetectorRef, ElementRef, inject
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -17,6 +17,7 @@ import { PendingStateService } from '../shared/services/pending-state.service';
 import {AdminApi} from '../admin/admin-api.service';
 import {orderedSidebarItems,sidebarItemKey} from '../shared/utils/sidebar-order';
 import {businessTabs,activeBusinessModule} from '../shared/utils/business-modules';
+import {observeTables} from '../shared/utils/responsive-tables';
 
 @Component({
   selector: 'app-layout',
@@ -26,7 +27,8 @@ import {businessTabs,activeBusinessModule} from '../shared/utils/business-module
   styleUrl: './layout.component.scss',
   encapsulation: ViewEncapsulation.None
 })
-export class LayoutComponent implements OnInit, OnDestroy {
+export class LayoutComponent implements OnInit, OnDestroy, AfterViewInit {
+  private stopTableLabels: (() => void) | null = null;
   // Injected as fields rather than constructor parameters because the signal
   // fields below read them in their own initializers, and with target ES2022
   // (native class fields) those run BEFORE constructor parameter properties
@@ -339,7 +341,19 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.loadAutoBackupPath();
   }
 
+  ngAfterViewInit() {
+    const body = this.host.nativeElement.querySelector<HTMLElement>('.content-body');
+    if (body && typeof MutationObserver !== 'undefined') this.stopTableLabels = observeTables(body);
+  }
+
+  /** Phone drawer: Escape closes it, like tapping the dark backdrop. */
+  @HostListener('document:keydown.escape')
+  closeMenuOnEscape() {
+    if (window.innerWidth <= 768 && !this.sidebarCollapsed) this.toggleSidebar();
+  }
+
   ngOnDestroy() {
+    this.stopTableLabels?.();
     this.destroyed=true;
     this.cancelMenuDrag();
     this.subs.unsubscribe();
