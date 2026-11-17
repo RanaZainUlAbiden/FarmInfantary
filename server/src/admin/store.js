@@ -88,6 +88,20 @@ export function createAdminStore(pool,{onRevokeUser=async()=>{}}={}) {
     await audit(c,actor,id,'farm.updated',id,{status:input.status,seatLimit:input.seatLimit,allowStaffCreation:input.allowStaffCreation,businessType:input.businessType});return {changed:true};
    });
   },
+  // Permanently erases a farm: its owner and staff logins and every record it holds. The audit trail is kept.
+  // The farm name must be typed exactly (checked here, not just in the browser) and the revision must be current.
+  async deleteFarm(actor,id,{confirmName,expectedVersion}) {
+   admin(actor);return transaction(actor,async(c,revoked)=>{
+    const f=await farm(c,id);
+    if(f.admin_version!==expectedVersion)refuse(409,'Farm changed. Reload and try again.');
+    if(typeof confirmName!=='string'||confirmName.trim()!==f.farm_name)refuse(400,'Type the farm name exactly to confirm deleting it.');
+    const userIds=(await c.query('SELECT user_id FROM users WHERE farm_id=$1',[id])).rows.map(r=>r.user_id);
+    const rows=Number((await c.query('SELECT admin_delete_farm($1) AS removed',[id])).rows[0].removed);
+    for(const uid of userIds)revoked.add(uid);
+    await audit(c,actor,id,'farm.deleted',id,{farmName:f.farm_name,users:userIds.length,records:rows});
+    return {deleted:true,users:userIds.length,records:rows};
+   });
+  },
   async createStaff(actor,id,input) {
    return transaction(actor,async c=>{
     if(actor.role!=='super_admin'&&actor.farmId!==id)refuse(403,'This farm is not available.');

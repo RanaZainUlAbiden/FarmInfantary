@@ -141,5 +141,84 @@ try {
    assert.equal((await req('PATCH','/api/account/business-type',{businessType},ownerCookie)).statusCode,403);
   }
  });
+ // ── Farm staff accounts at creation, and permanent farm deletion ───────────────────────────
+ const seedRow=async(c,table,values)=>{
+  const cols=(await c.query("SELECT column_name,data_type,column_default,is_nullable,is_identity FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=$1 ORDER BY ordinal_position",[table])).rows;
+  const row={};for(const col of cols){if(col.column_name in values)row[col.column_name]=values[col.column_name];else if(col.is_nullable==='NO'&&col.column_default===null&&col.is_identity!=='YES')row[col.column_name]=/int|double|numeric|real/.test(col.data_type)?1:'x';}
+  const names=Object.keys(row);return (await c.query(`INSERT INTO ${table}(${names.join(',')}) VALUES(${names.map((_,i)=>'$'+(i+1)).join(',')}) RETURNING *`,names.map(n=>row[n]))).rows[0];
+ };
+ const inTenant=async(id,work)=>{const c=await f.pool.connect();try{await c.query('BEGIN');await c.query("SELECT set_config('app.farm_id',$1,true)",[String(id)]);const out=await work(c);await c.query('COMMIT');return out;}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}};
+ const seedFarmData=id=>inTenant(id,async c=>{
+  const unit=await seedRow(c,'farm_units',{farm_id:id,module_type:'broiler',unit_name:'Shed'});
+  const flock=await seedRow(c,'flocks',{farm_id:id,flock_name:'Flock 1',unit_id:unit.unit_id});
+  await c.query("SELECT set_config('app.broker_workflow','on',true)");
+  const sale=await seedRow(c,'sales',{farm_id:id,flock_id:flock.flock_id,broker_managed:1});
+  const pay=await seedRow(c,'broker_payments',{farm_id:id,sale_id:sale.sale_id,flock_id:flock.flock_id,method:'cash',request_id:'req-'+id,request_hash:'h'});
+  await seedRow(c,'bank_ledger',{farm_id:id,reference_type:'broker_payment',reference_id:String(pay.payment_id??1)});
+  await c.query("SELECT set_config('app.broker_workflow','',true)");
+  await seedRow(c,'expenses',{farm_id:id,flock_id:flock.flock_id});await seedRow(c,'customers',{farm_id:id});
+  return {flock,sale};
+ });
+ const tenantRows=async id=>{const tables=(await q("SELECT c.relname FROM pg_class c JOIN pg_attribute a ON a.attrelid=c.oid AND a.attname='farm_id' AND NOT a.attisdropped WHERE c.relnamespace=current_schema()::regnamespace AND c.relkind='r' AND c.relname<>'audit_events'")).rows.map(r=>r.relname);let n=0;const left=[];for(const t of tables){const c=Number((await q(`SELECT count(*) AS n FROM ${t} WHERE farm_id=$1`,[id])).rows[0].n);if(c){n+=c;left.push(t+':'+c);}}return {n,left};};
+ let seatFarm,seatOwner;
+ await check('platform sets how many staff accounts a new farm may have; owners can create exactly that many',async()=>{
+  for(const staffSeats of [-1,2.5,'3',1_000_001])assert.equal((await req('POST','/api/admin/farms',{farmName:'Bad seats',businessType:'all',username:'bad.seats',password,staffSeats})).statusCode,400);
+  const r=ok(await req('POST','/api/admin/farms',{farmName:'Seats Farm',businessType:'all',username:'seats.owner',password,staffSeats:2}));seatFarm=r.farmId;seatOwner=await login('seats.owner');
+  const meta=ok(await req('GET',`/api/admin/farms/${seatFarm}`)).farm;assert.equal(meta.staff_seat_limit,2);assert.equal(meta.can_admin_add_staff,1);
+  ok(await req('POST','/api/account/staff',{username:'seats.staff1',password},seatOwner));ok(await req('POST','/api/account/staff',{username:'seats.staff2',password},seatOwner));
+  const third=await req('POST','/api/account/staff',{username:'seats.staff3',password},seatOwner);assert.equal(third.statusCode,409);assert.match(third.json().error,/seat limit/i);
+  const none=ok(await req('POST','/api/admin/farms',{farmName:'No Seats Farm',businessType:'all',username:'noseats.owner',password}));
+  assert.equal(ok(await req('GET',`/api/admin/farms/${none.farmId}`)).farm.staff_seat_limit,0);
+  assert.equal((await req('POST','/api/account/staff',{username:'noseats.staff',password},await login('noseats.owner'))).statusCode,403);
+ });
+ await check('deleting a farm needs the exact name, a current revision and a platform administrator',async()=>{
+  const seeded=await seedFarmData(seatFarm);assert.ok(seeded.sale.sale_id);
+  const meta=ok(await req('GET',`/api/admin/farms/${seatFarm}`)).farm,url=`/api/admin/farms/${seatFarm}/delete`;
+  assert.equal((await req('POST',url,{confirmName:'seats farm',expectedVersion:meta.admin_version})).statusCode,400);
+  assert.equal((await req('POST',url,{confirmName:'',expectedVersion:meta.admin_version})).statusCode,400);
+  assert.equal((await req('POST',url,{confirmName:meta.farm_name,expectedVersion:meta.admin_version+7})).statusCode,409);
+  assert.equal((await req('POST',url,{confirmName:meta.farm_name,expectedVersion:meta.admin_version,extra:1})).statusCode,400);
+  assert.equal((await req('POST',url,{confirmName:meta.farm_name,expectedVersion:meta.admin_version},seatOwner)).statusCode,403);
+  assert.equal((await req('POST',url,{confirmName:meta.farm_name,expectedVersion:meta.admin_version},null)).statusCode,401);
+  assert.ok((await tenantRows(seatFarm)).n>5,'seed data should exist before deletion');
+ });
+ await check('ordinary deletes still refuse broker-managed history after the purge function exists',async()=>{
+  const other=ok(await req('POST','/api/admin/farms',{farmName:'Other Farm',businessType:'all',username:'other.owner',password,staffSeats:1})).farmId;
+  const s=await seedFarmData(other);
+  await assert.rejects(inTenant(other,c=>c.query('DELETE FROM sales WHERE sale_id=$1',[s.sale.sale_id])),/broker account/i);
+  await assert.rejects(inTenant(other,c=>c.query('DELETE FROM flocks WHERE flock_id=$1',[s.flock.flock_id])),/broker sales/i);
+  globalThis.__otherFarm=other;
+ });
+ await check('platform deletion erases the farm, logins, sessions and every record atomically, keeps the audit trail and leaves other farms alone',async()=>{
+  const other=globalThis.__otherFarm,beforeOther=(await tenantRows(other)).n,ownerIds=(await q('SELECT user_id FROM users WHERE farm_id=$1',[seatFarm])).rows.map(r=>r.user_id);
+  assert.equal(ownerIds.length,3);assert.ok((await q('SELECT count(*)::int AS n FROM auth_sessions WHERE user_id=ANY($1)',[ownerIds])).rows[0].n>=1);
+  const meta=ok(await req('GET',`/api/admin/farms/${seatFarm}`)).farm;revoked.length=0;
+  const done=ok(await req('POST',`/api/admin/farms/${seatFarm}/delete`,{confirmName:'  '+meta.farm_name+' ',expectedVersion:meta.admin_version}));
+  assert.equal(done.deleted,true);assert.equal(done.users,3);assert.ok(done.records>5);
+  const left=await tenantRows(seatFarm);assert.deepEqual(left,{n:0,left:[]});
+  assert.equal((await q('SELECT count(*)::int AS n FROM farms WHERE farm_id=$1',[seatFarm])).rows[0].n,0);
+  assert.equal((await q('SELECT count(*)::int AS n FROM auth_sessions WHERE user_id=ANY($1)',[ownerIds])).rows[0].n,0);
+  for(const id of ownerIds)assert.ok(revoked.includes(id),'live sessions of deleted users are revoked');
+  assert.equal((await req('GET','/api/auth/me',undefined,seatOwner)).statusCode,401);
+  assert.equal((await req('POST','/api/auth/login',{username:'seats.owner',password},null)).statusCode,401);
+  assert.ok(!(await farms()).some(x=>x.farm_id===seatFarm));
+  assert.equal((await req('GET',`/api/admin/farms/${seatFarm}`)).statusCode,404);
+  const ev=(await q("SELECT actor_id,farm_id,target_id,details FROM audit_events WHERE action='farm.deleted' AND farm_id=$1",[seatFarm])).rows;
+  assert.equal(ev.length,1);assert.equal(ev[0].details.farmName,'Seats Farm');assert.equal(ev[0].details.users,3);
+  assert.ok((await q("SELECT count(*)::int AS n FROM audit_events WHERE farm_id=$1 AND action='farm.created'",[seatFarm])).rows[0].n===1,'earlier audit history is kept');
+  assert.equal((await tenantRows(other)).n,beforeOther);assert.ok(beforeOther>5);
+  assert.equal((await req('POST',`/api/admin/farms/${seatFarm}/delete`,{confirmName:meta.farm_name,expectedVersion:meta.admin_version})).statusCode,404);
+  ok(await req('POST','/api/admin/farms',{farmName:'Seats Farm',businessType:'all',username:'seats.owner',password}));
+ });
+ await check('a failure during deletion rolls everything back',async()=>{
+  const other=globalThis.__otherFarm,before=(await tenantRows(other)).n,meta=ok(await req('GET',`/api/admin/farms/${other}`)).farm;
+  await q("CREATE FUNCTION fail_delete_fixture() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'PRIVATE DELETE DETAILS'; END; $$");
+  await q('CREATE TRIGGER fail_delete_fixture BEFORE DELETE ON expenses FOR EACH ROW EXECUTE FUNCTION fail_delete_fixture()');
+  const r=await req('POST',`/api/admin/farms/${other}/delete`,{confirmName:meta.farm_name,expectedVersion:meta.admin_version});
+  assert.ok(r.statusCode>=400);assert.ok(!r.body.includes('PRIVATE'));
+  assert.equal((await tenantRows(other)).n,before);assert.equal((await q("SELECT count(*)::int AS n FROM audit_events WHERE action='farm.deleted' AND farm_id=$1",[other])).rows[0].n,0);
+  assert.equal(ok(await req('GET',`/api/admin/farms/${other}`)).farm.farm_name,'Other Farm');
+  await q('DROP TRIGGER fail_delete_fixture ON expenses');await q('DROP FUNCTION fail_delete_fixture()');
+ });
  console.log('ALL CHECKS PASSED — '+passed+' admin provisioning/seat/audit scenarios');
 } finally {await app?.close();await authPool?.end();await q(`DROP SCHEMA IF EXISTS ${f.schema}_meta CASCADE`);await f.close();if(authCreated){const {Pool}=createRequire(new URL('../../server/package.json',import.meta.url))('pg'),p=new Pool({connectionString:process.env.DATABASE_URL});try{await p.query('DROP ROLE '+authRole);}finally{await p.end();}}}

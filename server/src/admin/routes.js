@@ -52,6 +52,11 @@ export function registerAdminRoutes(app,{pool,session,onRevokeUser}) {
   if(!Number.isSafeInteger(b.seatLimit)||b.seatLimit<0||b.seatLimit>1_000_000||typeof b.allowStaffCreation!=='boolean')bad('Choose valid staff settings.');
   return {success:true,...await store.updateFarm(req.adminActor,id(req.params.farmId),{...b,farmName:name(b.farmName),businessType:type(b.businessType),status:status(b.status),expectedVersion:id(b.expectedVersion)})};
  });
+ // Irreversible. A POST (not DELETE) so the confirmation travels in a normal JSON body through every proxy.
+ app.post('/api/admin/farms/:farmId/delete',root,async req=>{
+  const b=body(req.body,['confirmName','expectedVersion']);if(typeof b.confirmName!=='string')bad('Type the farm name to confirm.');
+  return {success:true,...await store.deleteFarm(req.adminActor,id(req.params.farmId),{confirmName:b.confirmName,expectedVersion:id(b.expectedVersion)})};
+ });
  app.get('/api/admin/farms/:farmId/users',root,async req=>{const p=page(req);return {success:true,users:await store.listUsers(req.adminActor,id(req.params.farmId),p.before,p.limit)};});
  app.post('/api/admin/farms/:farmId/staff',root,async(req,reply)=>withPassword(userInput(req.body),input=>store.createStaff(req.adminActor,id(req.params.farmId),input),reply));
  app.get('/api/account/staff',owner,async req=>{const p=page(req);return {success:true,...await store.ownTeam(req.adminActor,p.before,p.limit)};});

@@ -9,7 +9,7 @@ import {BUSINESS_BUNDLES,businessBundle,businessBundleLabel} from '../shared/uti
 export class AdminComponent implements OnInit,OnDestroy {
  root=false;busy=false;error='';message='';view='farms';farms:any[]=[];users:any[]=[];events:any[]=[];catalogue:any[]=[];
  selected:any=null;draft:any={};selectedUser:any=null;grants:any[]=[];pendingStatus='active';invalid=new Set<string>();
- newFarm=false;staffSeats=0;farmName='';businessType='broiler_distribution';ownerName='';ownerPassword='';staffName='';staffPassword='';replacementPassword='';
+ newFarm=false;staffSeats=0;deleteConfirm='';farmName='';businessType='broiler_distribution';ownerName='';ownerPassword='';staffName='';staffPassword='';replacementPassword='';
  farmMore=false;userMore=false;auditMore=false;private destroyed=false;
  businessBundles=BUSINESS_BUNDLES;businessBundleLabel=businessBundleLabel;
  currentPassword='';newDeleteCode='';deleteConfigured=false;
@@ -31,7 +31,7 @@ export class AdminComponent implements OnInit,OnDestroy {
   }else{const r=await this.read('/api/account/staff');this.selected=r.farm;this.users=r.users;this.userMore=r.users.length===50;this.deleteConfigured=(await this.read('/api/account/delete-code')).configured;}
  });}
  async tab(value:string){if(this.busy)return;this.view=value;this.render();if(value==='audit')await this.task(async()=>{this.events=(await this.read('/api/admin/audit')).events;this.auditMore=this.events.length===50;});}
- private async loadFarm(f:any){this.selected={...f};this.draft={farmName:f.farm_name,businessType:businessBundle(f.business_type),status:f.status,seatLimit:f.staff_seat_limit,allowStaffCreation:f.can_admin_add_staff===1,expectedVersion:f.admin_version};
+ private async loadFarm(f:any){this.deleteConfirm='';this.selected={...f};this.draft={farmName:f.farm_name,businessType:businessBundle(f.business_type),status:f.status,seatLimit:f.staff_seat_limit,allowStaffCreation:f.can_admin_add_staff===1,expectedVersion:f.admin_version};
   this.selectedUser=null;this.users=(await this.read(`/api/admin/farms/${f.farm_id}/users`)).users;this.userMore=this.users.length===50;}
  async selectFarm(f:any){await this.task(()=>this.loadFarm(f));this.focus('farm-editor-title');}
  focus(id:string){this.render();this.host.nativeElement.querySelector<HTMLElement>('#'+id)?.focus();}
@@ -48,6 +48,14 @@ export class AdminComponent implements OnInit,OnDestroy {
  }
  async saveFarm(){if(!this.validate([['farm-name',!!this.draft.farmName?.trim()&&this.draft.farmName.trim().length<=100,'Enter a farm name.'],['seat-limit',Number.isSafeInteger(this.draft.seatLimit)&&this.draft.seatLimit>=0,'Enter a whole number of staff accounts (0 or more).']]))return;this.draft.allowStaffCreation=this.draft.seatLimit>0;
   await this.task(async()=>{await this.mutation('PUT',`/api/admin/farms/${this.selected.farm_id}`,this.draft);const f=(await this.read('/api/admin/farms/'+this.selected.farm_id)).farm;this.farms=this.farms.map(x=>x.farm_id===f.farm_id?f:x);await this.loadFarm(f);},'Farm settings saved.');}
+ /** Permanent. The server re-checks the typed name and the revision, so this only guards against slips. */
+ async deleteFarm(){
+  if(!this.selected)return;
+  if(this.deleteConfirm.trim()!==this.selected.farm_name){this.invalid=new Set(['delete-confirm']);this.error='Type the farm name exactly to confirm.';this.focus('delete-confirm');return;}
+  const id=this.selected.farm_id,name=this.selected.farm_name,version=this.selected.admin_version,confirmName=this.deleteConfirm;
+  await this.task(async()=>{await this.mutation('POST',`/api/admin/farms/${id}/delete`,{confirmName,expectedVersion:version});
+   this.farms=this.farms.filter(x=>x.farm_id!==id);this.selected=null;this.selectedUser=null;this.users=[];this.deleteConfirm='';this.invalid.clear();},`Farm "${name}" was permanently deleted.`);
+ }
  async createStaff(){if(!this.validate([['new-staff-name',this.validName(this.staffName),'Enter a valid staff username.'],['new-staff-password',this.validPassword(this.staffPassword),'Use a staff password of 1 to 128 characters.']]))return;
   await this.task(async()=>{try{await this.mutation('POST',this.root?`/api/admin/farms/${this.selected.farm_id}/staff`:'/api/account/staff',{username:this.staffName,password:this.staffPassword});this.staffName='';await this.reloadUsers();}finally{this.staffPassword='';}},'Staff account created.');}
  private async reloadUsers(){this.selectedUser=null;if(this.root){const f=(await this.read('/api/admin/farms/'+this.selected.farm_id)).farm;this.farms=this.farms.map(x=>x.farm_id===f.farm_id?f:x);await this.loadFarm(f);}

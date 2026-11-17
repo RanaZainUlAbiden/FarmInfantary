@@ -24,8 +24,8 @@ async function inspect(client,{schema,role=null,direct=false}) {
   }else if(Object.values(a).some(Boolean))throw new Error('Auth role cannot access business/unclassified tables.');
  }
  const funcs=(await client.query(`SELECT p.proname,p.prosecdef,p.proconfig,has_function_privilege($1,p.oid,'EXECUTE') AS allowed FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname=$2`,[r.rolname,schema])).rows;
- for(const name of ['auth_farm_metadata','admin_farm_metadata'])if(!funcs.some(f=>f.proname===name&&f.allowed&&f.prosecdef&&JSON.stringify(f.proconfig)===JSON.stringify(['search_path=pg_catalog'])))throw new Error('Private metadata function grants/configuration are missing.');
- if(funcs.some(f=>f.prosecdef&&f.allowed&&!['auth_farm_metadata','admin_farm_metadata'].includes(f.proname)))throw new Error('Auth role can execute an unexpected privileged function.');
+ for(const name of ['auth_farm_metadata','admin_farm_metadata','admin_delete_farm'])if(!funcs.some(f=>f.proname===name&&f.allowed&&f.prosecdef&&f.proconfig?.length===1&&String(f.proconfig[0]).replaceAll(' ','')===(name==='admin_delete_farm'?'search_path=pg_catalog,'+schema:'search_path=pg_catalog')))throw new Error('Private metadata function grants/configuration are missing.');
+ if(funcs.some(f=>f.prosecdef&&f.allowed&&!['auth_farm_metadata','admin_farm_metadata','admin_delete_farm'].includes(f.proname)))throw new Error('Auth role can execute an unexpected privileged function.');
  const seqs=(await client.query(`SELECT c.relname,c.relowner,has_sequence_privilege($1,c.oid,'UPDATE') AS reset,has_sequence_privilege($1,c.oid,'USAGE') AS usage FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$2 AND c.relkind='S'`,[r.rolname,schema])).rows;
  const allowedSequences=[];for(const [table,col] of [['users','user_id'],['audit_events','event_id'],['farms','farm_id']])allowedSequences.push((await client.query('SELECT c.relname FROM pg_class c WHERE c.oid=pg_get_serial_sequence($1,$2)::regclass',[qi(schema)+'.'+qi(table),col])).rows[0]?.relname);
  if(seqs.some(s=>s.reset||String(s.relowner)===String(r.oid)||s.usage!==allowedSequences.includes(s.relname)))throw new Error('Unexpected auth sequence grants.');
@@ -42,7 +42,7 @@ export async function provisionAuthRole(pool,{role,password,schema='public'}) {
   await c.query(`GRANT SELECT ON ${qi(schema)}.permission_catalogue TO ${qi(role)}`);await c.query(`GRANT SELECT,INSERT ON ${qi(schema)}.audit_events TO ${qi(role)}`);
   for(const [verb,columns] of [['SELECT',reads],['INSERT',inserts],['UPDATE',updates]])await c.query(`GRANT ${verb}(${columns.map(qi).join(',')}) ON ${qi(schema)}.farms TO ${qi(role)}`);
   for(const [table,column] of [['users','user_id'],['audit_events','event_id'],['farms','farm_id']]){const seq=(await c.query('SELECT c.relname FROM pg_class c WHERE c.oid=pg_get_serial_sequence($1,$2)::regclass',[qi(schema)+'.'+qi(table),column])).rows[0]?.relname;if(!seq)throw new Error('Missing auth identity sequence');await c.query(`GRANT USAGE ON SEQUENCE ${qi(schema)}.${qi(seq)} TO ${qi(role)}`);}
-  for(const name of ['auth_farm_metadata','admin_farm_metadata'])await c.query(`GRANT EXECUTE ON FUNCTION ${qi(schema)}.${qi(name)}(bigint) TO ${qi(role)}`);
+  for(const name of ['auth_farm_metadata','admin_farm_metadata','admin_delete_farm'])await c.query(`GRANT EXECUTE ON FUNCTION ${qi(schema)}.${qi(name)}(bigint) TO ${qi(role)}`);
   const path=[schema,'pg_catalog',...(schema==='public'?[]:['public']),'pg_temp'].map(qi).join(',');await c.query(`ALTER ROLE ${qi(role)} SET search_path TO ${path}`);
   await c.query(`ALTER ROLE ${qi(role)} SET statement_timeout TO '10s'`);await c.query(`ALTER ROLE ${qi(role)} SET lock_timeout TO '10s'`);
   await inspect(c,{schema,role});await c.query('COMMIT');return {role,schema};
