@@ -9,14 +9,18 @@ import { toLocalDateString } from '../shared/utils/date.util';
 import { distributionBillsOnly } from '../shared/utils/bill-source.util';
 import { friendlySqlError } from '../shared/utils/sql-error.util';
 import { DeleteCodeDialogComponent } from '../shared/components/delete-code-dialog/delete-code-dialog.component';
+import { PaginationComponent } from '../shared/components/pagination/pagination.component';
+import { ListPager } from '../shared/utils/list-pager';
 @Component({
   selector: 'app-sales-returns',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateOnlyPipe, DeleteCodeDialogComponent],
+  imports: [PaginationComponent, CommonModule, FormsModule, DateOnlyPipe, DeleteCodeDialogComponent],
   templateUrl: './sales-returns.component.html',
   styleUrl: './sales-returns.component.scss'
 })
 export class SalesReturnsComponent implements OnInit {
+  readonly billsPager = new ListPager();
+  readonly returnsPager = new ListPager();
   currentFarm: any = null;
   bills: any[] = [];
   filteredBills: any[] = [];

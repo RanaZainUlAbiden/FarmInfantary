@@ -19,14 +19,18 @@ import {
 } from '../../shared/utils/supplier-ledger.util';
 import { filterByDateRange, dateRangeLabel } from '../../shared/utils/date-range.util';
 import { printPdfBase64 } from '../../shared/utils/browser-print.util';
+import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+import { ListPager } from '../../shared/utils/list-pager';
 @Component({
   selector: 'app-supplier-ledger',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, BackLinkComponent],
+  imports: [PaginationComponent, CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, BackLinkComponent],
   templateUrl: './supplier-ledger.component.html',
   styleUrl: './supplier-ledger.component.scss'
 })
 export class SupplierLedgerComponent implements OnInit {
+  readonly entriesPager = new ListPager();
+  readonly paymentsPager = new ListPager();
   currentFarm: any = null;
   suppliers: any[] = [];
   filteredSuppliers: any[] = [];

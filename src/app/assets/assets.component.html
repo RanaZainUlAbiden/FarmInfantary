@@ -211,7 +211,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let p of payments" [class.settlement-row]="isSettlement(p)">
+          <tr *ngFor="let p of paymentsPager.view(payments)" [class.settlement-row]="isSettlement(p)">
             <td>{{ p.date | dateOnly }}</td>
             <td class="amount">Rs. {{ p.amount | number:'1.0-0' }}</td>
             <td>{{ paymentSourceLabel(p) }}</td>
@@ -239,6 +239,7 @@
           </tr>
         </tfoot>
       </table>
+<app-pagination [currentPage]="paymentsPager.currentPage" [totalItems]="paymentsPager.total" [pageSize]="paymentsPager.size" (pageChange)="paymentsPager.page = $event"></app-pagination>
     </div>
   </ng-container>
 </div>

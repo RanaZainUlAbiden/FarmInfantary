@@ -144,7 +144,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let p of purchases">
+            <tr *ngFor="let p of purchasesPager.view(purchases)">
               <td>{{ p.date | date:'yyyy-MM-dd' }}</td>
               <td>{{ p.product_name || '—' }}</td>
               <td class="num">{{ p.quantity | number:'1.0-2' }}</td>
@@ -169,6 +169,7 @@
             </tr>
           </tfoot>
         </table>
+<app-pagination [currentPage]="purchasesPager.currentPage" [totalItems]="purchasesPager.total" [pageSize]="purchasesPager.size" (pageChange)="purchasesPager.page = $event"></app-pagination>
       </div>
     </div>
 
@@ -189,7 +190,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let e of paymentHistory">
+            <tr *ngFor="let e of paymentsPager.view(paymentHistory)">
               <td>{{ e.transaction_date | date:'yyyy-MM-dd' }}</td>
               <td>{{ e.description || '—' }}</td>
               <td class="notes-cell">{{ e.notes || '—' }}</td>
@@ -208,6 +209,7 @@
             </tr>
           </tfoot>
         </table>
+<app-pagination [currentPage]="paymentsPager.currentPage" [totalItems]="paymentsPager.total" [pageSize]="paymentsPager.size" (pageChange)="paymentsPager.page = $event"></app-pagination>
       </div>
     </div>
 
@@ -259,7 +261,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let e of ledgerEntries">
+            <tr *ngFor="let e of entriesPager.view(ledgerEntries)">
               <td>{{ e.transaction_date | date:'yyyy-MM-dd' }}</td>
               <td>{{ e.description || '—' }}</td>
               <td class="notes-cell">{{ e.notes || '—' }}</td>
@@ -282,6 +284,7 @@
             </tr>
           </tfoot>
         </table>
+<app-pagination [currentPage]="entriesPager.currentPage" [totalItems]="entriesPager.total" [pageSize]="entriesPager.size" (pageChange)="entriesPager.page = $event"></app-pagination>
       </div>
     </div>
   </div>

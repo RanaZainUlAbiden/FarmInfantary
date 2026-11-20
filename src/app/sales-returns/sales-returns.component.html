@@ -70,7 +70,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let bill of filteredBills">
+          <tr *ngFor="let bill of billsPager.view(filteredBills)">
             <td class="strong bill-num">{{ bill.bill_number }}</td>
             <td>{{ bill.bill_date | dateOnly }}</td>
             <td>{{ bill.customer_name || '—' }}</td>
@@ -100,6 +100,7 @@
           </tr>
         </tbody>
       </table>
+<app-pagination [currentPage]="billsPager.currentPage" [totalItems]="billsPager.total" [pageSize]="billsPager.size" (pageChange)="billsPager.page = $event"></app-pagination>
     </div>
 
     <!-- Return History -->
@@ -120,7 +121,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let r of returns">
+          <tr *ngFor="let r of returnsPager.view(returns)">
             <td class="strong bill-num">{{ r.return_number }}</td>
             <td>{{ r.return_date | dateOnly }}</td>
             <td>{{ r.bill_number }}</td>
@@ -140,6 +141,7 @@
           </tr>
         </tbody>
       </table>
+<app-pagination [currentPage]="returnsPager.currentPage" [totalItems]="returnsPager.total" [pageSize]="returnsPager.size" (pageChange)="returnsPager.page = $event"></app-pagination>
     </div>
 
   </ng-container>

@@ -170,7 +170,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let entry of visibleEntries">
+          <tr *ngFor="let entry of entriesPager.view(visibleEntries)">
             <td>{{ entry.transaction_date | date:'yyyy-MM-dd' }}</td>
             <td>{{ entry.description || '—' }}</td>
             <td class="notes-cell">{{ entry.notes || '—' }}</td>
@@ -200,6 +200,7 @@
           </tr>
         </tbody>
       </table>
+<app-pagination [currentPage]="entriesPager.currentPage" [totalItems]="entriesPager.total" [pageSize]="entriesPager.size" (pageChange)="entriesPager.page = $event"></app-pagination>
     </div>
 
     <!-- PAYMENT HISTORY — the money-out rows only, newest first, each naming
@@ -218,7 +219,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let p of paymentHistory">
+          <tr *ngFor="let p of paymentsPager.view(paymentHistory)">
             <td>{{ p.transaction_date | date:'yyyy-MM-dd' }}</td>
             <td><span class="type-badge">{{ rowLabel(p) }}</span></td>
             <td>{{ p.voucher_number || p.description || '—' }}</td>
@@ -234,6 +235,7 @@
           </tr>
         </tbody>
       </table>
+<app-pagination [currentPage]="paymentsPager.currentPage" [totalItems]="paymentsPager.total" [pageSize]="paymentsPager.size" (pageChange)="paymentsPager.page = $event"></app-pagination>
     </div>
 
     <!-- Payment Form -->

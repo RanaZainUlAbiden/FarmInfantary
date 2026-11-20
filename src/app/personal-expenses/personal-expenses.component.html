@@ -138,7 +138,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let e of entries">
+          <tr *ngFor="let e of entriesPager.view(entries)">
             <td>{{ e.date | dateOnly }}</td>
             <td>{{ e.description || '—' }}</td>
             <td class="amount">Rs. {{ e.amount | number:'1.0-0' }}</td>
@@ -159,6 +159,7 @@
           </tr>
         </tfoot>
       </table>
+<app-pagination [currentPage]="entriesPager.currentPage" [totalItems]="entriesPager.total" [pageSize]="entriesPager.size" (pageChange)="entriesPager.page = $event"></app-pagination>
     </div>
   </ng-container>
 </div>

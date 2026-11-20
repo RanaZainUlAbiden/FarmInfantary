@@ -64,7 +64,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let s of settlements">
+          <tr *ngFor="let s of settlementsPager.view(settlements)">
             <td class="voucher-no">{{ s.settlement_number || '—' }}</td>
             <td>{{ s.date | dateOnly }}</td>
             <td>{{ s.customer_name || 'Deleted Customer' }}</td>
@@ -94,6 +94,7 @@
           </tr>
         </tfoot>
       </table>
+<app-pagination [currentPage]="settlementsPager.currentPage" [totalItems]="settlementsPager.total" [pageSize]="settlementsPager.size" (pageChange)="settlementsPager.page = $event"></app-pagination>
     </div>
   </ng-container>
 </div>

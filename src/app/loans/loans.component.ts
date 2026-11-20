@@ -9,6 +9,8 @@ import { DateOnlyPipe } from '../shared/pipes/date-format.pipe';
 import { toLocalDateString } from '../shared/utils/date.util';
 import { friendlySqlError } from '../shared/utils/sql-error.util';
 import { bankOptionLabel } from '../shared/utils/bank-source.util';
+import { PaginationComponent } from '../shared/components/pagination/pagination.component';
+import { ListPager } from '../shared/utils/list-pager';
 
 /**
  * LOANS AND ADVANCES — money the owner lent out, and money other people left
@@ -60,11 +62,13 @@ import { bankOptionLabel } from '../shared/utils/bank-source.util';
 @Component({
   selector: 'app-loans',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, DateOnlyPipe],
+  imports: [PaginationComponent, CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, DateOnlyPipe],
   templateUrl: './loans.component.html',
   styleUrl: './loans.component.scss'
 })
 export class LoansComponent implements OnInit {
+  readonly loansPager = new ListPager();
+  readonly paymentsPager = new ListPager();
   currentFarm: any = null;
   isLoading = true;
   errorMessage = '';

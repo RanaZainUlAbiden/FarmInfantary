@@ -110,7 +110,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let entry of visibleEntries">
+          <tr *ngFor="let entry of entriesPager.view(visibleEntries)">
             <td>{{ entry.transaction_date | date:'yyyy-MM-dd' }}</td>
             <td>{{ entry.description || '—' }}</td>
             <td class="debit" *ngIf="entry.debit > 0">Rs. {{ entry.debit | number:'1.0-0' }}</td>
@@ -134,6 +134,7 @@
           </tr>
         </tbody>
       </table>
+<app-pagination [currentPage]="entriesPager.currentPage" [totalItems]="entriesPager.total" [pageSize]="entriesPager.size" (pageChange)="entriesPager.page = $event"></app-pagination>
     </div>
 
     <!-- Payment Form -->

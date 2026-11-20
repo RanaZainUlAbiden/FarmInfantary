@@ -358,7 +358,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let p of filteredPurchases">
+        <tr *ngFor="let p of purchasesPager.view(filteredPurchases)">
           <td>{{ p.date | date:'dd-MM-yyyy' }}</td>
           <td class="product-name">{{ p.product_name || '—' }}</td>
           <td>{{ p.supplier_name || '—' }}</td>
@@ -384,6 +384,7 @@
         </tr>
       </tbody>
     </table>
+<app-pagination *ngIf="filteredPurchases.length > 0" [currentPage]="purchasesPager.currentPage" [totalItems]="purchasesPager.total" [pageSize]="purchasesPager.size" (pageChange)="purchasesPager.page = $event"></app-pagination>
   </div>
 
   <!-- Sales Table -->
@@ -404,7 +405,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let s of filteredSales">
+        <tr *ngFor="let s of salesPager.view(filteredSales)">
           <td>{{ s.bill_date | date:'dd-MM-yyyy' }}</td>
           <td class="bill-number">{{ s.bill_number }}</td>
           <td>{{ s.customer_name || 'Walk-in' }}</td>
@@ -426,6 +427,7 @@
         </tr>
       </tbody>
     </table>
+<app-pagination *ngIf="filteredSales.length > 0" [currentPage]="salesPager.currentPage" [totalItems]="salesPager.total" [pageSize]="salesPager.size" (pageChange)="salesPager.page = $event"></app-pagination>
     <p class="cash-note" *ngIf="internalTransferCount > 0">
       Own-farm sales are included in these totals. Supplying your own flock or batch is a real sale
       for this business: it earns the revenue and the farm owes the money until it settles, on the
@@ -451,7 +453,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let e of filteredExpenses">
+        <tr *ngFor="let e of expensesPager.view(filteredExpenses)">
           <td>{{ e.transaction_date | date:'dd-MM-yyyy' }}</td>
           <td>{{ e.category }}</td>
           <td class="product-name">{{ e.description || '—' }}</td>
@@ -468,6 +470,7 @@
         </tr>
       </tbody>
     </table>
+<app-pagination *ngIf="filteredExpenses.length > 0" [currentPage]="expensesPager.currentPage" [totalItems]="expensesPager.total" [pageSize]="expensesPager.size" (pageChange)="expensesPager.page = $event"></app-pagination>
   </div>
 
   <!-- Supplier Payables — what is owed to each supplier, and what each payment
@@ -565,7 +568,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let r of filteredReturns">
+        <tr *ngFor="let r of returnsPager.view(filteredReturns)">
           <td>{{ r.return_date | date:'dd-MM-yyyy' }}</td>
           <td class="bill-number">{{ r.return_number }}</td>
           <td>{{ r.bill_number || '—' }}</td>
@@ -585,6 +588,7 @@
         </tr>
       </tbody>
     </table>
+<app-pagination *ngIf="filteredReturns.length > 0" [currentPage]="returnsPager.currentPage" [totalItems]="returnsPager.total" [pageSize]="returnsPager.size" (pageChange)="returnsPager.page = $event"></app-pagination>
   </div>
 
   <!-- Purchase Returns Table -->
@@ -607,7 +611,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let r of filteredPurchaseReturns">
+        <tr *ngFor="let r of purchaseReturnsPager.view(filteredPurchaseReturns)">
           <td>{{ r.return_date | date:'dd-MM-yyyy' }}</td>
           <td class="bill-number">{{ r.return_number }}</td>
           <td class="product-name">{{ r.product_name || '—' }}</td>
@@ -628,6 +632,7 @@
         </tr>
       </tbody>
     </table>
+<app-pagination *ngIf="filteredPurchaseReturns.length > 0" [currentPage]="purchaseReturnsPager.currentPage" [totalItems]="purchaseReturnsPager.total" [pageSize]="purchaseReturnsPager.size" (pageChange)="purchaseReturnsPager.page = $event"></app-pagination>
   </div>
 
 

@@ -119,7 +119,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let e of selectedCategoryExpenses">
+          <tr *ngFor="let e of expensesPager.view(selectedCategoryExpenses)">
             <td>{{ e.transaction_date | date:'dd-MM-yyyy' }}</td>
             <td>{{ e.description || '—' }}</td>
             <td>
@@ -146,6 +146,7 @@
           </tr>
         </tbody>
       </table>
+<app-pagination *ngIf="selectedCategoryExpenses.length > 0" [currentPage]="expensesPager.currentPage" [totalItems]="expensesPager.total" [pageSize]="expensesPager.size" (pageChange)="expensesPager.page = $event"></app-pagination>
     </div>
   </ng-container>
 

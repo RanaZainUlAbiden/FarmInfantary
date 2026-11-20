@@ -82,7 +82,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let l of filteredLoans" [class.settled]="isSettled(l)">
+          <tr *ngFor="let l of loansPager.view(filteredLoans)" [class.settled]="isSettled(l)">
             <td>{{ l.date | dateOnly }}</td>
             <td>
               <button class="link" (click)="openLoan(l)">{{ l.party_name }}</button>
@@ -111,6 +111,7 @@
           </tr>
         </tbody>
       </table>
+<app-pagination [currentPage]="loansPager.currentPage" [totalItems]="loansPager.total" [pageSize]="loansPager.size" (pageChange)="loansPager.page = $event"></app-pagination>
     </div>
   </ng-container>
 </div>
@@ -170,7 +171,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let p of payments">
+        <tr *ngFor="let p of paymentsPager.view(payments)">
           <td>{{ p.date | dateOnly }}</td>
           <td class="right">Rs. {{ p.amount | number:'1.0-0' }}</td>
           <td class="muted">{{ accountOf(p) }}</td>
@@ -186,6 +187,7 @@
         </tr>
       </tbody>
     </table>
+<app-pagination [currentPage]="paymentsPager.currentPage" [totalItems]="paymentsPager.total" [pageSize]="paymentsPager.size" (pageChange)="paymentsPager.page = $event"></app-pagination>
   </div>
 </div>
 

@@ -17,15 +17,18 @@ import { BankPickerComponent } from '../../shared/components/bank-picker/bank-pi
 import { bankSourceError, bankNameOf } from '../../shared/utils/bank-source.util';
 
 import { printPdfBase64 } from '../../shared/utils/browser-print.util';
+import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+import { ListPager } from '../../shared/utils/list-pager';
 @Component({
   selector: 'app-expense-ledger',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent,
+  imports: [PaginationComponent, CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent,
             BackLinkComponent, BankPickerComponent],
   templateUrl: './expense-ledger.component.html',
   styleUrl: './expense-ledger.component.scss'
 })
 export class ExpenseLedgerComponent implements OnInit {
+  readonly expensesPager = new ListPager();
   currentFarm: any = null;
   expenses: any[] = [];
   filteredExpenses: any[] = [];

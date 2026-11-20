@@ -15,10 +15,12 @@ import { toLocalDateString } from '../../shared/utils/date.util';
 import { BackLinkComponent } from '../../shared/components/back-link/back-link.component';
 
 import { printPdfBase64 } from '../../shared/utils/browser-print.util';
+import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+import { ListPager } from '../../shared/utils/list-pager';
 @Component({
   selector: 'app-bank-ledger',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, BackLinkComponent],
+  imports: [PaginationComponent, CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, BackLinkComponent],
   templateUrl: './bank-ledger.component.html',
   styleUrl: './bank-ledger.component.scss'
 })
@@ -38,6 +40,7 @@ import { printPdfBase64 } from '../../shared/utils/browser-print.util';
  * account may be deleted — hangs off `isHouse`, so the two never fork.
  */
 export class BankLedgerComponent implements OnInit {
+  readonly ledgerPager = new ListPager();
   currentFarm: any = null;
   customers: any[] = [];
   bankAccounts: any[] = [];

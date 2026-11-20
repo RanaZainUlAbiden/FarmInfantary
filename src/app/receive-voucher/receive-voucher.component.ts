@@ -14,6 +14,8 @@ import { bankSourceError, bankSourceFields, paymentSourceLabel, bankOptionLabel 
 import { alignHeadFootWithColumnStyles } from '../shared/utils/pdf-table.util';
 
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
+import { PaginationComponent } from '../shared/components/pagination/pagination.component';
+import { ListPager } from '../shared/utils/list-pager';
 function firstOfMonth(): string {
   const d = new Date();
   return toLocalDateString(new Date(d.getFullYear(), d.getMonth(), 1));
@@ -51,11 +53,12 @@ function firstOfMonth(): string {
 @Component({
   selector: 'app-receive-voucher',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, DateOnlyPipe],
+  imports: [PaginationComponent, CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, DateOnlyPipe],
   templateUrl: './receive-voucher.component.html',
   styleUrl: './receive-voucher.component.scss'
 })
 export class ReceiveVoucherComponent implements OnInit {
+  readonly vouchersPager = new ListPager();
   currentFarm: any = null;
 
   customers: any[] = [];

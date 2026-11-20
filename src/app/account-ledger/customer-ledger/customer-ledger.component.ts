@@ -16,14 +16,17 @@ import { BackLinkComponent } from '../../shared/components/back-link/back-link.c
 import { filterByDateRange, dateRangeLabel } from '../../shared/utils/date-range.util';
 
 import { printPdfBase64 } from '../../shared/utils/browser-print.util';
+import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+import { ListPager } from '../../shared/utils/list-pager';
 @Component({
   selector: 'app-customer-ledger',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, BackLinkComponent],
+  imports: [PaginationComponent, CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, BackLinkComponent],
   templateUrl: './customer-ledger.component.html',
   styleUrl: './customer-ledger.component.scss'
 })
 export class CustomerLedgerComponent implements OnInit {
+  readonly entriesPager = new ListPager();
   currentFarm: any = null;
   customers: any[] = [];
   filteredCustomers: any[] = [];

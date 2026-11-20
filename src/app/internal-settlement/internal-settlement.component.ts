@@ -14,6 +14,8 @@ import { bankSourceError, paymentSourceLabel, bankOptionLabel } from '../shared/
 import { alignHeadFootWithColumnStyles } from '../shared/utils/pdf-table.util';
 
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
+import { PaginationComponent } from '../shared/components/pagination/pagination.component';
+import { ListPager } from '../shared/utils/list-pager';
 function firstOfMonth(): string {
   const d = new Date();
   return toLocalDateString(new Date(d.getFullYear(), d.getMonth(), 1));
@@ -60,11 +62,12 @@ function firstOfMonth(): string {
 @Component({
   selector: 'app-internal-settlement',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, DateOnlyPipe],
+  imports: [PaginationComponent, CommonModule, FormsModule, ConfirmDialogComponent, DeleteCodeDialogComponent, DateOnlyPipe],
   templateUrl: './internal-settlement.component.html',
   styleUrl: './internal-settlement.component.scss'
 })
 export class InternalSettlementComponent implements OnInit {
+  readonly settlementsPager = new ListPager();
   currentFarm: any = null;
 
   /** Own-farm customers only — see the class note. */

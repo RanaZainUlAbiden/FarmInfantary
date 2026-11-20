@@ -9,6 +9,8 @@ import { toLocalDateString } from '../shared/utils/date.util';
 import { friendlySqlError } from '../shared/utils/sql-error.util';
 import { printPdfReport } from '../shared/utils/print-report.util';
 import { paymentSourceLabel, bankOptionLabel } from '../shared/utils/bank-source.util';
+import { PaginationComponent } from '../shared/components/pagination/pagination.component';
+import { ListPager } from '../shared/utils/list-pager';
 
 function firstOfMonth(): string {
   const d = new Date();
@@ -18,11 +20,12 @@ function firstOfMonth(): string {
 @Component({
   selector: 'app-personal-expenses',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent, DateOnlyPipe],
+  imports: [PaginationComponent, CommonModule, FormsModule, ConfirmDialogComponent, DateOnlyPipe],
   templateUrl: './personal-expenses.component.html',
   styleUrl: './personal-expenses.component.scss'
 })
 export class PersonalExpensesComponent implements OnInit {
+  readonly entriesPager = new ListPager();
   currentFarm: any = null;
 
   /** Categories are user-defined rows now, not a hardcoded list. */

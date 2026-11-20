@@ -134,7 +134,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let entry of filteredLedgerEntries">
+          <tr *ngFor="let entry of ledgerPager.view(filteredLedgerEntries)">
             <td>{{ entry.transaction_date | date:'yyyy-MM-dd' }}</td>
             <td class="transaction-number">{{ entry.transaction_number || '—' }}</td>
             <td>{{ entry.description || '—' }}</td>
@@ -157,6 +157,7 @@
           </tr>
         </tbody>
       </table>
+<app-pagination [currentPage]="ledgerPager.currentPage" [totalItems]="ledgerPager.total" [pageSize]="ledgerPager.size" (pageChange)="ledgerPager.page = $event"></app-pagination>
     </div>
   </div>
 

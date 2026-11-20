@@ -16,6 +16,8 @@ import { printPdfBase64 } from '../../shared/utils/browser-print.util';
 import {
   isSupplierPayment, supplierRowLabel, supplierTotals, SupplierTotals
 } from '../../shared/utils/supplier-ledger.util';
+import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+import { ListPager } from '../../shared/utils/list-pager';
 
 /**
  * SUPPLIER ACCOUNTS — the entity-based view of what the farm owes its
@@ -47,11 +49,14 @@ import {
 @Component({
   selector: 'app-supplier-accounts',
   standalone: true,
-  imports: [CommonModule, FormsModule, BackLinkComponent],
+  imports: [PaginationComponent, CommonModule, FormsModule, BackLinkComponent],
   templateUrl: './supplier-accounts.component.html',
   styleUrl: './supplier-accounts.component.scss'
 })
 export class SupplierAccountsComponent implements OnInit {
+  readonly purchasesPager = new ListPager();
+  readonly paymentsPager = new ListPager();
+  readonly entriesPager = new ListPager();
   currentFarm: any = null;
 
   /** One card per supplier, straight off `getAllSuppliersWithBalance()`. */

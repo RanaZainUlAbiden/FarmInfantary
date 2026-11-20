@@ -61,7 +61,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let v of vouchers">
+          <tr *ngFor="let v of vouchersPager.view(vouchers)">
             <td class="voucher-no">{{ v.voucher_number || '—' }}</td>
             <td>{{ v.date | dateOnly }}</td>
             <td>{{ v.supplier_name || 'Deleted Supplier' }}</td>
@@ -85,6 +85,7 @@
           </tr>
         </tfoot>
       </table>
+<app-pagination [currentPage]="vouchersPager.currentPage" [totalItems]="vouchersPager.total" [pageSize]="vouchersPager.size" (pageChange)="vouchersPager.page = $event"></app-pagination>
     </div>
   </ng-container>
 </div>

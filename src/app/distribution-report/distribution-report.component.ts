@@ -30,11 +30,16 @@ interface BillCost {
 @Component({
   selector: 'app-distribution-report',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [PaginationComponent, CommonModule, FormsModule],
   templateUrl: './distribution-report.component.html',
   styleUrl: './distribution-report.component.scss'
 })
 export class DistributionReportComponent implements OnInit {
+  readonly purchasesPager = new ListPager();
+  readonly salesPager = new ListPager();
+  readonly expensesPager = new ListPager();
+  readonly returnsPager = new ListPager();
+  readonly purchaseReturnsPager = new ListPager();
   currentFarm: any = null;
   products: any[] = [];
   purchases: any[] = [];
@@ -1864,3 +1869,5 @@ export class DistributionReportComponent implements OnInit {
   }
 }
 import { settledPurchases } from '../shared/utils/purchase-settlement.util';
+import { PaginationComponent } from '../shared/components/pagination/pagination.component';
+import { ListPager } from '../shared/utils/list-pager';

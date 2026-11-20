@@ -9,17 +9,20 @@ import { toLocalDateString } from '../shared/utils/date.util';
 import { printPdfReport } from '../shared/utils/print-report.util';
 import { paymentSourceLabel, bankOptionLabel } from '../shared/utils/bank-source.util';
 import { friendlySqlError } from '../shared/utils/sql-error.util';
+import { PaginationComponent } from '../shared/components/pagination/pagination.component';
+import { ListPager } from '../shared/utils/list-pager';
 
 const CATEGORIES = ['Vehicle', 'Equipment', 'Building', 'Land', 'Other'];
 
 @Component({
   selector: 'app-assets',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent, DateOnlyPipe],
+  imports: [PaginationComponent, CommonModule, FormsModule, ConfirmDialogComponent, DateOnlyPipe],
   templateUrl: './assets.component.html',
   styleUrl: './assets.component.scss'
 })
 export class AssetsComponent implements OnInit {
+  readonly paymentsPager = new ListPager();
   currentFarm: any = null;
   categories = CATEGORIES;
 
