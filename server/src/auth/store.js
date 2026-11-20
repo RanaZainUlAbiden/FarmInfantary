@@ -22,8 +22,24 @@ export function createAuthStore(pool, config, {
     await pool.query('DELETE FROM auth_sessions WHERE expires_at <= $1 OR last_seen_at <= $2', [at, at-config.idleSeconds]);
     await pool.query('DELETE FROM auth_login_limits WHERE window_started_at <= $1', [at-config.loginWindowSeconds]);
   }
+  // SQL-endpoint limiting is per-process memory: it runs on every query, and a
+  // DB write per query (two serialized upserts on the same hot rows) made every
+  // screen slower. Login/password limits stay durable in the database.
+  const memoryBuckets = new Map();
+  function throttleInMemory(ip, username, at, limits) {
+    const windowSeconds = limits.windowSeconds;
+    if (memoryBuckets.size > 5000) for (const [k, v] of memoryBuckets) if (v.start <= at - windowSeconds) memoryBuckets.delete(k);
+    for (const [scope, key, limit] of [['ip', ip, limits.ipAttempts], ['username', username, limits.userAttempts]]) {
+      const id = digest('sql:' + scope, key);
+      let bucket = memoryBuckets.get(id);
+      if (!bucket || bucket.start <= at - windowSeconds) { bucket = { start: at, attempts: 0 }; memoryBuckets.set(id, bucket); }
+      if (++bucket.attempts > limit) return false;
+    }
+    return true;
+  }
   async function throttle(ip, username, purpose = 'login', limits = null) {
     const at = now();
+    if (purpose === 'sql' && limits) return throttleInMemory(ip, username, at, limits);
     await cleanup(at);
     const windowSeconds=limits?.windowSeconds??config.loginWindowSeconds;
     for (const [scope, key, limit] of [['ip',ip,limits?.ipAttempts??config.ipAttempts],['username',username,limits?.userAttempts??config.usernameAttempts]]) {
@@ -65,12 +81,16 @@ export function createAuthStore(pool, config, {
   async function resolveToken(token) {
     if (!token) return null;
     const at = now();
-    const r = await pool.query(`UPDATE auth_sessions s SET last_seen_at=GREATEST(s.last_seen_at,$2)
-      FROM users u LEFT JOIN LATERAL auth_farm_metadata(u.farm_id) f ON true
-      WHERE s.token_hash=$1 AND s.user_id=u.user_id AND s.auth_version=u.auth_version
-        AND s.expires_at>$2 AND s.last_seen_at>$3 AND u.status='active'
-        AND (u.role='super_admin' OR f.status='active')
-      RETURNING u.user_id,u.username,u.role,u.farm_id,u.auth_version,f.farm_name,f.business_type,s.token_hash`,
+    // Only write last_seen_at when it is more than a minute old (idle limit is
+    // 30 minutes). Writing on every query rewrote the same row per request.
+    const r = await pool.query(`WITH touch AS (
+        UPDATE auth_sessions SET last_seen_at=$2
+        WHERE token_hash=$1 AND last_seen_at < $2-60 AND expires_at>$2 AND last_seen_at>$3 RETURNING 1)
+      SELECT u.user_id,u.username,u.role,u.farm_id,u.auth_version,f.farm_name,f.business_type,s.token_hash
+      FROM auth_sessions s JOIN users u ON s.user_id=u.user_id AND s.auth_version=u.auth_version
+      LEFT JOIN LATERAL auth_farm_metadata(u.farm_id) f ON true
+      WHERE s.token_hash=$1 AND s.expires_at>$2 AND s.last_seen_at>$3 AND u.status='active'
+        AND (u.role='super_admin' OR f.status='active')`,
     [digest('session',token),at,at-config.idleSeconds]);
     return r.rows[0] ? actorFrom(r.rows[0]) : null;
   }

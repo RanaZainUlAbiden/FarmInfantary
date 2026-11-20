@@ -1,5 +1,5 @@
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withPreloading, PreloadAllModules } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { sessionInterceptor } from './shared/auth/session.interceptor';
 
@@ -10,7 +10,9 @@ import { HttpPlatformApi } from './shared/platform/http-platform-api';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes),
+    // Fetch every lazy screen in the background once the first screen is up, so
+    // later navigation does not wait on a download (files are cached for a year).
+    provideRouter(routes, withPreloading(PreloadAllModules)),
 
     // `withFetch` so requests go through the Fetch API rather than XHR, which
     // is what the session cookie work in Phase 3 will need.
