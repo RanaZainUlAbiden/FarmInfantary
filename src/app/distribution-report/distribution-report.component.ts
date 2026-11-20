@@ -5,8 +5,7 @@ import { DatabaseService } from '../shared/services/database.service';
 import { AuthService } from '../shared/services/auth.service';
 import { friendlySqlError } from '../shared/utils/sql-error.util';
 import { distributionBillsOnly } from '../shared/utils/bill-source.util';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
 import { alignHeadFootWithColumnStyles, getTableRightEdge } from '../shared/utils/pdf-table.util';
 import { paymentSourceLabel } from '../shared/utils/bank-source.util';
 import { CashPositionService, CashPosition } from '../shared/services/cash-position.service';
@@ -1097,6 +1096,7 @@ export class DistributionReportComponent implements OnInit {
   // ── PDF GENERATION ────────────────────────────────────────
 
   async generatePDF() {
+    const { autoTable, jsPDF } = await loadPdfLibs();
     this.isGenerating = true;
     try {
       const doc = new jsPDF('p', 'mm', 'a4');
@@ -1871,3 +1871,4 @@ export class DistributionReportComponent implements OnInit {
 import { settledPurchases } from '../shared/utils/purchase-settlement.util';
 import { PaginationComponent } from '../shared/components/pagination/pagination.component';
 import { ListPager } from '../shared/utils/list-pager';
+import { loadPdfLibs } from '../shared/utils/pdf-libs';

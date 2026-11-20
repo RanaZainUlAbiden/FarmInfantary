@@ -14,14 +14,14 @@ import { DateOnlyPipe } from '../shared/pipes/date-format.pipe';
 import { Subscription } from 'rxjs';
 import { skip } from 'rxjs/operators';
 import { PendingStateService } from '../shared/services/pending-state.service';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
 import { alignHeadFootWithColumnStyles } from '../shared/utils/pdf-table.util';
 import { PaginationComponent } from '../shared/components/pagination/pagination.component';
 import {BrokersComponent} from '../brokers/brokers.component';
 
 import { toLocalDateString } from '../shared/utils/date.util';
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
+import { loadPdfLibs } from '../shared/utils/pdf-libs';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-sale',
@@ -607,6 +607,7 @@ export class SaleComponent implements OnInit, OnDestroy {
 
 
   async printDailySale(group: any) {
+    const { autoTable, jsPDF } = await loadPdfLibs();
     const doc = new jsPDF(); const pw = doc.internal.pageSize.getWidth(); const ph = doc.internal.pageSize.getHeight();
     const footer = 'Software By: www.devinfantary.com  |  Contact: 0302 6938217';
     const B: [number, number, number] = [0, 0, 0]; const G: [number, number, number] = [120, 120, 120]; const LG: [number, number, number] = [200, 200, 200];
@@ -640,6 +641,7 @@ export class SaleComponent implements OnInit, OnDestroy {
 
   // PRINT: Broker Sale
   async printBrokerSale() {
+    const { autoTable, jsPDF } = await loadPdfLibs();
     const brokerName = this.selectedBrokerFilter; const allBrokerSales = this.sales.filter((s: any) => s.broker === brokerName);
     if (allBrokerSales.length === 0) return;
     const tw = allBrokerSales.reduce((s: number, x: any) => s + (x.bird_weight || 0), 0); const ta = allBrokerSales.reduce((s: number, x: any) => s + (x.total_amount || 0), 0);
@@ -676,6 +678,7 @@ export class SaleComponent implements OnInit, OnDestroy {
 
   // PRINT: Driver Receipt — 3-part voucher (Driver / Supervisor / Farm copy) on one page
   async printDriverReceipt(row: any) {
+    const { jsPDF } = await loadPdfLibs();
     const isSaved = row.sale_id !== undefined;
     const brokerName = isSaved ? (row.broker || '—') : this.getBrokerName(row.broker_id);
     const birdWeight = isSaved ? (row.bird_weight || 0) : this.getRowBirdWeight(row);

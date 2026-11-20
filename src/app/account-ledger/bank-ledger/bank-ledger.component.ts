@@ -6,8 +6,7 @@ import { DatabaseService } from '../../shared/services/database.service';
 import { AuthService } from '../../shared/services/auth.service';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { friendlySqlError } from '../../shared/utils/sql-error.util';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
 import { alignHeadFootWithColumnStyles, getTableRightEdge } from '../../shared/utils/pdf-table.util';
 import { DeleteCodeDialogComponent } from '../../shared/components/delete-code-dialog/delete-code-dialog.component';
 
@@ -17,6 +16,7 @@ import { BackLinkComponent } from '../../shared/components/back-link/back-link.c
 import { printPdfBase64 } from '../../shared/utils/browser-print.util';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { ListPager } from '../../shared/utils/list-pager';
+import { loadPdfLibs } from '../../shared/utils/pdf-libs';
 @Component({
   selector: 'app-bank-ledger',
   standalone: true,
@@ -531,6 +531,7 @@ export class BankLedgerComponent implements OnInit {
   // ── PROFESSIONAL PDF REPORT ──────────────────────────────
 
   async printReport() {
+    const { autoTable, jsPDF } = await loadPdfLibs();
     if (!this.selectedBank) return;
     
     const doc = new jsPDF('p', 'mm', 'a4');

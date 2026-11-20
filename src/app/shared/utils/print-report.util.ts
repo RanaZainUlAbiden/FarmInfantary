@@ -1,7 +1,7 @@
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
 import { alignHeadFootWithColumnStyles } from './pdf-table.util';
 import { printPdfBase64 } from './browser-print.util';
+import { loadPdfLibs } from './pdf-libs';
 
 export interface PrintReportColumn {
   header: string;
@@ -31,6 +31,7 @@ export interface PrintReportOptions {
  * rather than each reimplementing jsPDF/autoTable boilerplate.
  */
 export async function printPdfReport(opts: PrintReportOptions): Promise<void> {
+  const { autoTable, jsPDF } = await loadPdfLibs();
   const doc = new jsPDF('p', 'mm', 'a4');
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();

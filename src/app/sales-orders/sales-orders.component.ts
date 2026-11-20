@@ -8,8 +8,7 @@ import { FormStateService } from '../shared/services/form-state.service';
 import { DateOnlyPipe } from '../shared/pipes/date-format.pipe';
 import { friendlySqlError } from '../shared/utils/sql-error.util';
 import { ConfirmDialogComponent } from '../shared/components/confirm-dialog/confirm-dialog.component';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
 import { alignHeadFootWithColumnStyles, getTableRightEdge } from '../shared/utils/pdf-table.util';
 import { PaginationComponent } from '../shared/components/pagination/pagination.component';
 import { DeleteCodeDialogComponent } from '../shared/components/delete-code-dialog/delete-code-dialog.component';
@@ -18,6 +17,7 @@ import { toLocalDateString } from '../shared/utils/date.util';
 import { distributionBillsOnly } from '../shared/utils/bill-source.util';
 import { bankOptionLabel } from '../shared/utils/bank-source.util';
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
+import { loadPdfLibs } from '../shared/utils/pdf-libs';
 /**
  * Unwinds a bill save or delete that has already told the user why it stopped —
  * a bank movement that could not be applied, for example. The transaction rolls
@@ -1927,6 +1927,7 @@ export class SalesOrdersComponent implements OnInit, OnDestroy {
   }
 
   async printBill(bill: any) {
+    const { autoTable, jsPDF } = await loadPdfLibs();
     const items = await this.db.get('SELECT * FROM bill_items WHERE bill_id=?', [bill.bill_id]);
     const billItems = items.success ? items.data : [];
     const doc = new jsPDF(); 

@@ -1,8 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
 import { ActivatedRoute } from '@angular/router';
 import { DatabaseService, DbBatchOp } from '../shared/services/database.service';
 import { AuthService } from '../shared/services/auth.service';
@@ -17,6 +16,7 @@ import { alignHeadFootWithColumnStyles } from '../shared/utils/pdf-table.util';
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
 import { PaginationComponent } from '../shared/components/pagination/pagination.component';
 import { ListPager } from '../shared/utils/list-pager';
+import { loadPdfLibs } from '../shared/utils/pdf-libs';
 function firstOfMonth(): string {
   const d = new Date();
   return toLocalDateString(new Date(d.getFullYear(), d.getMonth(), 1));
@@ -373,6 +373,7 @@ export class PaymentVoucherComponent implements OnInit {
    * recomputed from the form.
    */
   async printVoucher(v: any) {
+    const { autoTable, jsPDF } = await loadPdfLibs();
     const res = await this.db.get(
       `SELECT sl.ledger_id, sl.debit,
               (SELECT COALESCE(SUM(COALESCE(x.credit, 0) - COALESCE(x.debit, 0)), 0)

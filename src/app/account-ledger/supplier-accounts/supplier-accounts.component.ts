@@ -2,8 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
 import { DatabaseService } from '../../shared/services/database.service';
 import { AuthService } from '../../shared/services/auth.service';
 import { toLocalDateString } from '../../shared/utils/date.util';
@@ -18,6 +17,7 @@ import {
 } from '../../shared/utils/supplier-ledger.util';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { ListPager } from '../../shared/utils/list-pager';
+import { loadPdfLibs } from '../../shared/utils/pdf-libs';
 
 /**
  * SUPPLIER ACCOUNTS — the entity-based view of what the farm owes its
@@ -319,6 +319,7 @@ export class SupplierAccountsComponent implements OnInit {
   // ── PRINT ────────────────────────────────────────────────
 
   async printReport() {
+    const { autoTable, jsPDF } = await loadPdfLibs();
     if (!this.selectedSupplier) return;
 
     const doc = new jsPDF('p', 'mm', 'a4');

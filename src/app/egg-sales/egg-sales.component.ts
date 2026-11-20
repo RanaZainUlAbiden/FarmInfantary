@@ -17,8 +17,9 @@ import { Subscription } from 'rxjs';
 import { toLocalDateString } from '../shared/utils/date.util';
 import { friendlySqlError } from '../shared/utils/sql-error.util';
 import { printPdfReport, PrintReportColumn } from '../shared/utils/print-report.util';
-import { jsPDF } from 'jspdf';
+import type { jsPDF } from 'jspdf';
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
+import { loadPdfLibs } from '../shared/utils/pdf-libs';
 @Component({
   selector: 'app-egg-sales',
   standalone: true,
@@ -971,6 +972,7 @@ private editOriginalGrade: string = '';
   // Accounts / Farm copy) on one page, so egg sales get the same paper trail
   // broiler sales already has.
   async printSaleRow(row: any) {
+    const { jsPDF } = await loadPdfLibs();
     const isPerCarton = row.sale_mode === 'per_carton';
     const total = (row.total_amount !== null && row.total_amount !== undefined) ? Number(row.total_amount) : this.computeSaleTotal(row);
     const qty = this.computeQuantity(row);

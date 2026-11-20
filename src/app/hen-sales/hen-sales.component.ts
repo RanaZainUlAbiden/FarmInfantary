@@ -18,8 +18,9 @@ import { Subscription } from 'rxjs';
 import { toLocalDateString } from '../shared/utils/date.util';
 import { friendlySqlError } from '../shared/utils/sql-error.util';
 import { printPdfReport, PrintReportColumn } from '../shared/utils/print-report.util';
-import { jsPDF } from 'jspdf';
+import type { jsPDF } from 'jspdf';
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
+import { loadPdfLibs } from '../shared/utils/pdf-libs';
 @Component({
   selector: 'app-hen-sales',
   standalone: true,
@@ -906,6 +907,7 @@ export class HenSalesComponent implements OnInit, OnDestroy {
   // Accounts / Farm copy) on one page, so hen sales get the same paper trail
   // broiler sales already has.
   async printSaleRow(row: any) {
+    const { jsPDF } = await loadPdfLibs();
     const isPerKg = row.pricing_mode === 'per_kg';
     const total = (row.total_amount !== null && row.total_amount !== undefined) ? Number(row.total_amount) : this.computeSaleTotal(row);
     const rateUnit = isPerKg ? 'kg' : 'hen';

@@ -5,8 +5,7 @@ import { Router } from '@angular/router';
 import { DatabaseService } from '../../shared/services/database.service';
 import { AuthService } from '../../shared/services/auth.service';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
 import { alignHeadFootWithColumnStyles } from '../../shared/utils/pdf-table.util';
 import { DeleteCodeDialogComponent } from '../../shared/components/delete-code-dialog/delete-code-dialog.component';
 
@@ -19,6 +18,7 @@ import { bankSourceError, bankNameOf } from '../../shared/utils/bank-source.util
 import { printPdfBase64 } from '../../shared/utils/browser-print.util';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { ListPager } from '../../shared/utils/list-pager';
+import { loadPdfLibs } from '../../shared/utils/pdf-libs';
 @Component({
   selector: 'app-expense-ledger',
   standalone: true,
@@ -459,6 +459,7 @@ export class ExpenseLedgerComponent implements OnInit {
   // ── PDF REPORT ────────────────────────────────────────────
 
   async printReport() {
+    const { autoTable, jsPDF } = await loadPdfLibs();
     const doc = new jsPDF('p', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();

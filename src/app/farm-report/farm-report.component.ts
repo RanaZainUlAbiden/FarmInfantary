@@ -14,11 +14,11 @@ import {
 import { CashPositionService, CashPosition, FarmCashPosition } from '../shared/services/cash-position.service';
 import { toLocalDateString } from '../shared/utils/date.util';
 import { Subscription } from 'rxjs';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
 import { alignHeadFootWithColumnStyles } from '../shared/utils/pdf-table.util';
 
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
+import { loadPdfLibs } from '../shared/utils/pdf-libs';
 /**
  * Farm Report — every flock/batch of the farm selected in the sidebar, over a
  * date range. Rendering only: all SQL and aggregation lives in
@@ -281,6 +281,7 @@ export class FarmReportComponent implements OnInit, OnDestroy {
   // BLACK/GRAY/LGRAY constants, same DD-MM-YYYY formatDate, same footer text,
   // same page numbering and section headings. Do not restyle it in isolation.
   async generatePDF() {
+    const { autoTable, jsPDF } = await loadPdfLibs();
     if (!this.report) return;
     this.isGenerating = true;
 

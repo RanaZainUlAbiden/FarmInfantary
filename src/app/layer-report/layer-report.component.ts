@@ -7,12 +7,12 @@ import { FlockService } from '../shared/services/flock.service';
 import { FarmUnitService } from '../shared/services/farm-unit.service';
 import { DataChangeService } from '../shared/services/data-change.service';
 import { Subscription } from 'rxjs';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
 import { alignHeadFootWithColumnStyles } from '../shared/utils/pdf-table.util';
 import { labourPaymentLabel } from '../shared/utils/bank-source.util';
 
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
+import { loadPdfLibs } from '../shared/utils/pdf-libs';
 @Component({
   selector: 'app-layer-report',
   standalone: true,
@@ -327,6 +327,7 @@ export class LayerReportComponent implements OnInit, OnDestroy {
   }
 
   async generatePDF() {
+    const { autoTable, jsPDF } = await loadPdfLibs();
     this.isGenerating = true;
     this.savePreferences();
 

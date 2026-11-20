@@ -6,13 +6,13 @@ import { AuthService } from '../shared/services/auth.service';
 import { DatabaseService } from '../shared/services/database.service';
 import { Subscription } from 'rxjs';
 import { skip } from 'rxjs/operators';
-import { jsPDF } from 'jspdf';
+import type { jsPDF } from 'jspdf';
 import { displayFcr, latestFlockFcr } from '../shared/utils/fcr.util';
-import autoTable from 'jspdf-autotable';
 import { alignHeadFootWithColumnStyles } from '../shared/utils/pdf-table.util';
 import { labourPaymentLabel } from '../shared/utils/bank-source.util';
 
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
+import { loadPdfLibs } from '../shared/utils/pdf-libs';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-report',
@@ -359,6 +359,7 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   // ── PDF Generation ────────────────────────────────────────
   async generatePDF() {
+    const { autoTable, jsPDF } = await loadPdfLibs();
     this.isGenerating = true;
     this.savePreferences();
 

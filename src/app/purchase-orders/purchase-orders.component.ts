@@ -10,12 +10,13 @@ import { ConfirmDialogComponent } from '../shared/components/confirm-dialog/conf
 import { DeleteCodeDialogComponent } from '../shared/components/delete-code-dialog/delete-code-dialog.component';
 import { DateOnlyPipe } from '../shared/pipes/date-format.pipe';
 import { PaginationComponent } from '../shared/components/pagination/pagination.component';
-import { jsPDF } from 'jspdf';
+import type { jsPDF } from 'jspdf';
 
 import { toLocalDateString } from '../shared/utils/date.util';
 import { friendlySqlError } from '../shared/utils/sql-error.util';
 import { settledPurchases } from '../shared/utils/purchase-settlement.util';
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
+import { loadPdfLibs } from '../shared/utils/pdf-libs';
 @Component({
   selector: 'app-purchase-orders',
   standalone: true,
@@ -362,6 +363,7 @@ export class PurchaseOrdersComponent implements OnInit, OnDestroy {
   }
 
   async openImage(base64: string) {
+    const { jsPDF } = await loadPdfLibs();
     try {
       const img = new Image();
       await new Promise<void>((resolve, reject) => {

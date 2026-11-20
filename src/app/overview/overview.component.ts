@@ -6,11 +6,11 @@ import { DatabaseService } from '../shared/services/database.service';
 import { OverviewService, OverviewSummary, OverviewDateRange } from '../shared/services/overview.service';
 import { CashPositionService, CashPosition } from '../shared/services/cash-position.service';
 import { toLocalDateString } from '../shared/utils/date.util';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
 import { alignHeadFootWithColumnStyles } from '../shared/utils/pdf-table.util';
 
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
+import { loadPdfLibs } from '../shared/utils/pdf-libs';
 @Component({
   selector: 'app-overview',
   standalone: true,
@@ -111,6 +111,7 @@ export class OverviewComponent implements OnInit {
 
   // ── PDF Generation ──────────────────────────────────────────
   async generatePDF() {
+    const { autoTable, jsPDF } = await loadPdfLibs();
     if (!this.summary) return;
     this.isGenerating = true;
 

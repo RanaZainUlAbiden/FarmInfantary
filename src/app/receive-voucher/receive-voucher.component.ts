@@ -1,8 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
 import { DatabaseService, DbBatchOp } from '../shared/services/database.service';
 import { AuthService } from '../shared/services/auth.service';
 import { ConfirmDialogComponent } from '../shared/components/confirm-dialog/confirm-dialog.component';
@@ -16,6 +15,7 @@ import { alignHeadFootWithColumnStyles } from '../shared/utils/pdf-table.util';
 import { printPdfBase64 } from '../shared/utils/browser-print.util';
 import { PaginationComponent } from '../shared/components/pagination/pagination.component';
 import { ListPager } from '../shared/utils/list-pager';
+import { loadPdfLibs } from '../shared/utils/pdf-libs';
 function firstOfMonth(): string {
   const d = new Date();
   return toLocalDateString(new Date(d.getFullYear(), d.getMonth(), 1));
@@ -393,6 +393,7 @@ export class ReceiveVoucherComponent implements OnInit {
    * shows the real allocation rather than a re-guess of it.
    */
   async printVoucher(v: any) {
+    const { autoTable, jsPDF } = await loadPdfLibs();
     const res = await this.db.get(
       `SELECT cl.credit, cl.reference_id, b.bill_number, b.bill_date,
               b.total_amount, b.amount_paid
