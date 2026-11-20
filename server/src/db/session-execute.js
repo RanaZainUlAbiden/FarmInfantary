@@ -33,7 +33,7 @@ const sanitize = result => result?.success ? result : {
 
 export function createSessionDb(pool, {
   authorize, idleTimeoutMs = 30_000, lifetimeMs = 60_000,
-  statementTimeoutMs = 10_000, maxConnections = 8, maxTransactionsPerUser = 4,
+  statementTimeoutMs = 10_000, maxConnections = 16, maxTransactionsPerUser = 4,
   maxQueuedOperations = 16, maxBatchSize = 500,
 } = {}) {
   if (typeof authorize !== 'function') throw new Error('A trusted SQL authorizer is required.');

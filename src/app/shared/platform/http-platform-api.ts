@@ -28,7 +28,7 @@ export class HttpPlatformApi implements PlatformApi {
   private txToken: string | null = null;
   private sessionGeneration = 0;
   private activePosts = 0;
-  private readonly postLimit = 4;
+  private readonly postLimit = 6;
   private readonly queueLimit = 128;
   private postQueue: Array<{ start: () => void; cancel: () => void }> = [];
   resetSession(): void {

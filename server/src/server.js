@@ -100,7 +100,7 @@ export async function buildServer({ env = process.env, logger = false, pool: sup
     if(!Number.isSafeInteger(requestLimit)||requestLimit<1||requestLimit>10_000)throw new Error('Invalid SQL request limit.');
     if(mode==='session'&&(env.RUNTIME_DATABASE_URL||suppliedRuntimePool)) {
       const schema=env.DATABASE_SCHEMA??'public';
-      runtime=suppliedRuntimePool??new pg.Pool({connectionString:env.RUNTIME_DATABASE_URL,max:8,
+      runtime=suppliedRuntimePool??new pg.Pool({connectionString:env.RUNTIME_DATABASE_URL,max:16,
         connectionTimeoutMillis:5000,statement_timeout:10_000});
       app.addHook('onClose',async()=>{await sessionDb?.close();if(!suppliedRuntimePool)await runtime.end();});
       await attestRuntimeRole(runtime,{schema});
