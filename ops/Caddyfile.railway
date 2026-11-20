@@ -36,6 +36,14 @@
   header Cache-Control "public, max-age=31536000, immutable"
   file_server
  }
+ # Un-hashed brand images are versioned by a ?v= query in the page, so they
+ # can be kept for 30 days instead of being re-checked on every visit.
+ @images path /logo.png /logo-ui.webp /favicon.png /favicon-192.png /app-icon.svg
+ handle @images {
+  root * /srv
+  header Cache-Control "public, max-age=2592000"
+  file_server
+ }
  handle {
   root * /srv
   try_files {path} /index.html

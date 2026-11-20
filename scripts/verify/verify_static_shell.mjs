@@ -7,7 +7,7 @@ const caches={open:async name=>{if(!stores.has(name))stores.set(name,new Map());
 vm.runInNewContext(source,{self:{location:{origin:'https://farm.test'},clients:{claim:async()=>{claimed=true;}},addEventListener:(type,fn)=>handlers[type]=fn},caches,URL,fetch:async request=>{network++;if(offline)throw new Error('offline');return new Response('static asset',{headers:{'content-type':request.mode==='navigate'?'text/html':'application/javascript'}});}});
 const check=async(label,fn)=>{await fn();passed++;console.log('  PASS  '+label);};
 const event=async(type,request)=>{let promise;handlers[type]({request,waitUntil:p=>promise=p,respondWith:p=>promise=p});return promise?await promise:undefined;};
-await check('shell install caches only public static shell assets',async()=>{await event('install');assert.deepEqual([...stores.values()][0].keys().toArray?.()||[...[...stores.values()][0].keys()],['/index.html','/logo.png']);});
+await check('shell install caches only public static shell assets',async()=>{await event('install');assert.deepEqual([...stores.values()][0].keys().toArray?.()||[...[...stores.values()][0].keys()],['/index.html','/logo-ui.webp?v=20261120']);});
 await check('API reads, all mutations, exports and foreign origins bypass the service worker',async()=>{
  for(const request of [{url:'https://farm.test/api/auth/me',method:'GET'},{url:'https://farm.test/api/account/export',method:'GET'},{url:'https://farm.test/api/db/run',method:'POST'},{url:'https://other.test/main-ABC.js',method:'GET'}])assert.equal(await event('fetch',request),undefined);assert.equal(network,0);
 });

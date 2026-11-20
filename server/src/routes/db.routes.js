@@ -37,7 +37,7 @@ export function registerDbRoutes(app, { db, session, sessionDb, guarded = false 
     const identity = await actor(req);
     if(guarded&&!sessionDb) {
       const denied=async()=>({success:false,error:'Business database access is unavailable.'});
-      return Object.fromEntries(['get','run','batch','begin','commit','rollback'].map(key=>[key,denied]));
+      return Object.fromEntries(['get','getMany','run','batch','begin','commit','rollback'].map(key=>[key,denied]));
     }
     return sessionDb ? sessionDb.forActor(identity) : db;
   };
@@ -51,6 +51,19 @@ export function registerDbRoutes(app, { db, session, sessionDb, guarded = false 
       return reply.code(400).send({ success: false, error: 'sql must be a non-empty string.' });
     }
     return (await executor(req)).get(sql, params ?? [], token ?? null);
+  });
+
+  // Several reads in one request and one read-only transaction. Each query gets
+  // its own { success, data } answer, in order; one failing query never turns
+  // another query's answer into an error the browser cannot tell apart.
+  app.post('/api/db/get-many', async (req, reply) => {
+    const bad = badBody(req.body);
+    if (bad) return reply.code(400).send({ success: false, error: bad });
+    const { queries, token } = req.body;
+    if (!Array.isArray(queries) || queries.length < 1 || queries.some(q => !q || typeof q.sql !== 'string' || q.sql.trim() === '')) {
+      return reply.code(400).send({ success: false, error: 'queries must be a non-empty list of { sql, params }.' });
+    }
+    return (await executor(req)).getMany(queries, token ?? null);
   });
 
   app.post('/api/db/run', async (req, reply) => {

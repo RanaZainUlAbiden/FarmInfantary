@@ -1,7 +1,7 @@
 // Static shell only. API responses, exports and mutations are NEVER cached or replayed.
-const CACHE='farminfantary-static-v2-brand';
-const asset=/^\/(?:main|polyfills|chunk|styles)-[a-z0-9]+\.(?:js|css)$|^\/(?:logo\.png|favicon\.png|app-icon\.svg)$/i;
-self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(['/index.html','/logo.png']))));
+const CACHE='farminfantary-static-v3-images';
+const asset=/^\/(?:main|polyfills|chunk|styles)-[a-z0-9]+\.(?:js|css)$|^\/(?:logo\.png|logo-ui\.webp|favicon\.png|favicon-192\.png|app-icon\.svg)$/i;
+self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(['/index.html','/logo-ui.webp?v=20261120']))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('farminfantary-static-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
  const request=event.request,url=new URL(request.url);

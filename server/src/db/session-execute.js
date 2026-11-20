@@ -34,11 +34,11 @@ const sanitize = result => result?.success ? result : {
 export function createSessionDb(pool, {
   authorize, idleTimeoutMs = 30_000, lifetimeMs = 60_000,
   statementTimeoutMs = 10_000, maxConnections = 16, maxTransactionsPerUser = 4,
-  maxQueuedOperations = 16, maxBatchSize = 500,
+  maxQueuedOperations = 16, maxBatchSize = 500, maxReadsPerRequest = 100,
 } = {}) {
   if (typeof authorize !== 'function') throw new Error('A trusted SQL authorizer is required.');
   for (const value of [idleTimeoutMs, lifetimeMs, statementTimeoutMs, maxConnections,
-    maxTransactionsPerUser, maxQueuedOperations, maxBatchSize]) {
+    maxTransactionsPerUser, maxQueuedOperations, maxBatchSize, maxReadsPerRequest]) {
     if (!Number.isSafeInteger(value) || value < 1) throw new Error('Invalid session database limit.');
   }
   const db = createDb(pool, { transactionTimeoutMs: 0 });
@@ -83,7 +83,8 @@ export function createSessionDb(pool, {
     record.lifeTimer.unref();
     return record;
   }
-  async function open(record) {
+  // `readOnly` opens BEGIN READ ONLY, so a batched read request can never write.
+  async function open(record, readOnly = false) {
     // BEGIN and the transaction-local context go out as ONE round trip. Every
     // interpolated value is validated first: ids are digit strings (checked by
     // identity()) and the timeouts are integers (checked at construction).
@@ -98,7 +99,7 @@ export function createSessionDb(pool, {
       set_config('app.user_id', ${literal(record.actor.userId)}, true),
       set_config('statement_timeout', ${literal(statementTimeoutMs)}, true),
       set_config('lock_timeout', ${literal(statementTimeoutMs)}, true),
-      set_config('idle_in_transaction_session_timeout', ${literal(Math.max(idleTimeoutMs, statementTimeoutMs) + 1000)}, true)`);
+      set_config('idle_in_transaction_session_timeout', ${literal(Math.max(idleTimeoutMs, statementTimeoutMs) + 1000)}, true)`, { readOnly });
     } catch { forget(record); return false; }
     if (!result.success) { forget(record); return false; }
     record.internalToken = result.token;
@@ -143,16 +144,20 @@ export function createSessionDb(pool, {
   async function execute(actor, method, input, params, token) {
     let payload;
     try {
-      payload = method === 'batch' ? validateBatch(structuredClone(input))
+      const many = method === 'getMany';
+      if (many) {
+        if (!Array.isArray(input) || input.length < 1 || input.length > maxReadsPerRequest) return failure('Invalid database operation.');
+        payload = input.map(q => ({ sql: q?.sql, params: structuredClone(q?.params ?? []) }));
+      } else payload = method === 'batch' ? validateBatch(structuredClone(input))
         : { sql: input, params: structuredClone(params) };
       if (method === 'batch' && payload.length > maxBatchSize) return failure('Batch is too large.');
-      const statements = method === 'batch' ? payload : [payload];
+      const statements = method === 'batch' || many ? payload : [payload];
       for (const statement of statements) {
         if (typeof statement.sql !== 'string' || !statement.sql.trim() || !Array.isArray(statement.params)) {
           return failure('Invalid database operation.');
         }
         // All batch statements are authorized before the first mutation.
-        const approved = await authorize({ actor, method, sql: statement.sql, params: structuredClone(statement.params) });
+        const approved = await authorize({ actor, method: many ? 'get' : method, sql: statement.sql, params: structuredClone(statement.params) });
         if (approved !== true && !(readPrepared(approved?.query) && Array.isArray(approved.params))) {
           return failure('Database access is not allowed.');
         }
@@ -166,13 +171,30 @@ export function createSessionDb(pool, {
     record.pending++;
     return queue(record, async () => {
       try {
-        if (!explicit && !await open(record)) return unavailable();
+        if (!explicit && !await open(record, method === 'getMany')) return unavailable();
         // Work admitted before commit is allowed to drain; expiry/revocation
         // instead prevents queued work, then rolls back after the active query.
         if (record.cancelled) return closedTransaction();
-        const result = method === 'batch' ? await db.batch(payload, record.internalToken, { bare: !explicit })
+        let result;
+        if (method === 'getMany') {
+          // Reads run in order on this one connection. A failed statement aborts
+          // the transaction, so the rest are reported as failed and the browser
+          // repeats just those on their own to get the exact error.
+          const results = []; let aborted = false;
+          for (const statement of payload) {
+            if (aborted) { results.push(unavailable()); continue; }
+            const one = sanitize(await db.get(statement.sql, statement.params, record.internalToken));
+            if (!one.success) aborted = true;
+            results.push(one);
+          }
+          result = aborted ? { success: true, results, aborted: true } : { success: true, results };
+        } else result = method === 'batch' ? await db.batch(payload, record.internalToken, { bare: !explicit })
           : await db[method](payload.sql, payload.params, record.internalToken);
         if (explicit && record.cancelled) return closedTransaction();
+        if (!explicit && result.aborted) {
+          await db.rollback(record.internalToken);
+          return { success: true, results: result.results };
+        }
         if (!explicit) {
           if (!result.success || record.state !== 'open') { await db.rollback(record.internalToken); return sanitize(result.success ? null : result); }
           const committed = await db.commit(record.internalToken);
@@ -180,8 +202,8 @@ export function createSessionDb(pool, {
         }
         // A failed batch already restored its savepoint. A failed ordinary
         // statement poisons PostgreSQL's transaction: roll it back immediately.
-        if (!result.success && method !== 'batch') void expire(record);
-        return sanitize(result);
+        if ((!result.success && method !== 'batch') || result.aborted) void expire(record);
+        return sanitize(result.aborted ? { success: true, results: result.results } : result);
       } catch {
         if (explicit) void expire(record);
         else if (record.internalToken) await db.rollback(record.internalToken);
@@ -201,9 +223,10 @@ export function createSessionDb(pool, {
   function forActor(value) {
     const actor = identity(value);
     const denied = () => Promise.resolve(failure('A valid farm session is required.'));
-    if (!actor) return Object.fromEntries(['get', 'run', 'batch', 'begin', 'commit', 'rollback'].map(key => [key, denied]));
+    if (!actor) return Object.fromEntries(['get', 'getMany', 'run', 'batch', 'begin', 'commit', 'rollback'].map(key => [key, denied]));
     return Object.freeze({
       get: (sql, params = [], token = null) => execute(actor, 'get', sql, params, token),
+      getMany: (queries, token = null) => execute(actor, 'getMany', queries, null, token),
       run: (sql, params = [], token = null) => execute(actor, 'run', sql, params, token),
       batch: (ops, token = null) => execute(actor, 'batch', ops, null, token),
       begin: () => begin(actor), commit: token => finish(actor, token, true), rollback: token => finish(actor, token, false),

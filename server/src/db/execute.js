@@ -142,6 +142,13 @@ export function createDb(pool, { transactionTimeoutMs = 60_000 } = {}) {
     }
   }
 
+  /** Several reads in order; each answers like get(), so one failure never hides the rest. */
+  async function getMany(queries, token = null) {
+    const results = [];
+    for (const q of queries) results.push(await get(q.sql, q.params ?? [], token));
+    return { success: true, results };
+  }
+
   async function run(sql, params = [], token = null) {
     try {
       const { client } = target(token);
@@ -321,11 +328,11 @@ export function createDb(pool, { transactionTimeoutMs = 60_000 } = {}) {
 
   // `initSql` (trusted, server-built, never from a request) rides in the same
   // round trip as BEGIN: one simple-protocol message instead of two.
-  async function begin(initSql = null) {
+  async function begin(initSql = null, { readOnly = false } = {}) {
     let client;
     try {
       client = await pool.connect();
-      await client.query(initSql ? `BEGIN; ${initSql}` : 'BEGIN');
+      await client.query(`BEGIN${readOnly ? ' READ ONLY' : ''}${initSql ? `; ${initSql}` : ''}`);
       const token = `tx_${++tokenSeq}_${Date.now()}`;
       const tx = {
         client,
@@ -366,6 +373,7 @@ export function createDb(pool, { transactionTimeoutMs = 60_000 } = {}) {
   return {
     init,
     get,
+    getMany,
     run,
     batch,
     begin,

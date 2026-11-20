@@ -234,6 +234,27 @@ try {
     const raw = createDb(pool); await raw.init(); const token = ok(await raw.begin()).token;
     no(await raw.get('SELECT 1/0', [], token)); no(await raw.commit(token)); assert.equal(raw.openTransactions, 0);
   });
+  const many = createSessionDb(pool, options); await many.init(); const FA = many.forActor(a);
+  await check('batched reads return one answer per query, in order, scoped to the caller farm', async () => {
+    const r = ok(await FA.getMany([{ sql: context, params: [] }, { sql: read, params: [] }]));
+    assert.equal(r.results.length, 2); assert.equal(r.results[0].success, true);
+    assert.equal(r.results[0].data[0].farm, '1'); assert.equal(r.results[1].success, true);
+    assert.ok(r.results[1].data.every(row => String(row.farm_id) === '1'));
+    assert.equal(many.activeConnections, 0);
+  });
+  await check('batched reads are read-only: a write fails, nothing persists, later reads are reported failed', async () => {
+    const before = await count(1, 424242);
+    const r = ok(await FA.getMany([{ sql: read, params: [] }, { sql: insert, params: [1, 424242] }, { sql: read, params: [] }]));
+    assert.equal(r.results[0].success, true); assert.equal(r.results[1].success, false); assert.equal(r.results[2].success, false);
+    assert.equal(await count(1, 424242), before); assert.equal(many.activeConnections, 0);
+    // the connection goes back to the pool clean: the next request works and sees its own context
+    assert.equal(ok(await FA.get(context)).data[0].farm, '1');
+  });
+  await check('a batched read that is not authorized refuses the whole request before touching the database', async () => {
+    no(await FA.getMany([{ sql: read, params: [] }, { sql: 'SELECT 1 FROM session_fixture', params: [] }]));
+    no(await FA.getMany([])); no(await FA.getMany('SELECT 1')); assert.equal(many.activeConnections, 0);
+  });
+  await many.close();
   console.log(`\nALL CHECKS PASSED — ${checks} session transaction scenarios`);
 } finally {
   await Promise.all([db?.close(), timed?.close(), bounded?.close()]);

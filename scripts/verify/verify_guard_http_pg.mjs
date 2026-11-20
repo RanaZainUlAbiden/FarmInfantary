@@ -199,6 +199,20 @@ try {
   await sql("UPDATE users SET status='active' WHERE user_id=$1",[ownerId]);a=await login('guard.owner');
   assert.equal((await query('SELECT current_stock FROM products WHERE product_id=?',[product1])).data[0].current_stock,11);
  });
+ await check('batched reads go through the same session, origin and guard checks as single reads',async()=>{
+  const ask=(cookie,body,headers={})=>db('get-many',body,cookie,headers);
+  const one={sql:'SELECT current_stock FROM products WHERE product_id=?',params:[product1]};
+  const good=await ask(a,{queries:[one,one]});assert.equal(good.statusCode,200);
+  const body=good.json();assert.equal(body.success,true);assert.equal(body.results.length,2);
+  assert.ok(body.results.every(r=>r.success&&r.data.length===1));
+  assert.equal((await ask(null,{queries:[one]})).statusCode,401);
+  assert.equal((await ask(a,{queries:[one]},{origin:'https://evil.example'})).statusCode,403);
+  assert.equal((await ask(a,{queries:[]})).statusCode,400);assert.equal((await ask(a,{queries:'SELECT 1'})).statusCode,400);
+  const mixed=(await ask(a,{queries:[one,{sql:'UPDATE products SET current_stock=1',params:[]},one]})).json();
+  // The guard refuses a write sent as a read, so the whole request is refused up front.
+  assert.equal(mixed.success,false);assert.equal(mixed.results,undefined);
+  assert.equal((await query('SELECT current_stock FROM products WHERE product_id=?',[product1])).data[0].current_stock,11);
+ });
  await check('atomic SQL throttles return 429 before execution and reopen after the window',async()=>{
   // SQL throttling is counted in server memory (not auth_login_limits), so fill
   // the 600-per-minute allowance with real cheap reads, then the next is refused.

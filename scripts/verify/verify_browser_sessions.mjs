@@ -93,7 +93,7 @@ await check('late BEGIN responses cannot restore a previous identity transaction
  const requests=[],http={post:(url,body)=>{const result=new rx.Subject();requests.push({url,body,result});return result;}};
  const {HttpPlatformApi}=loadBrowserSource('src/app/shared/platform/http-platform-api.ts',{'@angular/core':{Injectable:()=>t=>t}});
  const api=new HttpPlatformApi(http),begin=api.dbBeginTransaction();api.resetSession();requests[0].result.next({success:true,token:'old'});requests[0].result.complete();assert.equal((await begin).success,false);
- const read=api.dbGet('SELECT 1');assert.equal(requests[1].body.token,null);requests[1].result.next({success:true,data:[]});requests[1].result.complete();await read;
+ const read=api.dbGet('SELECT 1');await new Promise(r=>setTimeout(r,0));assert.equal(requests[1].body.token,null);requests[1].result.next({success:true,data:[]});requests[1].result.complete();await read;
 });
 
 function interceptorFor(f) {

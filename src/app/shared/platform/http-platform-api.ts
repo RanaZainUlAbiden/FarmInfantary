@@ -31,7 +31,13 @@ export class HttpPlatformApi implements PlatformApi {
   private readonly postLimit = 6;
   private readonly queueLimit = 128;
   private postQueue: Array<{ start: () => void; cancel: () => void }> = [];
+  /** Reads issued in the same moment, waiting to travel as ONE request. */
+  private pendingReads: Array<{ sql: string; params: any[]; resolve: (r: DbGetResult) => void }> = [];
+  private readFlushTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly readBatchMax = 40;
   resetSession(): void {
+    const waiting = this.pendingReads.splice(0);
+    waiting.forEach(read => read.resolve({ success: false, error: 'Your sign-in changed. Start again.' }));
     this.txToken = null;
     this.sessionGeneration++;
     const discarded = this.postQueue.splice(0);
@@ -83,10 +89,41 @@ export class HttpPlatformApi implements PlatformApi {
   }
 
   dbGet(sql: string, params: any[] = []): Promise<DbGetResult> {
+    // Plain reads outside a transaction are gathered for a moment and sent
+    // together (one request, one read-only transaction). A screen that asks for
+    // forty figures at once used to send forty requests, six at a time. Anything
+    // that is not a plain read, or runs inside a transaction, goes by itself.
+    if (this.txToken || !/^\s*(select|with)\b/i.test(sql)) return this.getSingle(sql, params);
+    return new Promise<DbGetResult>(resolve => {
+      this.pendingReads.push({ sql, params, resolve });
+      this.readFlushTimer ??= setTimeout(() => this.flushReads(), 0);
+    });
+  }
+
+  private getSingle(sql: string, params: any[]): Promise<DbGetResult> {
     return this.post<DbGetResult>(
       'db/get', { sql, params, token: this.txToken },
       (error) => ({ success: false, error })
     );
+  }
+
+  private flushReads(): void {
+    this.readFlushTimer = null;
+    const reads = this.pendingReads.splice(0);
+    for (let i = 0; i < reads.length; i += this.readBatchMax) {
+      const group = reads.slice(i, i + this.readBatchMax);
+      if (group.length === 1) { void this.getSingle(group[0].sql, group[0].params).then(group[0].resolve); continue; }
+      void this.post<{ success: boolean; results?: DbGetResult[]; error?: string }>(
+        'db/get-many', { queries: group.map(r => ({ sql: r.sql, params: r.params })), token: null },
+        (error) => ({ success: false, error })
+      ).then(res => group.forEach((read, index) => {
+        const answer = res.success ? res.results?.[index] : undefined;
+        // A query that failed (or the whole request) is repeated on its own, so
+        // the caller gets exactly the error it always got.
+        if (answer?.success) read.resolve(answer);
+        else void this.getSingle(read.sql, read.params).then(read.resolve);
+      }));
+    }
   }
 
   dbRun(sql: string, params: any[] = []): Promise<DbRunResult> {
