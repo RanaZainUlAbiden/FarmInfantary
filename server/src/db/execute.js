@@ -237,7 +237,10 @@ export function createDb(pool, { transactionTimeoutMs = 60_000 } = {}) {
    * BEGIN — PostgreSQL rejects the latter, exactly as SQLite did — so a batch
    * can fail and unwind without discarding the transaction around it.
    */
-  async function batch(ops, token = null) {
+  // `bare` (trusted caller only): the caller already owns the surrounding
+  // transaction and rolls the whole of it back on failure, so the savepoint
+  // (two extra round trips) is skipped.
+  async function batch(ops, token = null, { bare = false } = {}) {
     let list;
     try {
       list = validateBatch(ops);
@@ -253,7 +256,7 @@ export function createDb(pool, { transactionTimeoutMs = 60_000 } = {}) {
     try {
       if (nested) {
         ({ client } = target(token));
-        await client.query(`SAVEPOINT ${savepoint}`);
+        if (!bare) await client.query(`SAVEPOINT ${savepoint}`);
       } else {
         client = await pool.connect();
         release = () => client.release();
@@ -279,7 +282,7 @@ export function createDb(pool, { transactionTimeoutMs = 60_000 } = {}) {
         results.push({ lastId });
       }
 
-      if (nested) await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+      if (nested) { if (!bare) await client.query(`RELEASE SAVEPOINT ${savepoint}`); }
       else await client.query('COMMIT');
 
       return {
@@ -290,7 +293,9 @@ export function createDb(pool, { transactionTimeoutMs = 60_000 } = {}) {
     } catch (err) {
       const failedIndex = results.length;
       try {
-        if (nested) {
+        if (nested && bare) {
+          // The caller rolls the whole transaction back.
+        } else if (nested) {
           await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
           await client.query(`RELEASE SAVEPOINT ${savepoint}`);
         } else {
@@ -314,11 +319,13 @@ export function createDb(pool, { transactionTimeoutMs = 60_000 } = {}) {
   // Only 2 call sites use these; the other 54 multi-statement writes use
   // batch(), which is self-contained. Prefer batch() for new work.
 
-  async function begin() {
+  // `initSql` (trusted, server-built, never from a request) rides in the same
+  // round trip as BEGIN: one simple-protocol message instead of two.
+  async function begin(initSql = null) {
     let client;
     try {
       client = await pool.connect();
-      await client.query('BEGIN');
+      await client.query(initSql ? `BEGIN; ${initSql}` : 'BEGIN');
       const token = `tx_${++tokenSeq}_${Date.now()}`;
       const tx = {
         client,

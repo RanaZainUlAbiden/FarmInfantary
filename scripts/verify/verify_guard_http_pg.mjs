@@ -200,8 +200,9 @@ try {
   assert.equal((await query('SELECT current_stock FROM products WHERE product_id=?',[product1])).data[0].current_stock,11);
  });
  await check('atomic SQL throttles return 429 before execution and reopen after the window',async()=>{
-  const bucket=createHmac('sha256',secret).update('sql:username\0'+String(ownerId)).digest('hex');
-  await sql('UPDATE auth_login_limits SET attempts=600 WHERE bucket=$1',[bucket]);
+  // SQL throttling is counted in server memory (not auth_login_limits), so fill
+  // the 600-per-minute allowance with real cheap reads, then the next is refused.
+  let refused=false;for(let i=0;i<700&&!refused;i++)refused=(await db('get',{sql:'SELECT 1 AS one'})).statusCode===429;assert.ok(refused);
   const r=await db('run',{sql:'UPDATE products SET current_stock=999'});assert.equal(r.statusCode,429);assert.equal(r.headers['retry-after'],'60');
   now+=61_000;assert.equal((await query('SELECT current_stock FROM products WHERE product_id=?',[product1])).data[0].current_stock,11);
  });

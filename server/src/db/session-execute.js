@@ -84,17 +84,25 @@ export function createSessionDb(pool, {
     return record;
   }
   async function open(record) {
-    const result = await db.begin();
+    // BEGIN and the transaction-local context go out as ONE round trip. Every
+    // interpolated value is validated first: ids are digit strings (checked by
+    // identity()) and the timeouts are integers (checked at construction).
+    const literal = value => {
+      const text = String(value);
+      if (!/^[0-9]{1,19}$/.test(text)) throw new Error('Invalid session context value.');
+      return `'${text}'`;
+    };
+    let result;
+    try {
+      result = await db.begin(`SELECT set_config('app.farm_id', ${literal(record.actor.farmId)}, true),
+      set_config('app.user_id', ${literal(record.actor.userId)}, true),
+      set_config('statement_timeout', ${literal(statementTimeoutMs)}, true),
+      set_config('lock_timeout', ${literal(statementTimeoutMs)}, true),
+      set_config('idle_in_transaction_session_timeout', ${literal(Math.max(idleTimeoutMs, statementTimeoutMs) + 1000)}, true)`);
+    } catch { forget(record); return false; }
     if (!result.success) { forget(record); return false; }
     record.internalToken = result.token;
-    // Trusted, parameterized, transaction-local context on the SAME connection
-    // as every business statement. Neither pool reuse nor COMMIT preserves it.
-    const context = await db.get(`SELECT set_config('app.farm_id', ?, true),
-      set_config('app.user_id', ?, true), set_config('statement_timeout', ?, true),
-      set_config('lock_timeout', ?, true), set_config('idle_in_transaction_session_timeout', ?, true)`,
-    [record.actor.farmId, record.actor.userId, String(statementTimeoutMs),
-      String(statementTimeoutMs), String(Math.max(idleTimeoutMs, statementTimeoutMs) + 1000)], result.token);
-    if (!context.success || record.state !== 'opening') {
+    if (record.state !== 'opening') {
       await db.rollback(result.token); forget(record); return false;
     }
     record.state = 'open'; touch(record);
@@ -162,7 +170,7 @@ export function createSessionDb(pool, {
         // Work admitted before commit is allowed to drain; expiry/revocation
         // instead prevents queued work, then rolls back after the active query.
         if (record.cancelled) return closedTransaction();
-        const result = method === 'batch' ? await db.batch(payload, record.internalToken)
+        const result = method === 'batch' ? await db.batch(payload, record.internalToken, { bare: !explicit })
           : await db[method](payload.sql, payload.params, record.internalToken);
         if (explicit && record.cancelled) return closedTransaction();
         if (!explicit) {
